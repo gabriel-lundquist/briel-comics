@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+    <!-- <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head> -->
+    <body>
+
+        <h1>Hello world!</h1>
+
+        <p>My first paragraph.</p>
+
+        <h1>This is heading 1</h1>
+        <h2>This is heading 2</h2>
+        <h3>This is heading 3</h3> 
+
+        <p>This is a paragraph.</p>
+        <p>This is another paragraph.</p> 
+
+        <a href="https://www.w3schools.com">This is a link</a> 
+
+        <br>
+
+        <!-- Need to test out conditional styles in picture elements... -->
+        <picture>
+            <source srcset="img_smallflower.jpg" media="(max-width: 600px)">
+            <source srcset="img_flowers.jpg" media="(max-width: 1500px)">
+            <source srcset="flowers.jpg">
+            <img src="img_smallflower.jpg" alt="Flowers">
+        </picture> 
+        <!-- style="width: 100%; border-radius: 1rem;" -->
+        <style>
+        .responsive-img {
+            width: 50%;
+            max-width: 50%;
+            display: block;
+            margin: 0 auto;
+        }
+        @media (max-width: 1080px) {
+            .responsive-img {
+                /* width: 100vw;
+                margin: 0;
+                border-radius: 0;
+                /* Remove body padding? */
+                /* padding: 0; */
+                /* display: block;
+                position: relative;
+                left: 50%;
+                right: 50%;
+                transform: translateX(-50%); */ 
+                width: 100cqw;
+                max-width: initial;
+                position: relative;
+                left: 50%;
+                right: 50%;
+                margin-left: -50cqw;
+                margin-right: -50cqw;
+                /* transform: translateX(-50%); */
+            }
+        }
+        /* @media screen and (max-width: 1920px) {
+            .responsive-img {
+                width: 1080px;
+            }
+        } */
+        </style>
+
+<img
+    src="Drink2-Final.png"
+    alt="Drink page 2"
+    srcset="
+        Drink2-1080x1350px.png 1080w,
+        Drink2-8x10in.png      1920w,
+        Drink2-Final.png       2160w
+    "
+    sizes="
+        (max-width: 1080px) 100vw,
+        (max-width: 1920px) 1080px,
+        (max-width: 4096px) 1920px
+    "
+    class="responsive-img"
+>
+
+<!-- style="
+        max-width: 100%;
+        display: block;
+        margin: 0 auto
+    " -->
+        <!-- <img src="2024-05-06Bits3.png"
+        alt="Three black-and-white comics strips." 
+        style="max-width:80%; height:auto; align-items:center;"> -->
+        <!-- Still need to figure out how to center an image...-->
+
+    </body>
+</html>
