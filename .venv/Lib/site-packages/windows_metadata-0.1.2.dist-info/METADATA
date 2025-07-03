@@ -1,0 +1,56 @@
+Metadata-Version: 2.1
+Name: windows-metadata
+Version: 0.1.2
+Summary: Read Windows metadata from files
+Author-email: Sébastien Paine <sebastienpaine@me.com>
+License: MIT License
+        
+        Copyright (c) 2022, Sébastien Paine
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+        
+Project-URL: Homepage, https://github.com/sebastienpaine/windows_metadata
+Project-URL: Bug Tracker, https://github.com/sebastienpaine/windows_metadata/issues
+Keywords: windows,metadata,attributes,details
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: Microsoft :: Windows
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: pywin32
+Provides-Extra: dev
+Requires-Dist: black ; extra == 'dev'
+Requires-Dist: pylint ; extra == 'dev'
+
+# Windows Metadata
+
+This package reads the metadata Windows creates for a file (also called "attributes" or "details"). 
+These values are then stored in a WindowsAttribute object and can be accessed like a dict or an object attribute.
+```python
+attr = WindowsAttributes('testfile')
+attr["Horizontal resolution"] # dict-like access
+attr.horizontal_resolution    # attribute like access
+```
+
+To get a dict of all the attributes a file has
+```python
+attr.get_attribute_dict()
+```
