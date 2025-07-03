@@ -39,8 +39,15 @@ def remove_nondigits(text):
 def strip_period_from_file_extension(extension):
     return extension[extension.rfind('.'):]
 
+def newline_to_space(text):
+    return text.replace('\n', ' ') \
+               .replace('\r', ' ')
+
 def convert_to_size_in_kb(size_metadata):
-    size = float(''.join([char for char in size_metadata if char.isdigit() or char == '.']))
+    size = float(''.join([char for char in size_metadata 
+                          if char.isdigit() or char == '.']))
+    # Last two characters of the windows metadata size field
+    # is the units of memory
     size_unit = size_metadata[-2:]
 
     if size_unit == "KB":
@@ -56,6 +63,17 @@ def convert_to_size_in_kb(size_metadata):
     
     return round(size)
 
+def write_records_SQL_format(filepath, 
+                             records, 
+                             write_mode='w'):
+    with open(filepath, write_mode, newline='\n') as record_file:
+        record_writer = csv.writer(record_file, 
+                                   delimiter='\t', 
+                                   escapechar='\\', 
+                                   doublequote=False, 
+                                   lineterminator='\n', 
+                                   quoting=csv.QUOTE_MINIMAL)
+        record_writer.writerows(records)
 
 # def sanitize_special_unicode(text):
 #     unspecial_fragments = text.split("\\u")
