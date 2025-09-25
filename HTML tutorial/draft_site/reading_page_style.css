@@ -1,0 +1,42 @@
+html {
+    /* background-image: url("600pixel_square.png") */
+    background-color: #111111;
+}
+
+body {
+    margin: 0 auto;
+}
+
+.comic-page {
+    display: block;
+    margin: 0 auto;
+}
+
+/* .description-link {
+    text-align: center;
+} */
+
+img {
+    color:white
+}
+
+h3 {
+    color:white;
+    text-align: center;
+    margin-bottom: 6pt;
+}
+
+p {
+    color:white;
+    text-align: center;
+    margin: 0 10%;
+}
+
+a {
+    color:white
+}
+
+a:visited {
+    color:gray
+}
+
