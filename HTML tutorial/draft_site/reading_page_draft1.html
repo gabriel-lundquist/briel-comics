@@ -3,33 +3,47 @@
     <head>
         <meta charset="utf-8">
         <!-- Good to include charset just to prevent weird errors later on. -->
-        <meta name="viewport" content="width=device-width"/>
+        <meta name="viewport" content="width=device-width">
         <meta name="author" content="Breel">
         <meta name="description" content="A page displaying a comic.">
         
         <title>Drink p2 | Breel Comix</title>
-        <link rel="icon" href="smileicon.ico" type="image/x-icon" />
+        <link rel="icon" href="smileicon.ico" type="image/x-icon">
 
-        <link href="reading_page_style.css" rel="stylesheet" />
+        <link href="reading_page_style.css" rel="stylesheet">
     </head>
 
     <body>
         <main>
-            <section>
+            <div class="page-display">
+                <a href="reading_page_draft0.html" class="nav-button" title="Previous"></a>
             <!-- Specifying width and height are good -->
                 <img
                     class="comic-page"
                     src="../Drink2-1080x1350px.png"
-                    width="1080"
-                    height="1350"
                     alt="Page 2 of Drink. A black-and-white comics page with lots of text. 
                         Described under the heading Text Description."
-                />
+                >
+                    <!-- style="display: inline;" -->
+                    <!-- width="1080"
+                    height="1350" -->
                 <!-- Resource on web accessibility for complex images: 
                  https://www.w3.org/WAI/tutorials/images/complex/ -->
-                
+                <a href="reading_page_draft2.html" class="nav-button" title="Next"></a>
                 <!-- <p><a href="#text_description">Text Description</a></p> -->
-            </section>
+            </div>
+
+            <nav>
+                <p class="nav-line">
+                    <a href="reading_page_draft0.html" class="nav-button">Previous</a>
+                    <a href="reading_page_draft2.html" class="nav-button">Next</a>
+                </p>
+                <p class="nav-line">
+                    <a href="reading_page_start.html" class="nav-button">Skip back</a>
+                    <a href="home_page.html" class="nav-button">Home</a>
+                    <a href="reading_page_end.html" class="nav-button">Skip forward</a>
+                </p>
+            </nav>
 
             <section>
                 <h2>Tags</h2>
@@ -60,7 +74,7 @@
         </main>
 
         <footer>
-            <p>©Copyright 2025 by Briel Comics. All rights reversed.</p>
+            <p>©Copyright 2025 by Briel Comics. All rights reserved.</p>
         </footer>
     </body>
 </html>

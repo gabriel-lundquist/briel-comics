@@ -1,0 +1,59 @@
+html {
+    font-family: Courier, monospace;
+    font-size: large;
+}
+
+h3,
+h4,
+p {
+    margin: 0;
+}
+
+/* Normalize forms, so font and box size changes affect forms */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 100%;
+  /* box-sizing: border-box;
+  padding: 0;
+  margin: 0; */
+}
+
+.search-entry {
+    display: block;
+    border: 0.14em solid black;
+    padding: 0.2em;
+    margin: 1em;
+}
+
+@media (width >= 600px) {
+    .search-entry {
+        display: flex;
+    }
+}
+
+.search-entry .thumbnail-div {
+    padding: 0;
+    max-width: 100px;
+}
+
+.search-entry em {
+    text-decoration: underline;
+}
+
+.search-entry h4 {
+    display: inline;
+}
+
+a:hover {
+    background-color:#ff00ff;
+    /* font-weight: bold; */
+    /* text-decoration: none; */
+  /* background: #ff00ff; */
+}
+
+/* h3 a:hover {
+    font-weight: normal;
+} */

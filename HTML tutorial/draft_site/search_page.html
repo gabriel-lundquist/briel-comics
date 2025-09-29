@@ -10,6 +10,7 @@
         <title>Search | Breel Comix</title>
         <link rel="icon" href="smileicon.ico" type="image/x-icon" />
 
+        <link href="search_page_style.css" rel="stylesheet" />
         
     </head>
 
@@ -17,20 +18,70 @@
         <header>
             <h1>Search</h1>
             <form action="search_page.html" method="get">
-                <label for="search">Search tags:</label>
-                <br />
-                <input type="search" name="search" id="search"/> <button>Search</button>
-                <br />
-                <input type="checkbox" name="title" id="title">
+                <p>
+                    <input type="search" name="search" id="search" size="50"/> 
+                    <button>Search</button>
+                </p>
+                <p>
+                    <label for="search">Searches tags, dates, titles, and page numbers by default</label>
+                </p>
+                <!-- <input type="checkbox" name="title" id="title">
                 <label for="title">Search page titles too</label>
-                <br />
-                <input type="checkbox" name="desc" id="desc">
-                <label for="desc">Search image descriptions too</label>
-                
+                <br /> -->
+                <p>
+                    <input type="checkbox" name="desc" id="desc">
+                    <label for="desc">Search image descriptions too</label>
+                </p>
+                <p>
+                    <input type="checkbox" name="thumbnails" id="thumbnails">
+                    <label for="thumbnails">Display thumbnails</label>
+                </p>
             </form>
         </header>
 
-        
+        <main>
+            <!-- Actually... maybe we use a table for our results page! -->
+            <h2>Results</h2>
+            <article, class="search-entry">
+                <div class="thumbnail-div"><p>Where the thumbnail would be</p></div>
+                <div class="detail-div">
+                    <h3><a href=reading_page_draft1.html>Drink <em>page 2</em></a></h3>
+                    <p><h4>Date:</h4>
+                        <time date="2025-09-26">2025, Sept. 26th, a <em>Friday</em></time>
+                    </p>
+                    <p><h4>Tags:</h4>
+                        <a href="search_page.html?tag=tag1">tag1</a>,
+                        <em><a href="search_page.html?tag=tag2">tag2</a></em>,
+                        <a href="search_page.html?tag=tag3">tag3</a>
+                    </p>
+                    <p><h4>Image description:</h4>
+                        A <em>silly</em> image. Here is more descriptive text.
+                    </p>
+                </div>
+                
+            </article, class="search_entry">
+
+            <article, class="search-entry">
+                <div class="thumbnail-div">
+                    <p>Where the thumbnail would be</p>
+                </div>
+                <div class="detail-div">
+                    <h3><a href=reading_page_draft1.html>Drink <del>page 4</del></a></h3>
+                    <p><h4>Date:</h4>
+                        <time date="2025-09-25">2025, <del>Sept. 25th</del>, a Thursday</time>
+                    </p>
+                    <p><h4>Tags:</h4>
+                        <a href="search_page.html?tag=tag1">tag1</a>,
+                        <em><a href="search_page.html?tag=tag2">tag2</a></em>, 
+                        <del><a href="search_page.html?tag=tag4">tag4</a></del>
+                    </p>
+                    <p><h4>Image description:</h4>
+                        A <del>badass</del> image.
+                    </p>
+                </div>
+            </article, class="search_entry">
+
+        </main>
     </body>
 
 </html>

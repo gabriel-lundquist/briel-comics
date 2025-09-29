@@ -1,41 +1,109 @@
 html {
-    background-image: url("../600pixel_square.png")
-    /* background-color: #111111; */
-    /* background-image: linear-gradient(gray, black); */
+/* These background attributes will change depending on the page */
+    /* background-image: url("../600pixel_square.png"); */
+    /* background-size: 100% 100%;  */
+    /* To stretch an image to always fit. 
+     Remove to make the background image repeat. */
+    background-color: #222222; /* For just a solid color */
+
+    font-family: Courier, monospace;
+    font-size: large;
 }
 
 body {
-    margin-top: 4vh;
+    margin: 0;
 }
 
-.comic-page {
-    display: block;
+body, 
+footer {
+    color:white;
+    text-align: center
+}
+
+h2 {
+    margin-bottom: 0;
+}
+
+h2 + p {
+    margin-left: 10vw;
+    margin-right: 10vw;
+    margin-top: 0;
+}
+
+nav {
+    font-size: calc(1em + 4pt);
+}
+
+a:link {
+    color: inherit
+}
+
+a:visited {
+    color: #aaaaaa
+}
+
+a:hover {
+    /* font-style: oblique; */
+    color: white;
+    background: #ff00ff;
+}
+
+/* .nav-button {
+    display: inline-block;
+    width: 33vw;
+} */
+
+.nav-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
     margin: 0 auto;
+}
+
+.nav-line a.nav-button {
+    display: block;
+    flex: 1 12em;
+    padding: 0.5em;
+    text-align: center;
+    /* display: block;
+    text-align: center; */
+    /* display: block;
+    text-align: inherit; 
+    align-self: center; */
+}
+
+.page-display {
+    display: flex;
+    justify-content: space-between;
+    --comic-page-width: 1080px;
+    --comic-page-height: 1350px;
+}
+
+.page-display a.nav-button {
+    width: max(0px, 0.25 * (100vw - var(--comic-page-width)));
+    max-height: 100%;
+}
+
+.page-display img.comic-page {
+    /* margin: clamp(0px, 0.1*(100vw - 1080px), 5vh) auto; */
+    /* Change 1080px and 1350px to adjust for image size, 
+       5vh for the default preferred top margin  */
+    max-width: 100%;
+    margin-top: clamp(0px, 0.5*(100vw - var(--comic-page-width)), 5vh);
+}
+
+/* @media screen and (width <= 1080) {
+    .comic-page {
+        margin: 0 auto;
+    }
+} */
+
+@media screen and (min-height: 1350px) {
+    .page-display img.comic-page {
+        margin: calc(0.5 * (100vh - 1350px)) auto;
+    }
 }
 
 /* .description-link {
     text-align: center;
 } */
-
-h2 {
-    color:white;
-    text-align: center;
-    margin-bottom: 0;
-}
-
-p {
-    color:white;
-    text-align: center;
-    margin-left: 10vh;
-    margin-right: 10vh;
-    margin-top: 0;
-}
-
-img,
-a:link {
-    color:white
-}
-
-a:visited {
-    color:gray
-}
