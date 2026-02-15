@@ -34,7 +34,8 @@ Archive reading should have seamless, intuitive interaction, as well as very few
 - Listen. This is too much but I think it will be a fun project.
 
 ### Landing page
-- link to most recent update
+- ~~link to most recent update~~
+- Actually I'm thinking the landing page *is* the most recent update. Or at least it's centered. Add additional landing page stuff at the bottom of the page.
 - blog posts?
 - links to other comics 
 - web ring?
