@@ -5,26 +5,35 @@
         <!-- Good to include charset just to prevent weird errors later on. -->
         <meta name="viewport" content="width=device-width"/>
         <meta name="author" content="Breel">
-        <meta name="description" content="A search page for Breel comics.">
+        <meta name="description" content="Breel Comics comic search page.">
         
         <title>Search | Breel Comix</title>
         <link rel="icon" href="smileicon.ico" type="image/x-icon" />
 
-        <link href="search_page_style.css" rel="stylesheet" />
+        <link href="archive_page_style.css" rel="stylesheet" />
         
     </head>
 
     <body>
         <header>
             <h1>Search</h1>
+
             <form action="search_page.html" method="get">
                 <p>
-                    <input type="search" name="search" id="search" size="50"/> 
+                    <input 
+                        type="search" 
+                        name="search" 
+                        id="search"
+                        placeholder="Search comic pages..."
+                        minlength="2"
+                        maxlength="256"
+                        size="31"
+                        aria-label="Search comic pages"/> 
                     <button>Search</button>
                 </p>
-                <p>
-                    <label for="search">Searches tags, dates, titles, and page numbers by default</label>
-                </p>
+                <label for="search">
+                    Searches tags, dates, titles, and page numbers by default
+                </label>
                 <!-- <input type="checkbox" name="title" id="title">
                 <label for="title">Search page titles too</label>
                 <br /> -->
@@ -32,18 +41,28 @@
                     <input type="checkbox" name="desc" id="desc">
                     <label for="desc">Search image descriptions too</label>
                 </p>
-                <p>
-                    <input type="checkbox" name="thumbnails" id="thumbnails">
-                    <label for="thumbnails">Display thumbnails</label>
-                </p>
             </form>
+            
+            <button>Hide thumbnails</button>
+
         </header>
 
         <main>
             <!-- Actually... maybe we use a table for our results page! -->
             <h2>Results</h2>
             <article, class="search-entry">
-                <div class="thumbnail-div"><p>Where the thumbnail would be</p></div>
+                <div class="thumbnails-div">
+                    <a href="reading_page_draft1.html" class="page-link">
+                        <img
+                            class="thumbnail"
+                            src="../2026-02-22Binarization_p2_nail.jpg"
+                            alt="A shrunken, square version of
+                                the black-and-white comic Drink page 2."
+                            width="100px"
+                            height="100px"
+                            loading="lazy"
+                        >
+                    </a> </div>
                 <div class="detail-div">
                     <h3><a href=reading_page_draft1.html>Drink <em>page 2</em></a></h3>
                     <p><h4>Date:</h4>
@@ -59,14 +78,14 @@
                     </p>
                 </div>
                 
-            </article, class="search_entry">
+            </article, class="search-entry">
 
             <article, class="search-entry">
-                <div class="thumbnail-div">
+                <div class="thumbnails-div">
                     <p>Where the thumbnail would be</p>
                 </div>
                 <div class="detail-div">
-                    <h3><a href=reading_page_draft1.html>Drink <del>page 4</del></a></h3>
+                    <h3><a href=reading_page_draft2.html>Drink <del>page 4</del></a></h3>
                     <p><h4>Date:</h4>
                         <time date="2025-09-25">2025, <del>Sept. 25th</del>, a Thursday</time>
                     </p>
@@ -79,9 +98,27 @@
                         A <del>badass</del> image.
                     </p>
                 </div>
-            </article, class="search_entry">
+            </article, class="search-entry">
 
         </main>
+
+        <footer>
+            <p>©Copyright 2026 by Briel Comics. All rights reserved.</p>
+        </footer>
+
+        <script>
+            function createParagraph() {
+                const para = document.createElement("p");
+                para.textContent = "You clicked the button!";
+                document.body.appendChild(para);
+            }
+
+            const buttons = document.querySelectorAll("button");
+
+            for (const button of buttons) {
+                button.addEventListener("click", createParagraph);
+            }
+        </script>
     </body>
 
 </html>

@@ -4,7 +4,7 @@ html {
     /* background-size: 100% 100%;  */
     /* To stretch an image to always fit. 
      Remove to make the background image repeat. */
-    background-color: #222222; /* For just a solid color */
+    background-color: #221a1a; /* For just a solid color */
 
     font-family: Courier, monospace;
     font-size: large;
@@ -12,40 +12,72 @@ html {
 
 body {
     margin: 0;
+
+    display: flex;
+    justify-content: space-between;
+    --comic-page-width: 800px;
+    --comic-page-height: 1000px;
 }
 
 body, 
 footer {
+    /* Can change color depending on page */
     color:white;
     text-align: center
+}
+
+/* Selects the big navigation buttons to the side of the page */
+body > a.nav-button {
+    width: max(0px, 0.25 * (100vw - var(--comic-page-width)));
+    max-height: 100%;
 }
 
 h2 {
     margin-bottom: 0;
 }
 
+/* main {
+    display: flex;
+    justify-content: space-between;
+    --comic-page-width: 800px;
+    --comic-page-height: 1000px;
+} */
+
+/* main a.nav-button {
+    width: max(0px, 0.25 * (100vw - var(--comic-page-width)));
+    max-height: 100%;
+} */
+
+/* selects paragraph elements directly preceded by header 2 elements */
 h2 + p {
-    margin-left: 10vw;
-    margin-right: 10vw;
+    /* padding-left: 10vw;
+    padding-right: 10vw; */
+    max-width: var(--comic-page-width);
     margin-top: 0;
 }
 
 nav {
+    /* Make font size of text in the nav pane (previous, next, etc.) 4 
+    points bigger than the inherited size */
     font-size: calc(1em + 4pt);
 }
 
 a:link {
-    color: inherit
+    color: inherit;
+    padding: 0.1em;
+    border-radius: 0.1em;
 }
 
 a:visited {
+    /* Can change color depending on page */
     color: #aaaaaa
 }
 
 a:hover {
     /* font-style: oblique; */
+    /* Can change color depending on page */
     color: white;
-    background: #ff00ff;
+    background: #000000;
 }
 
 /* .nav-button {
@@ -57,6 +89,7 @@ a:hover {
     display: flex;
     align-items: center;
     justify-content: space-around;
+    /* width: 0.75 * (100vw - var(--comic-page-width)); */
     margin: 0 auto;
 }
 
@@ -64,6 +97,7 @@ a:hover {
     display: block;
     flex: 1 12em;
     padding: 0.5em;
+    border-radius: 0;
     text-align: center;
     /* display: block;
     text-align: center; */
@@ -72,23 +106,24 @@ a:hover {
     align-self: center; */
 }
 
-.page-display {
-    display: flex;
-    justify-content: space-between;
-    --comic-page-width: 1080px;
-    --comic-page-height: 1350px;
-}
+.prev-button {}
 
-.page-display a.nav-button {
+.next-button {}
+
+/* .page-display {
+    --comic-page-width: 800px;
+    --comic-page-height: 1000px;
+} */
+
+/* .page-display a.nav-button {
     width: max(0px, 0.25 * (100vw - var(--comic-page-width)));
     max-height: 100%;
-}
+} */
 
 .page-display img.comic-page {
     /* margin: clamp(0px, 0.1*(100vw - 1080px), 5vh) auto; */
-    /* Change 1080px and 1350px to adjust for image size, 
-       5vh for the default preferred top margin  */
     max-width: 100%;
+    /* Change 5vh for the default preferred top margin  */
     margin-top: clamp(0px, 0.5*(100vw - var(--comic-page-width)), 5vh);
 }
 
@@ -98,11 +133,17 @@ a:hover {
     }
 } */
 
-@media screen and (min-height: 1350px) {
+/* Change 1000px for the minimum height of the page */
+/* @media screen and (min-height: 1000px) {
     .page-display img.comic-page {
-        margin: calc(0.5 * (100vh - 1350px)) auto;
+        margin: calc(0.5 * (100vh - 1000px)) auto;
     }
-}
+} */
+
+/* 4k responsive text */
+/* @media screen and (min-width: 1990px) {
+    body, html {font-size: 2vh;}
+} */
 
 /* .description-link {
     text-align: center;

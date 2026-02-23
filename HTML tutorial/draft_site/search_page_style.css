@@ -21,29 +21,30 @@ textarea {
   margin: 0; */
 }
 
-.search-entry {
+.archive-entry {
     display: block;
     border: 0.14em solid black;
     padding: 0.2em;
     margin: 1em;
 }
 
-@media (width >= 600px) {
-    .search-entry {
+@media screen and (width >= 600px) {
+    .archive-entry {
         display: flex;
     }
 }
 
-.search-entry .thumbnail-div {
+.archive-entry .thumbnails-div {
     padding: 0;
-    max-width: 100px;
+    width: 100px;
+    height: 100px;
 }
 
-.search-entry em {
+.archive-entry em {
     text-decoration: underline;
 }
 
-.search-entry h4 {
+.archive-entry h4 {
     display: inline;
 }
 
