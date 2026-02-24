@@ -12,6 +12,7 @@
 
         <link href="archive_page_style.css" rel="stylesheet" />
         
+        <script type="module" src="archive_page_script.js"></script>
     </head>
 
     <body>
@@ -43,7 +44,7 @@
                 </p>
             </form>
             
-            <button>Hide thumbnails</button>
+            <button class="toggle-nails">Hide thumbnails</button class="toggle-nails">
 
         </header>
 
@@ -55,7 +56,7 @@
                     <a href="reading_page_draft1.html" class="page-link">
                         <img
                             class="thumbnail"
-                            src="../2026-02-22Binarization_p2_nail.jpg"
+                            src="./2026-02-22Binarization_p2_nail.jpg"
                             alt="A shrunken, square version of
                                 the black-and-white comic Drink page 2."
                             width="100px"
@@ -106,7 +107,7 @@
             <p>©Copyright 2026 by Briel Comics. All rights reserved.</p>
         </footer>
 
-        <script>
+        <!-- <script>
             function createParagraph() {
                 const para = document.createElement("p");
                 para.textContent = "You clicked the button!";
@@ -118,7 +119,7 @@
             for (const button of buttons) {
                 button.addEventListener("click", createParagraph);
             }
-        </script>
+        </script> -->
     </body>
 
 </html>
