@@ -122,11 +122,15 @@ a:visited {
 }
 
 .thumbnails-div {
+    --nails-display: flex;
+    --nails-hide-display: none;
     /* padding: 0; */
     margin: 0 0.3em;
-    display: flex;
+    display: var(--nails-hide-display); /* Thumbnails start as hidden */
+    /* display: none; */
     flex-wrap: wrap;
     /* justify-content: right; */
+    /* overflow: hidden; */
 }
 
 .search-entry .thumbnails-div {
@@ -142,6 +146,7 @@ a:visited {
     /* flex-wrap: wrap; */
     padding: 0.2em;
     height: var(--thumbnail-size);
+    width: var(--thumbnail-size);
     max-width: var(--thumbnail-size);
     max-height: var(--thumbnail-size);
     font-size: small;

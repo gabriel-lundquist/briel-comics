@@ -1,22 +1,19 @@
-// Start thumbnails as showing
-let nailsHidden = Boolean(false);
+// To keep images from loading, their initial `src` attributes are set to ""
 
-function toggleNails() {
-    const toggleNailsButtons = document.querySelectorAll(".toggle-nails");
-    if (nailsHidden) {
-        for (const toggleNailsButton of toggleNailsButtons) {
-            toggleNailsButton.textContent = "Hide thumbnails";
-        }
-        
-    } else {
-        for (const toggleNailsButton of toggleNailsButtons) {
-            toggleNailsButton.textContent = "Show thumbnails";
-        }
-    }
-    nailsHidden = !nailsHidden;
-}
+// However, once images have been loaded once, we don't want to 
+// load them again. To hide images we don't reset their `src` attributes, we 
+// just set the `display` style of the thumbnails div to "none".
 
-const toggleNailsButtons = document.querySelectorAll(".toggle-nails");
-for (const toggleNailsButton of toggleNailsButtons) {
-    toggleNailsButton.addEventListener("click", toggleNails)
-}
+import { addImageDivToggleListeners } from "./briels_helpful_code.js";
+
+// Start thumbnails as hidden, images unloaded
+const thumbnailState = { hidden: Boolean(true), loaded: Boolean(false) }
+addImageDivToggleListeners(thumbnailState, 
+                           ".toggle-nails", 
+                           ".thumbnails-div", 
+                           ".thumbnail", 
+                           "attr-src", 
+                           "--nails-display", 
+                           "--nails-hide-display", 
+                           "Hide thumbnails", 
+                           "Show thumbnails");
