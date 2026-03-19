@@ -4,7 +4,11 @@ html {
     /* background-size: 100% 100%;  */
     /* To stretch an image to always fit. 
      Remove to make the background image repeat. */
-    background-color: #221a1a; /* For just a solid color */
+    --primary-color: #221a1a;
+    --secondary-color: #ffffff;
+    --tertiary-color: #000000;
+    --quaternary-color: #aaaaaa;
+    background-color: var(--primary-color); /* For just a solid color */
 
     font-family: Courier, monospace;
     font-size: large;
@@ -22,7 +26,7 @@ body {
 body, 
 footer {
     /* Can change color depending on page */
-    color:white;
+    color: var(--secondary-color);
     text-align: center
 }
 
@@ -33,6 +37,8 @@ body > a.nav-button {
 }
 
 h2 {
+    /* margin-top: 0.5em; */
+    margin-top: 0;
     margin-bottom: 0;
 }
 
@@ -48,12 +54,21 @@ h2 {
     max-height: 100%;
 } */
 
+section[id="desc_section"], 
+section[id="tag_section"] {
+    border: 0.14em solid var(--secondary-color);
+    margin: 0.5em;
+    padding: 0.7em 1em;
+    padding-bottom: 1em;
+}
+
 /* selects paragraph elements directly preceded by header 2 elements */
 h2 + p {
     /* padding-left: 10vw;
     padding-right: 10vw; */
     max-width: var(--comic-page-width);
     margin-top: 0;
+    margin-bottom: 0;
 }
 
 nav {
@@ -70,14 +85,14 @@ a:link {
 
 a:visited {
     /* Can change color depending on page */
-    color: #aaaaaa
+    color: var(--quaternary-color)
 }
 
 a:hover {
     /* font-style: oblique; */
     /* Can change color depending on page */
-    color: white;
-    background: #000000;
+    color: var(--secondary-color);
+    background: var(--tertiary-color);
 }
 
 /* .nav-button {

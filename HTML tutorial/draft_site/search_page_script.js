@@ -7,7 +7,7 @@
 import { addImageDivToggleListeners } from "./briels_helpful_code.js";
 
 // Start thumbnails as hidden, images unloaded
-const thumbnailState = { hidden: Boolean(false), loaded: Boolean(true) }
+const thumbnailState = { hidden: Boolean(true), loaded: Boolean(false) }
 addImageDivToggleListeners(document, 
                            thumbnailState, 
                            ".toggle-nails", 
