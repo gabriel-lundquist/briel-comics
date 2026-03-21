@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en-US"> <!-- Good practice to specify primary language -->
+    <head>
+        <meta charset="utf-8">
+        <!-- Good to include charset just to prevent weird errors later on. -->
+        <meta name="author" content="Breel">
+        <meta name="description" content="A page showing various examples of HTML code.">
+        <meta name="viewport" content="width=device-width"/>
+        
+        <title>A test page...</title>
+        <link rel="icon" href="smileicon.ico" type="image/x-icon" />
+        <!-- The above line is for the little icon next to the page title on a tab and in your bookmarks! -->
+            <!-- Code examples for CSS and JavaScript in webpage (must be in header)
+        <link rel="stylesheet" href="my-css-file.css" />
+        <script src="my-js-file.js" defer></script> -->
+    </head>
+    <body>
+        <header>
+            <h1>Learning HTML</h1>
+            <!-- h1 should generally be used once per page, as a title for the page. -->
+        </header> 
+        
+        <!-- I don't care for using a header on the comic landing pages, 
+         and typically the header remains the same across the whole website.
+         That said, the semantics do help for screen readers and such. -->
+        
+        <main> <!-- Main part of the page, again useful for semantics and screen readers. 
+             Contains the content unique to the page. -->
+            
+            <section> <!-- Semantic formatting -->
+                <h2 id="simple_stuff">Simple stuff</h2>
+                <p>God, I can't <em>wait</em> to get past 
+                    <a href="https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content/Basic_HTML_syntax">
+                        this</a> 
+                    <strong>boilerplate.</strong>
+                </p>
+                <!-- <em> and <strong> are better than manual italic and bold 
+                    because they adapt to CSS. -->
+                
+                <br>
+                <img 
+                    src="600pixel_square.png"
+                    width="400"
+                />
+                <!-- Setting a default width makes sure that the page creates a space for the image 
+                 even before the image is loaded, preventing layout changes as the image loads. 
+                 Note that this also lets you change an image's size to be different than its resolution. -->
+            </section>
+
+            <section>
+                <h2>Some formatting</h2>
+                <p>Press <kbd>a</kbd> to do nothing.<sup>Nice?</sup></p>
+                <p>The time this line is being written is
+                    <time datetime="2025-09-24T09:30">Sept. 24th, 2025, 9:30am</time>
+                </p>
+                <p><abbr title="HyperText Markup Language">HTML</abbr> quotes work like 
+                    <q cite="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/q">intended
+                        for short quotations that don't require paragraph breaks.</q>
+                    Though you still need to 
+                    <a href="https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/q">
+                        <cite>link</cite>
+                    </a> 
+                    separately because the world is confusing.
+                </p>
+            </section>
+            <!-- <time> is machine-readable -->
+
+            <section>
+                <h2>Some non-semantic wrappers (discouraged)</h2>
+                <span class="editor-note">
+                <!-- span is an inline wrapper. 
+                 Using a class attribute allows a little self-description. -->
+                    [Editor's note: At this point in the play, the lights should be down low].
+                </span>
+                <div class="shopping-cart">
+                    <!-- div is a block-level wrapper. -->
+                    <h3>Shopping cart</h3>
+                    <ul>
+                        <li>
+                        <p>
+                            <a href=""><strong>Silver earrings</strong></a>: $99.95.
+                        </p>
+                        <img src="../products/3333-0985/thumb.png" alt="Silver earrings" />
+                        </li>
+                        <li>…</li>
+                    </ul>
+                    <p>Total cost: $237.89</p>
+                </div>
+            </section>
+
+            <section>
+                <h2>Links</h2>
+                <a href="helloworld.htm#Second_image">
+                    <p>Haha even block-level elements can be links.</p>
+                </a>
+                <a href="../Design-notes.md">
+                    <img 
+                        src="600pixel_square.png"
+                        width="200"
+                    />
+                </a> 
+                
+                <p>
+                    <a href="#simple_stuff">Scroll to Simple stuff</a>
+                </p>
+
+                <p>
+                    Firefox is developed by the
+                    <a href="https://www.mozilla.org/en-US/" target="_blank">
+                        Mozilla Foundation</a>. 
+                        <!-- Use the _blank target to open in another tab. -->
+                    <a href="mailto:nowhere@mozilla.org">Send email to nowhere</a>
+                </p>
+                <!-- Can make lots of elements links. -->
+            </section>
+        </main>
+
+        <aside> <!-- More semantic formatting... will be manageable in CSS... 
+             It doesn't relate to the content of the page. -->
+            <hr />
+            <h2>A lil sidebar action</h2>
+            <p>This could be useful on the main page, but not on reading pages.</p>
+            <p>On CSS layout, this can be pushed to the side.</p>
+        </aside>
+
+        <nav> <!-- A navigation pane, again useful semantically for screenreaders, 
+            and typically used for every page on a site. 
+            Might be useful at like, the bottom of the page... -->
+            <ul> <!--Unordered list.-->
+                <li><a href="#">Home</a></li>
+                <li><a href="#">Our team</a></li>
+                <li><a href="#">Projects</a></li>
+                <li><a href="#">Contact</a></li>
+            </ul>
+
+            <!-- A Search form: another common non-linear
+                way to navigate through a site. -->
+            <form>
+                <input type="search" name="q" placeholder="Search query" />
+                <input type="submit" value="Go!" />
+            </form>
+        </nav>
+
+        <footer> <!-- More semantic formatting. -->
+            <p>©Copyright 2050 by nobody. All rights reversed.</p>
+        </footer>
+    </body>
+    <!-- So basically look at the beginning Mozilla HTML tutorial for advanced text features. -->
+</html>

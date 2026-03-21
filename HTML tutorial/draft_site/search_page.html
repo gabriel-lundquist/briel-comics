@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8">
+        <!-- Good to include charset just to prevent weird errors later on. -->
+        <meta name="viewport" content="width=device-width"/>
+        <meta name="author" content="Breel">
+        <meta name="description" content="Breel Comics comic search page.">
+        
+        <title>Search | Breel Comix</title>
+        <link rel="icon" href="smileicon.ico" type="image/x-icon" />
+
+        <link href="update_list_style.css" rel="stylesheet" />
+        <link href="search_page_style.css" rel="stylesheet" />
+        
+        <script type="module" src="search_page_script.js"></script>
+    </head>
+
+    <body>
+        <header>
+            <h1>Search</h1>
+
+            <form action="search_page.html" method="get">
+                <p>
+                    <input 
+                        type="search" 
+                        name="search" 
+                        id="search"
+                        placeholder="Search comic pages..."
+                        minlength="2"
+                        maxlength="256"
+                        size="31"
+                        aria-label="Search comic pages"/> 
+                    <button type="submit">Search</button>
+                </p>
+                <label for="search">
+                    Searches tags, dates, titles, and page numbers by default
+                </label>
+                <!-- <input type="checkbox" name="title" id="title">
+                <label for="title">Search page titles too</label>
+                <br /> -->
+                <p>
+                    <input type="checkbox" name="desc" id="desc">
+                    <label for="desc">Search image descriptions too</label>
+                </p>
+            </form>
+
+        </header>
+
+        <main>
+            <!-- Actually... maybe we use a table for our results page! -->
+            <h2>Results </h2>
+            <button class="toggle-nails">Show thumbnails</button>
+            <article class="search-entry">
+                <div class="thumbnails-div">
+                    <a href="reading_page_draft1.html" class="page-link">
+                        <!-- img src gets changed by javascript when thumbnails are loaded -->
+                        <img
+                            class="thumbnail"
+                            attr-src="./2026-02-22Binarization_p2_nail.jpg"
+                            src=""
+                            alt="A shrunken, square version of
+                                the black-and-white comic Drink page 2."
+                            width="100px"
+                            height="100px"
+                            loading="lazy"
+                        >
+                    </a> </div>
+                <div class="detail-div">
+                    <h3><a href="reading_page_draft1.html">Drink <em>page 2</em></a></h3>
+                    <p><h4>Date:</h4>
+                        <time date="2025-09-26">2025, Sept. 26th, a <em>Friday</em></time>
+                    </p>
+                    <p><h4>Tags:</h4>
+                        <a href="search_page.html?tag=tag1">tag1</a>,
+                        <em><a href="search_page.html?tag=tag2">tag2</a></em>,
+                        <a href="search_page.html?tag=tag3">tag3</a>
+                    </p>
+                    <p><h4>Image description:</h4>
+                        A <em>silly</em> image. Here is more descriptive text.
+                    </p>
+                </div>
+                
+            </article>
+
+            <article class="search-entry">
+                <div class="thumbnails-div">
+                    <p>Where the thumbnail would be</p>
+                </div>
+                <div class="detail-div">
+                    <h3><a href="reading_page_draft2.html">Drink <del>page 4</del></a></h3>
+                    <p><h4>Date:</h4>
+                        <time date="2025-09-25">2025, <del>Sept. 25th</del>, a Thursday</time>
+                    </p>
+                    <p><h4>Tags:</h4>
+                        <a href="search_page.html?tag=tag1">tag1</a>,
+                        <em><a href="search_page.html?tag=tag2">tag2</a></em>, 
+                        <del><a href="search_page.html?tag=tag4">tag4</a></del>
+                    </p>
+                    <p><h4>Image description:</h4>
+                        A <del>badass</del> image.
+                    </p>
+                </div>
+            </article>
+
+        </main>
+
+        <footer>
+            <form action="search_page.html" method="get">
+                <p>
+                    <input 
+                        type="search" 
+                        name="search" 
+                        id="search-footer"
+                        placeholder="Search comic pages..."
+                        minlength="2"
+                        maxlength="256"
+                        size="31"
+                        aria-label="Search comic pages"/> 
+                    <button type="submit">Search</button>
+                </p>
+                <label for="search">
+                    Searches tags, dates, titles, and page numbers by default
+                </label>
+                <!-- <input type="checkbox" name="title" id="title">
+                <label for="title">Search page titles too</label>
+                <br /> -->
+                <p>
+                    <input type="checkbox" name="desc" id="desc-bottom">
+                    <label for="desc">Search image descriptions too</label>
+                </p>
+            </form>
+
+            <p>©Copyright 2026 by Briel Comics. All rights reserved.</p>
+        </footer>
+
+        <!-- <script>
+            function createParagraph() {
+                const para = document.createElement("p");
+                para.textContent = "You clicked the button!";
+                document.body.appendChild(para);
+            }
+
+            const buttons = document.querySelectorAll("button");
+
+            for (const button of buttons) {
+                button.addEventListener("click", createParagraph);
+            }
+        </script> -->
+    </body>
+
+</html>

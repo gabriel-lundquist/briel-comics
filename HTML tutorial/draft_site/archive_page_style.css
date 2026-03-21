@@ -1,0 +1,5 @@
+.thumbnails-div {
+    --nails-display: flex;
+    --nails-hide-display: none;
+    display: var(--nails-display); /* Thumbnails start as showing */
+}
