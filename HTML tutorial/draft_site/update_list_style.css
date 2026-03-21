@@ -11,10 +11,10 @@ h1 {
 }
 
 h2 {
-    margin: 0.3em 0.8em;
+    margin: auto;
 }
 
-header {
+header, main, footer {
     /* padding: 0.2em; */
     margin: 0.2em 1em;
     
@@ -46,16 +46,17 @@ textarea {
   margin: 0; */
 }
 
-input[id="search"] {
+input[type="search"] {
     /* border-radius: 1px; */
     /* flood-color: #ffefcf; */
     /* background-color: #ffefcf; */
     background-color: inherit;
     border-color: #ddc494;
+    /* margin: 0.5em auto; */
 }
 
 button {
-    margin: 0.5em 0;
+    /* margin: 0.5em 0; */
     border-radius: 0;
     background-color: #ffeecc;
     border-color: #c89c73;
@@ -63,10 +64,12 @@ button {
 
 form button {
     margin: 0;
+    margin-top: 0.2em;
 }
 
 form {
-    padding: 0.3em 0;
+    margin-bottom: 0.5em;
+    text-align: left;
 }
 
 label[for="search"] {
@@ -95,17 +98,17 @@ a:visited {
     font-weight: normal;
 } */
 
-.thumbnail {
-    /* margin-left: 0.2em; */
-}
+/* .thumbnail {
+    
+} */
 
 .archive-entry,
 .search-entry {
     display: block;
     border: 0.14em solid #5b3913;
-    padding: 0.2em;
-    margin: 1em;
-    margin-top: 0.2em;
+    padding: 0.4em 0.2em;
+    margin: 1em auto;
+    /* margin-top: 0.2em; */
     --thumbnail-size: 100px
 }
 
@@ -152,9 +155,9 @@ a:visited {
     font-size: small;
 }
 
-.thumbnails-div av img {
-    /* overflow: scroll; */
-}
+/* .thumbnails-div av img {
+    
+} */
 
 .archive-entry .thumbnails-div a {
     flex: 1;
