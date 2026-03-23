@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en-US">
+    <head>
+        <!-- Good to include charset just to prevent weird errors later on. -->
+        <meta charset="utf-8">
+        
+        <!-- Prevents mobile browsers from screwing with you. -->
+        <meta name="viewport" content="width=device-width">
+
+        <meta name="author" content="Breel">
+        <meta name="description" content="A page displaying a comic.">
+        
+        <title>Drink p2 | Breel Comix</title>
+        <link rel="icon" href="./images/smileicon.ico" type="image/x-icon">
+
+        <link href="./styles/reading_page_style.css" rel="stylesheet">
+
+        <script type="module" src="./scripts/reading_page_script.js"></script>
+    </head>
+
+    <body>
+        <a href="reading_page_draft0.html" class="nav-button prev-button" title="Previous"></a>
+
+        <div class="page-display">
+            <main> 
+                <!-- Will need to use javascript to make this responsive -->
+                <map name="nav-on-comic">
+                    <!-- Left quarter of image goes back -->
+                    <area
+                        shape="rect"
+                        coords="0,0,200,1000"
+                        href="reading_page_draft0.html"
+                        alt="Previous"
+                        class="nav-button prev-button"
+                    />
+                    <!-- Right quarter goes forward -->
+                    <area
+                        shape="rect"
+                        coords="600,0,800,1000"
+                        href="reading_page_draft2.html"
+                        alt="Next"
+                        class="nav-button next-button"
+                    />
+                </map>
+
+                <!-- Specifying width and height are good -->
+                <img
+                    class="comic-page"
+                    srcset="
+                        ./images/2026-02-21Binarization_p2_800px.png  800w, 
+                        ./images/2026-02-21Binarization_p2_1400px.png 1400w, 
+                        ./images/2026-02-21Binarization_p2_1920px.png 1920w
+                        "
+                    sizes="(max-width: 800px) 100vw, 
+                            (max-width: 1400px) 800px, 
+                            (max-width: 2450px) 1400px, 
+                            1920px
+                            "   
+                    src="./images/2026-02-21Binarization_p2_1400px.png"
+                    alt="Page 2 of Drink. A black-and-white comics page with lots of text. 
+                        Described under the heading Text Description."
+                    usemap="#nav-on-comic"
+                >
+                    <!-- style="display: inline;" -->
+                    <!-- width="1080"
+                    height="1350" -->
+                <!-- Resource on web accessibility for complex images: 
+                https://www.w3.org/WAI/tutorials/images/complex/ -->
+                
+                <!-- <p><a href="#text_description">Text Description</a></p> -->
+
+                <nav>
+                    <p class="nav-line">
+                        <a href="reading_page_draft0.html" 
+                            class="nav-button prev-button">Previous</a>
+                        <a href="reading_page_draft2.html" 
+                            class="nav-button next-button">Next</a>
+                    </p>
+                    <p class="nav-line">
+                        <a href="reading_page_start.html" class="nav-button prev-upd8-button">Skip back</a>
+                        <a href="archive_page.html" class="nav-button">Archive</a>
+                        <a href="reading_page_end.html" class="nav-button next-upd8-button">Skip forth</a>
+                    </p>
+                    <p class="nav-line">
+                        <a href="home_page.html" class="nav-button">Home</a>
+                    </p>
+                </nav>
+
+                <section id="tag_section">
+                    <h2>Tags</h2>
+                    <p><a href="search_page.html?tag=Drink">Drink</a>, 
+                        <a href="search_page.html?tag=squid_bartender">squid bartender</a>,
+                        <a href="search_page.html?tag=drink_pilgrim">drink pilgrim</a>
+                    </p>
+                </section>
+
+                <section id="desc_section">
+                    <h2 id="text_description">Text Description</h2>
+                    <p class="text-desc">
+                        Page 2 of "Drink". The pilgrim says, "I want to value myself without having to feel 
+                        special." The squid says, "Ah. Well, sadsack ape or not I got spirits for you."
+                        They reaches for a bottle, which appears prideful. "Here's, uh, platonic lotus-wine.
+                        You may detect notes of an ontological understanding of yourself as an endless four-dimensional
+                        pattern in spacetime, supremely and cosmically unique. In the back of your throat that sublime
+                        uniqueness becomes a pit of alienation from which no feeling or truth can escape." Next they
+                        pulls out a blocky bottle, surrounded by a regular pattern of other vessels. "Oh and this is
+                        malt of primordium. About two fingers, depending on the brand, has you feeling your intrinsic
+                        oneness with every object in reality as well as the insignificant gasping death of your own ego.
+                        Don't drink it if you're not prepared to lose track of which one of us is you. High-shelf labels
+                        pay a chorus to sing hymns of ancient gods into the still. The words condense into small black
+                        cubes that sit at the bottom of your glass like boba." A rocks glass shows these cubes, one of
+                        which says "Wiraqutra", the other of which says "Ninkasi".
+                    </p>
+                </section>
+            </main>
+
+            <footer>
+                <p>©Copyright 2025 by Briel Comics. All rights reserved.</p>
+            </footer>
+
+        </div>  
+        
+        <a href="reading_page_draft2.html" class="nav-button next-button" title="Next"></a>
+    </body>
+</html>
