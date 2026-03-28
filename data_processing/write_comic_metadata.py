@@ -1,7 +1,9 @@
-import windows_metadata as wm
+# import windows_metadata as wm
 import csv
 from datetime import datetime as dt
 import os
+import stat
+from PIL import Image
 
 def even_preceding_backslashes(prefix_text):
     # Count preceding backslashes
@@ -99,7 +101,7 @@ def register_sql_dialect():
 
 def which_aspectratio(ratio_str, 
                       aspectratiolist_filepath):
-    if ratio_str == '\\N':
+    if ratio_str == r'\N':
         return ratio_str
 
     if 'sql' not in csv.list_dialects():
@@ -113,7 +115,7 @@ def which_aspectratio(ratio_str,
         else:
             raise ValueError(f"{ratio_str} not in the list of aspect ratios")
 
-def get_file_record(img_filepath, 
+def get_file_record(img_direntry, 
                     aspectratiolist_filepath, 
                     alttext_filepath=None, 
                     ratio_str=None):
@@ -137,33 +139,36 @@ def get_file_record(img_filepath,
     is entered.
     '''
 
-    attr_dict = wm.WindowsAttributes(img_filepath).get_attribute_dict()
+    # attr_dict = wm.WindowsAttributes(img_filepath).get_attribute_dict()
 
-    prompt_prefix = f"{os.path.basename(img_filepath)}:\n"
+    prompt_prefix = f"{img_direntry.name}:\n"
 
     alttext = ''
     if alttext_filepath is not None:
         alttext = get_alttext(alttext_filepath)
     else:
-        input_str = input(prompt_prefix + "Enter alt text.\n> ")
+        input_str = input(prompt_prefix + "Enter alt text (or a path to it):\n> ")
         if os.path.exists(input_str):
             alttext = get_alttext(input_str)
         else:
             alttext = sanitize_fancy_quotes(
-                            sanitize_newlines_and_tabs(input_str)
-                        )
+                        sanitize_newlines_and_tabs(input_str)
+                    )
 
     if ratio_str is None:
-        ratio_str = input(prompt_prefix + "Enter aspect ratio.\n> ")
+        ratio_str = input(prompt_prefix + "Enter aspect ratio (format: #:#):\n> ")
 
-    return ['\\N',
-            sanitize_path_backslashes(attr_dict['Path']), 
-            remove_nondigits(attr_dict['Width']), 
-            remove_nondigits(attr_dict['Height']), 
+    (_, fileext) = os.path.splitext(img_direntry)
+    img = Image.open(img_direntry)
+
+    return [r'\N', # null symbol for file ID
+            os.path.abspath(img_direntry.path).replace(os.path.sep, '/'), # use unix folder notation 
+            str(img.size[0]), # width
+            str(img.size[1]), # height
             alttext,
-            strip_period_from_file_extension(attr_dict['File extension']), 
-            str(convert_to_size_in_kb(attr_dict['Size'])), 
-            '\\N', 
+            fileext.lstrip('.'), # just the extension, no dot
+            str(img_direntry.stat().st_size // 1000), # integer division for size in kb
+            r'\N', # null symbol for page id
             which_aspectratio(ratio_str, aspectratiolist_filepath)
            ]
 
@@ -175,22 +180,20 @@ def write_records_sql_format(filepath,
             record_file.write('\t'.join(record) + '\n')
 
 def is_image(direntry):
-    return (direntry.is_file()
-            and (direntry.name[-4:].lower() == '.png' 
-                or direntry.name[-4:].lower() == '.jpg'
-                or direntry.name[-5:].lower() == '.jpeg'
-                or direntry.name[-4:].lower() == '.gif'
-                or direntry.name[-5:].lower() == '.tiff'
-                or direntry.name[-4:].lower() == '.tif'
-            )
-        )
+    return direntry.is_file()   \
+            and direntry.name.split('.')[-1].lower() in ('png', 
+                                                         'jpeg', 
+                                                         'jpeg', 
+                                                         'gif', 
+                                                         'tiff', 
+                                                         'tif', 
+                                                         'ico')
 
 def get_dir_file_records(dir_path, 
                          alttext_path=None, 
-                         aspectratio_filepath=('C:\\ProgramData\\MySQL'
-                                               +'\\MySQL Server 8.0'
-                                               +'\\Uploads'
-                                               +'\\aspect_ratio_list.txt')):
+                         aspectratio_filepath=('C:/Users/gabri/Code/'
+                            + 'Briel comics website/briel-comics/'
+                            + 'data_processing/table_aspectratio.txt')):
     # os.chdir(dir_path)
     direntry_list = []
     with os.scandir(dir_path) as dir:
@@ -201,9 +204,11 @@ def get_dir_file_records(dir_path,
     for entry in direntry_list:
         if is_image(entry):
             print(f"\nGetting record for file {entry.name}...")
-            records.append(get_file_record(os.path.abspath(entry.path),
-                                           aspectratio_filepath, 
-                                           alttext_filepath=alttext_path))
+            if input("Want to use this one? (y/n) > ").lower() == 'y':
+                records.append(get_file_record(entry,
+                                               aspectratio_filepath, 
+                                               alttext_filepath=alttext_path))
+            
 
     return records
 
