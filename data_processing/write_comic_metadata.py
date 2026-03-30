@@ -182,7 +182,7 @@ def write_records_sql_format(filepath,
 def is_image(direntry):
     return direntry.is_file()   \
             and direntry.name.split('.')[-1].lower() in ('png', 
-                                                         'jpeg', 
+                                                         'jpg', 
                                                          'jpeg', 
                                                          'gif', 
                                                          'tiff', 
@@ -209,7 +209,6 @@ def get_dir_file_records(dir_path,
                                                aspectratio_filepath, 
                                                alttext_filepath=alttext_path))
             
-
     return records
 
 
