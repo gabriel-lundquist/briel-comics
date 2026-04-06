@@ -1,3 +1,32 @@
+<?php
+include "../php_sql/brielCode.php";
+use function brielCode\{pdoConnect, 
+                        executeAndFetch};
+
+// hey maybe I don't have to figure out all this logic if I'm just gonna do DOM manip anyway!
+
+$dbConn = NULL; 
+if (!($dbConn = pdoConnect())) {
+    echo "Uh-oh! Failed database connection.";
+} else {
+    $pageRecord = executeAndFetch($dbConn->prepare("SELECT * FROM page 
+                                                     WHERE title = :getTitle"), 
+                                  [$_GET["page"]], 
+                                  \PDO::FETCH_ASSOC);
+    $prevPageLink = executeAndFetch($dbConn->prepare("SELECT location FROM page LEFT JOIN pageorder 
+                                                       ON (pageid = sourceid)
+                                                       WHERE targetid = ?"), 
+                                    [$pageRecord["pageid"]]);
+    if ($prevPageLink) $prevPageLink = $prevPageLink["location"];
+    // even if this ends up null, we will test it later
+
+    $nextPageLink = executeAndFetch($dbConn->prepare("SELECT location FROM page LEFT JOIN pageorder 
+                                                       ON (pageid = sourceid)
+                                                       WHERE sourceid = ?"), 
+                                    [$pageRecord["pageid"]]);
+    if ($nextPageLink) $nextPageLink = $nextPageLink["location"];
+?>
+
 <!doctype html>
 <html lang="en-US">
     <head>
@@ -10,7 +39,7 @@
         <meta name="author" content="Breel">
         <meta name="description" content="A page displaying a comic.">
         
-        <title>Drink p2 | Breel Comix</title>
+        <title><?= $pageRecord["title"] ?> | Breel Comix</title>
         <link rel="icon" href="./images/smileicon.ico" type="image/x-icon">
 
         <link href="./styles/reading_page_style.css" rel="stylesheet">
@@ -19,7 +48,11 @@
     </head>
 
     <body>
-        <a href="reading_page_draft0.html" class="nav-button prev-button" title="Previous"></a>
+        <a href=<?php 
+            if ($prevPageLink and $prevPageLink != "NULL") {
+                echo $prevPageLink;
+            } 
+        ?> class="nav-button prev-button" title="Previous"></a>
 
         <div class="page-display">
             <main> 
@@ -32,7 +65,7 @@
                         href="reading_page_draft0.html"
                         alt="Previous"
                         class="nav-button prev-button"
-                    >
+                    />
                     <!-- Right quarter goes forward -->
                     <area
                         shape="rect"
@@ -40,7 +73,7 @@
                         href="reading_page_draft2.html"
                         alt="Next"
                         class="nav-button next-button"
-                    >
+                    />
                 </map>
 
                 <!-- Specifying width and height are good -->
@@ -52,7 +85,7 @@
                         ./images/Drink/2026-02-21Binarization_p2_1920px.png 1920w
                         "
                     sizes="(max-width: 800px) 100vw, 
-                            (max-width: 1500px) 800px, 
+                            (max-width: 1400px) 800px, 
                             (max-width: 2450px) 1400px, 
                             1920px
                             "   
@@ -89,10 +122,10 @@
                 <section id="tag_section">
                     <h2>Tags</h2>
                     <p><a href="search_page.html?tag=Drink">Drink</a>, 
-                        <a href="search_page.html?tag=squid_bartender">squid_bartender</a>,
-                        <a href="search_page.html?tag=drink_pilgrim">drink_pilgrim</a>
+                        <a href="search_page.html?tag=squid_bartender">squid bartender</a>,
+                        <a href="search_page.html?tag=drink_pilgrim">drink pilgrim</a>
                     </p>
-                </section>  
+                </section>
 
                 <section id="desc_section">
                     <h2 id="text_description">Text Description</h2>
@@ -123,3 +156,7 @@
         <a href="reading_page_draft2.html" class="nav-button next-button" title="Next"></a>
     </body>
 </html>
+
+<?php 
+}
+?>

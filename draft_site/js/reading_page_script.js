@@ -1,12 +1,16 @@
 const nextKeyCodes = new Set(["ArrowRight", 
                               "6", 
                               "d", 
-                              "D"]);
+                              "D",
+                              "c", 
+                              "C"]);
 
 const prevKeyCodes = new Set(["ArrowLeft", 
                               "4", 
                               "a", 
-                              "A"]);
+                              "A",
+                              "z", 
+                              "Z"]);
 
 import {/* getNavLinks,*/ getLink, keyNavigate } from "./briels_helpful_code.js";
 
