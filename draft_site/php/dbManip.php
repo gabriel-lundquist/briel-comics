@@ -276,21 +276,37 @@ function generatePageRecordInteractive($pdoConn) {
     while (in_array($title, $allTitles) AND !$useAnyway) {
         echo "Warning: $title already exists in page at "
              . $findFileFromTitle->execute([$title])->fetch()[0];
-        if (promptInput("Use this title anyway? (y/n) > ") != "y") {
-            $title = promptInput("Enter title: > ");
-        } else $useAnyway = true;
+        if (promptInput("Use this title anyway? (y/n) > ") == "y") {
+            $useAnyway = true;
+        } else $title = promptInput("Enter title: > ");
     }
     
     // Set location
-    $location = promptInput("Entire HTML file path (doesn't need to exist):"
-                            . "\n> ");
-    while (!is_html_path($location)) {
-        echo "Error: $location is not a path for an HTML file."
-
-    $alttext = promptInput("Enter alt text (or a path to it):\n> ");
-    if (is_readable($alttext)) {
-        $alttext = file_get_contents($alttext);
+    $useAnyway = false;
+    $promptHTMLPath = fn() => promptInput("Enter HTML file path "
+                                          . "(doesn't need to exist):"
+                                          . "\n> ");
+    $location = $promptHTMLPath();
+    while (!is_html_path($location) 
+           OR (file_exists($location) AND !$useAnyway)) {
+        if (!is_html_path($location)) {
+            echo "Error: $location is not a path for an HTML file.";
+            $location = $promptHTMLPath();
+        } else if (file_exists($location)) {
+            if (promptInput("Warning: $location already exists.\n"
+                            / "Use it? (y/n) > ") == "y") {
+                $useAnyway = true;
+            } else $location = $promptHTMLPath();
+        }
     }
+
+    $imageDesc = promptInput("Enter comic page description "
+                                . "(or a path to it):\n> ");
+    if (is_readable($imageDesc)) {
+        $imageDesc = file_get_contents($imageDesc);
+    }
+
+    
 
     $fileExt = substr($filePath, strrpos($filePath, ".") + 1);
 
