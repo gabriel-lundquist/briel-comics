@@ -20,20 +20,43 @@ body {
     display: flex;
     justify-content: space-between;
     --comic-page-width: 800px;
-    --comic-page-height: 1000px;
+    --shrink-factor: 0.95;
+    /* --comic-page-height: 1000px; */
+}
+
+@media screen and (min-width: 1500px) {
+    body {
+        --comic-page-width: 1400px;
+    }
+}
+
+@media screen and (min-width: 2400px) {
+    body {
+        --comic-page-width: 2000px;
+    }
 }
 
 body, 
 footer {
     /* Can change color depending on page */
     color: var(--secondary-color);
-    text-align: center
+    text-align: center;
 }
 
 /* Selects the big navigation buttons to the side of the page */
 body > a.nav-button {
     width: max(0px, 0.25 * (100vw - var(--comic-page-width)));
     max-height: 100%;
+}
+
+@media screen and (max-width: 800px) {
+    body {
+        --shrink-factor: 1;
+    }
+
+    body > a.nav-button {
+        display: none;
+    }
 }
 
 h2 {
@@ -54,10 +77,15 @@ h2 {
     max-height: 100%;
 } */
 
+/* main {
+    align-items: center;
+} */
+
 section[id="desc_section"], 
 section[id="tag_section"] {
     border: 0.14em solid var(--secondary-color);
-    margin: 0.5em;
+    max-width: calc(var(--shrink-factor) * var(--comic-page-width) - (2 * 0.14em + 2 * 0.5em + 1em));
+    margin: 0.5em auto;
     padding: 0.7em 1em;
     padding-bottom: 1em;
 }
@@ -66,7 +94,6 @@ section[id="tag_section"] {
 h2 + p {
     /* padding-left: 10vw;
     padding-right: 10vw; */
-    max-width: var(--comic-page-width);
     margin-top: 0;
     margin-bottom: 0;
 }
@@ -103,7 +130,8 @@ a:hover {
 .nav-line {
     display: flex;
     align-items: center;
-    justify-content: space-around;
+    justify-content: center;
+    max-width: calc(var(--shrink-factor) * var(--comic-page-width));
     /* width: 0.75 * (100vw - var(--comic-page-width)); */
     margin: 0 auto;
 }

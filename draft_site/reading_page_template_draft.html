@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en-US">
+    <head>
+        <!-- Good to include charset just to prevent weird errors later on. -->
+        <meta charset="utf-8">
+        
+        <!-- Prevents mobile browsers from screwing with you. -->
+        <meta name="viewport" content="width=device-width">
+
+        <meta name="author" content="Breel">
+        <meta name="description" content="A page displaying a comic.">
+        
+        <title><!-- To change with PHP --> | Breel Comix</title>
+        <link rel="icon" href="./images/smileicon.ico" type="image/x-icon">
+
+        <!-- Can be changed with PHP -->
+        <link href="./styles/reading_page_style.css" rel="stylesheet" id="reading_stylesheet">
+
+        <script type="module" src="./js/reading_page_script.js"></script>
+    </head>
+
+    <body>
+        <!-- To change with PHP (href) -->
+        <a href="" class="nav-button prev-button" title="Previous"></a>
+
+        <div class="page-display">
+            <main> 
+                <!-- Will need to use javascript to make this responsive -->
+                <map name="nav-on-comic">
+                    <!-- Left quarter of image goes back -->
+                    <!-- To change with PHP (href) -->
+                    <!-- To change with javascript (coords) -->
+                    <area
+                        shape="rect"
+                        coords="0,0,200,1000"
+                        href=""
+                        alt="Previous"
+                        class="nav-button prev-button"
+                    />
+                    <!-- Right quarter goes forward -->
+                    <!-- To change with PHP (href)-->
+                    <!-- To change with javascript (coords) -->
+                    <area
+                        shape="rect"
+                        coords="600,0,800,1000"
+                        href=""
+                        alt="Next"
+                        class="nav-button next-button"
+                    />
+                </map>
+
+                <!-- Specifying width and height are good -->
+                <!-- To change with PHP (srcset, src, alt) -->
+                <img
+                    class="comic-page"
+                    srcset=""
+                    sizes="(max-width: 800px) 100vw, 
+                            (max-width: 1500px) 800px, 
+                            (max-width: 2400px) 1400px, 
+                            2000px
+                            "   
+                    src=""
+                    alt=""
+                    usemap="#nav-on-comic"
+                    id="single_page"
+                >
+                    <!-- style="display: inline;" -->
+                    <!-- width="1080"
+                    height="1350" -->
+                <!-- Resource on web accessibility for complex images: 
+                https://www.w3.org/WAI/tutorials/images/complex/ -->
+                
+                <!-- <p><a href="#text_description">Text Description</a></p> -->
+
+                <nav>
+                    <p class="nav-line">
+                        <!-- To change with PHP (href) -->
+                        <a href="" 
+                            class="nav-button prev-button">Previous</a>
+                        <!-- To change with PHP (href) -->
+                        <a href="" 
+                            class="nav-button next-button">Next</a>
+                    </p>
+                    <p class="nav-line">
+                        <!-- To change with PHP (href) -->
+                        <a href="" class="nav-button prev-upd8-button">Skip back</a>
+                        <a href="archive_page.html" class="nav-button">Archive</a>
+                        <!-- To change with PHP (href) -->
+                        <a href="" class="nav-button next-upd8-button">Skip forth</a>
+                    </p>
+                    <p class="nav-line">
+                        <a href="home_page.html" class="nav-button">Home</a>
+                    </p>
+                </nav>
+
+                <section id="tag_section">
+                    <h2>Tags</h2>
+                    <!-- To change with PHP (add <a> tag links) -->
+                    <p id="tags-para">
+                    </p>
+                </section>
+
+                <section id="desc_section">
+                    <h2>Text Description</h2>
+                    <!-- To change with PHP (add description text) -->
+                    <p id="text-para">
+                    </p>
+                </section>
+            </main>
+
+            <footer>
+                <!-- Can be changed with PHP (change years) -->
+                <p class="copyright">©Copyright 2025-2026 by Briel Comics. All rights reserved.</p>
+            </footer>
+
+        </div>  
+        
+        <!-- To be changed with PHP (href)-->
+        <a href="" class="nav-button next-button" title="Next"></a>
+    </body>
+</html>
