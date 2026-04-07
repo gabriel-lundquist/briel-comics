@@ -306,7 +306,7 @@ function generatePageRecordInteractive($pdoConn) {
         $imageDesc = file_get_contents($imageDesc);
     }
 
-    
+    $spreadID = (promptInput("Double spread? (y/n) > ") =="y") ?"":"";
 
     $fileExt = substr($filePath, strrpos($filePath, ".") + 1);
 
