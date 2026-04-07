@@ -266,12 +266,12 @@ function generatePageRecordInteractive($pdoConn) {
     $allTitles = $pdoConn->query("SELECT title FROM page;")
                           ->fetchAll(\PDO::FETCH_COLUMN, 0);
     $title = promptInput("Enter title: > ");
-    $findPathFromTitle = $pdoConn->prepare("SELECT location FROM page 
+    $findFileFromTitle = $pdoConn->prepare("SELECT location FROM page 
                                             WHERE title = ?;");
     $useAnyway = false;
     while (in_array($title, $allTitles) AND !$useAnyway) {
         echo "Warning: $title already exists in page at "
-             . $findPathFromTitle->execute([$title])->fetch()[0] 
+             . $findFileFromTitle->execute([$title])->fetch()[0] 
              . "\n";
         if (promptInput("Use this title anyway? (y/n) > ") == "y") {
             $useAnyway = true;
