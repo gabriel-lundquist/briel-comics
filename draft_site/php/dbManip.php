@@ -26,6 +26,18 @@ const FILEINSERTCOLUMNS = ["fileid",
                           "pageid",
                           "ratio"];
 
+// class DoubleLink {
+//     public $next = NULL;
+
+//     public function __construct($nextLink) {
+//         $next = $nextLink;
+//     }
+
+//     public function getEnd() {
+        
+//     }
+// }
+
 /**
  * 
  */
@@ -306,7 +318,7 @@ function generatePageRecordInteractive($pdoConn) {
 
     // Get spread ID
     $getSpreadID = $pdoConn->prepare("SELECT spreadid FROM spread
-                                    WHERE spreadtype = ?;");
+                                        WHERE spreadtype = ?;");
     $getSpreadID->execute([(promptInput("Double spread? (y/n) > ") == "y")
                             ? "double" : "normal"]);
     $spreadID = $getSpreadID->fetch()[0];
@@ -337,12 +349,12 @@ function insertTagAssociationsInteractive($pageRecord, $pdoConn) {
     }
 
     $existingTags = $pdoConn->query("SELECT name FROM tag;")
-                            ->fetchALL(\PDO::FETCH_COLUMN);
+                            ->fetchAll(\PDO::FETCH_COLUMN);
     $insertNewTag = $pdoConn->prepare("INSERT INTO tag (tagid, name) VALUE (?,?);");
     $getTagIDFromName = $pdoConn->prepare("SELECT tagid FROM tag WHERE name = ?;");
 
     $tagListStr = promptInput("Adding tag associations with {$pageRecord['title']}...\n"
-                                . "Type in comma-separated tags. Available tags:\n"
+                                . "Type in comma-separated tags. Existing tags:\n"
                                 . implode("\t", $existingTags)
                                 . "\n> ");
     $tagList = array_map(fn($s) => trim($s), explode(",", $tagListStr));
@@ -463,6 +475,55 @@ function insertCWAssociationsInteractive($pageRecord, $pdoConn) {
         $pdoConn->rollback();
         return false;
     }
+}
+
+function getPageOrderList($pdoConn) {
+    $pdoConn->query("CREATE TEMPORARY TABLE temppageorder 
+                        AS SELECT * FROM pageorder;");
+
+    $rowExists = $pdoConn->prepare("SELECT sourceid, targetid FROM temppageorder 
+                                    LIMIT 1;");
+    $getTarget = $pdoConn->prepare("SELECT targetid FROM temppageorder 
+                                    WHERE sourceid = ?;");
+    $getSource = $pdoConn->prepare("SELECT sourceid FROM temppageorder
+                                    WHERE targetid = ?;");
+    $delRowByTarget = $pdoConn->prepare("DELETE FROM temppageorder
+                                            WHERE targetid = ?;");
+    $delRowBySource = $pdoConn->prepare("DELETE FROM temppageorder
+                                            WHERE sourceid = ?;");
+    
+    function upList($pageID) {
+        $getSource->execute([$pageID]);
+        $sourceID = $getSource->fetch(\PDO::FETCH_NUM)[0];
+        if ($record) {
+            $delRowByTarget->execute([$pageID]);
+            return array_push(upList($record["sourceid"]), $pageID); // append
+        } else {    // No entries where sourceid = $pageID
+            return [$pageID];
+        }
+    }
+    function downList($pageID) {
+        $getTarget->execute([$pageID]);
+        $targetID = $getTarget->fetch(\PDO::FETCH_NUM)[0];
+        if ($record) {
+            $delRowBySource->execute([$pageID]);
+            return array_unshift(downList($record["targetid"]), $pageID); // prepend
+        } else {    // No entries where targetid = $pageID
+            return [$pageID];
+        }
+    }
+
+    $orderLists = [];
+    $rowExists->execute();
+    while ($record = $rowExists->fetch(\PDO::FETCH_ASSOC)) {
+        $orderLists[] = array_merge(upList($record["sourceid"]), 
+                                    downList($record["targetid"]));
+        $rowExists->execute();
+    }
+
+    return orderLists;
+
+    $pdoConn->query("DROP TEMPORARY TABLE temppageorder;");
 }
 
 }
