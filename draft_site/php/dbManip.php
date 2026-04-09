@@ -268,7 +268,7 @@ function getFileWidthLocations($pageid, $pdoConn) {
 // }
 
 function is_file_path($str, $fileExt = ".+") {
-    return preg_match('(.*/.+)', $str) AND preg_match("(.*\.$fileExt)", $str);
+    return preg_match("(.*/.+\.$fileExt)");
 }
 
 function generatePageRecordInteractive($pdoConn) {
@@ -477,7 +477,7 @@ function insertCWAssociationsInteractive($pageRecord, $pdoConn) {
     }
 }
 
-function getPageOrderList($pdoConn) {
+function getPageOrderLists($pdoConn) {
     $pdoConn->query("CREATE TEMPORARY TABLE temppageorder 
                         AS SELECT * FROM pageorder;");
 
@@ -494,20 +494,18 @@ function getPageOrderList($pdoConn) {
     
     function upList($pageID) {
         $getSource->execute([$pageID]);
-        $sourceID = $getSource->fetch(\PDO::FETCH_NUM)[0];
-        if ($record) {
+        if ($sourceRec = $getSource->fetch(\PDO::FETCH_ASSOC)) {
             $delRowByTarget->execute([$pageID]);
-            return array_push(upList($record["sourceid"]), $pageID); // append
+            return array_push(upList($sourceRec["sourceid"]), $pageID); // append
         } else {    // No entries where sourceid = $pageID
             return [$pageID];
         }
     }
     function downList($pageID) {
         $getTarget->execute([$pageID]);
-        $targetID = $getTarget->fetch(\PDO::FETCH_NUM)[0];
-        if ($record) {
+        if ($targetRec = $getTarget->fetch(\PDO::FETCH_ASSOC)) {
             $delRowBySource->execute([$pageID]);
-            return array_unshift(downList($record["targetid"]), $pageID); // prepend
+            return array_unshift(downList($targetRec["targetid"]), $pageID); // prepend
         } else {    // No entries where targetid = $pageID
             return [$pageID];
         }
@@ -524,6 +522,43 @@ function getPageOrderList($pdoConn) {
     return orderLists;
 
     $pdoConn->query("DROP TEMPORARY TABLE temppageorder;");
+}
+
+function insertPageAfter($pdoConn, $pageID, $prevPageID) {
+    $getNext = $pdoConn->prepare("SELECT targetid FROM pageorder
+                                    WHERE sourceid = ?;");
+    $insert = $pdoConn->prepare("UPDATE pageorder SET targetid = :pageID 
+                                    WHERE sourceid = :prevPageID;
+                                 INSERT INTO pageorder 
+                                    VALUE (:pageID, :nextPageID);");
+
+    $nextPageID = executeAndFetch($getNext, [$prevPageID], \PDO::FETCH_NUM)[0];
+    return $insert->execute([":pageID"     => $pageID, 
+                             ":prevPageID" => $prevPageID, 
+                             ":nextPageID" => $nextPageID]);
+}
+
+function deletePageFromOrder($pdoConn, $pageID, $prevPageID) {
+    $getNext = $pdoConn->prepare("SELECT targetid FROM pageorder
+                                    WHERE sourceid = ?;");
+
+    $delPage = $pdoConn->prepare("SET @nextID = (
+                                    SELECT targetid FROM pageorder
+                                        WHERE sourceid = :pageID
+                                  );   
+                                  DELETE FROM pageorder 
+                                    WHERE sourceID = :pageID;
+                                  UPDATE pageorder SET targetID = @nextID
+                                    WHERE sourceID = :prevID;
+                                  ;");
+    
+    return $delPage->execute([":pageID" => $pageID, 
+                              ":prevID" => $prevPageID]);
+
+}
+
+function appendPages($pdoConn, $prevPageID, $pageIDs) {
+    
 }
 
 }
