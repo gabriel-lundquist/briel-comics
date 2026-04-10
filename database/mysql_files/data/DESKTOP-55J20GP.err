@@ -34,3 +34,14 @@
 2026-04-09T04:05:00.314474Z 0 [System] [MY-013105] [Server] C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe: Normal shutdown.
 2026-04-09T04:05:01.932290Z 0 [System] [MY-010910] [Server] C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe: Shutdown complete (mysqld 8.4.8)  MySQL Community Server - GPL.
 2026-04-09T04:05:01.933100Z 0 [System] [MY-015016] [Server] MySQL Server - end.
+2026-04-10T03:16:34.087196Z 0 [System] [MY-015015] [Server] MySQL Server - start.
+2026-04-10T03:16:34.153005Z 0 [System] [MY-010116] [Server] C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe (mysqld 8.4.8) starting as process 5820
+2026-04-10T03:16:34.199959Z 1 [System] [MY-013576] [InnoDB] InnoDB initialization has started.
+2026-04-10T03:16:34.967748Z 1 [System] [MY-013577] [InnoDB] InnoDB initialization has ended.
+2026-04-10T03:16:35.427027Z 0 [Warning] [MY-010068] [Server] CA certificate ca.pem is self signed.
+2026-04-10T03:16:35.427452Z 0 [System] [MY-013602] [Server] Channel mysql_main configured to support TLS. Encrypted connections are now supported for this channel.
+2026-04-10T03:16:35.477385Z 0 [System] [MY-011323] [Server] X Plugin ready for connections. Bind-address: '::' port: 33060
+2026-04-10T03:16:35.477437Z 0 [System] [MY-010931] [Server] C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe: ready for connections. Version: '8.4.8'  socket: ''  port: 3307  MySQL Community Server - GPL.
+2026-04-10T03:47:02.363025Z 0 [System] [MY-013105] [Server] C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe: Normal shutdown.
+2026-04-10T03:47:03.792737Z 0 [System] [MY-010910] [Server] C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe: Shutdown complete (mysqld 8.4.8)  MySQL Community Server - GPL.
+2026-04-10T03:47:03.794166Z 0 [System] [MY-015016] [Server] MySQL Server - end.

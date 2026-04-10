@@ -134,6 +134,9 @@ function generateFileRecordInteractive($filePath,
             "ratio"     => $ratioID];
 }
 
+/**
+ * 
+ */
 function prepareInsertRecords($pdoConn, 
                               $tableName, 
                               $insertColumns, 
@@ -262,10 +265,6 @@ function getFileWidthLocations($pageid, $pdoConn) {
         return false;
     }
 }
-
-// function is_html_path($str) {
-//     return is_file_path($str) AND preg_match('\.html)', $str);
-// }
 
 function is_file_path($str, $fileExt = ".+") {
     return preg_match("(.*/.+\.$fileExt)");
@@ -524,7 +523,7 @@ function getPageOrderLists($pdoConn) {
     $pdoConn->query("DROP TEMPORARY TABLE temppageorder;");
 }
 
-function insertPageAfter($pdoConn, $pageID, $prevPageID) {
+function insertPageAfter($prevPageID, $pageID, $pdoConn) {
     $getNext = $pdoConn->prepare("SELECT targetid FROM pageorder
                                     WHERE sourceid = ?;");
     $insert = $pdoConn->prepare("UPDATE pageorder SET targetid = :pageID 
@@ -538,7 +537,7 @@ function insertPageAfter($pdoConn, $pageID, $prevPageID) {
                              ":nextPageID" => $nextPageID]);
 }
 
-function deletePageFromOrder($pdoConn, $pageID, $prevPageID) {
+function deletePageAfter($pdoConn, $pageID, $prevPageID) {
     $getNext = $pdoConn->prepare("SELECT targetid FROM pageorder
                                     WHERE sourceid = ?;");
 
@@ -554,11 +553,18 @@ function deletePageFromOrder($pdoConn, $pageID, $prevPageID) {
     
     return $delPage->execute([":pageID" => $pageID, 
                               ":prevID" => $prevPageID]);
-
 }
 
-function appendPages($pdoConn, $prevPageID, $pageIDs) {
-    
+function appendPages($pageIDs, $lastPageID, $pdoConn) {
+    $records = [];
+    $records[] = [$lastPageID, $pageIDs[0]];
+    for ($i = 1; $i < count($pageIDs); $i++) {
+        $records[] = [$pageIDs[$i-1], $pageIDs[$i]];
+    }
+    return queryInsertRecords($pdoConn, 
+                              "pageorder", 
+                              ["sourceid", "targetid"],
+                              $records);
 }
 
 }
