@@ -32,17 +32,17 @@ function assignNavLink($node,
 //     }
 // }
 
-function generateComicPageHTML($pageRecord, 
-                               $prevLink, 
-                               $nextLink, 
-                               $prevUpd8Link, 
-                               $nextUpd8Link,
-                               $widthFileLocations, // values: locations, keys: widths
-                               $alttext, 
-                               $tags, // array of strings
-                               $searchPageLocation, 
-                               $templateFilepath = '../reading_page_template_draft.html'
-                               ) { 
+function generateComicPageDOMHTML($pageRecord, 
+                                    $prevLink, 
+                                    $nextLink, 
+                                    $prevUpd8Link, 
+                                    $nextUpd8Link,
+                                    $widthFileLocations, // values: locations, keys: widths
+                                    $alttext, 
+                                    $tags, // array of strings
+                                    $searchPageLocation, 
+                                    $templateFilepath = '../reading_page_template_draft.html'
+                                    ) { 
     // Assumes page record has already been created
     $doc = \DOM\HTMLDocument::createFromFile($templateFilepath);
 
@@ -113,8 +113,9 @@ function generateComicPageHTML($pageRecord,
     $comicPage->setAttribute("src", $srcStr);
 
     // Set the alt text
-    $comicPage->setAttribute("alt", $alttext 
-                                    . " Described under the heading Text Description.");
+    $comicPage->setAttribute("alt", 
+                             $alttext 
+                                . " Described under the heading Text Description.");
 
     // Set the tag links
     $tagPara = $doc->getElementById("tags-para");
@@ -128,6 +129,189 @@ function generateComicPageHTML($pageRecord,
     // Set the description
     $doc->getElementById("desc-para")->textContent = $pageRecord["imagedesc"];
     
+    return $doc->saveHtmlFile($pageRecord['location']);
+}
+
+function generateComicPage($pageRecord, 
+                            $prevLink, 
+                            $nextLink, 
+                            $prevUpd8Link, 
+                            $nextUpd8Link,
+                            $widthFileLocations, // values: locations, keys: widths
+                            $alttext, 
+                            $tags, // array of strings
+                            $contWarns, // array of strings
+                            $searchPageLocation) {
+    ob_start(); 
+?>
+<!doctype html>
+<html lang="en-US">
+    <head>
+        <!-- Good to include charset just to prevent weird errors later on. -->
+        <meta charset="utf-8">
+        
+        <!-- Prevents mobile browsers from screwing with you. -->
+        <meta name="viewport" content="width=device-width">
+
+        <meta name="author" content="Breel">
+        <meta name="description" content="A page displaying a comic.">
+        
+        <title><<?= $pageRecord['title'] ?> | Breel Comix</title>
+        <link rel="icon" href="./images/smileicon.ico" type="image/x-icon">
+
+        <!-- Can be changed with PHP -->
+        <link href="<?= $pageRecord['stylelocation'] == 'NULL' 
+                        ? "./styles/reading_page_style.css" 
+                        : $pageRecord['stylelocation'] ?>" 
+              rel="stylesheet" 
+              id="reading_stylesheet">
+
+        <script type="module" src="./js/reading_page_script.js"></script>
+    </head>
+
+    <body>
+        <!-- To change with PHP (href) -->
+        <a href="<?= $prevLink ?>" class="nav-button prev-button" title="Previous"></a>
+
+        <div class="page-display">
+            <main> 
+                <!-- Will need to use javascript to make this responsive -->
+                <map name="nav-on-comic">
+                    <!-- Left quarter of image goes back -->
+                    <!-- To change with PHP (href) -->
+                    <!-- To change with javascript (coords) -->
+                    <area
+                        shape="rect"
+                        coords="0,0,200,1000"
+                        href="<?= $prevLink ?>"
+                        alt="Previous"
+                        class="nav-button prev-button"
+                    />
+                    <!-- Right quarter goes forward -->
+                    <!-- To change with PHP (href)-->
+                    <!-- To change with javascript (coords) -->
+                    <area
+                        shape="rect"
+                        coords="600,0,800,1000"
+                        href="<?= $nextLink ?>"
+                        alt="Next"
+                        class="nav-button next-button"
+                    />
+                </map>
+
+                <!-- Specifying width and height are good -->
+                <!-- To change with PHP (srcset, src, alt) -->
+                <img
+                    class="comic-page"
+                    srcset="<?php
+                        $usualWidthFileLocations = [];
+                        $srcsetStr = "";
+                        foreach (["800", "1400", "2000"] as $width) {
+                            if (\array_key_exists($width, $widthFileLocations)) {
+                                $usualWidthFileLocations[$width] = $widthFileLocations[$width];
+                                $srcsetStr .= "{$widthFileLocations[$width]} {$width}w\n";
+                            }
+                        }
+                        echo $srcsetStr;
+                    ?>"
+                    sizes="(max-width: 800px) 100vw, 
+                            (max-width: 1500px) 800px, 
+                            (max-width: 2400px) 1400px, 
+                            2000px
+                            "   
+                    src="<?php 
+                        $srcStr = "";
+                        foreach (["1400", "800", "2000"] as $width) {
+                            if (\array_key_exists($width, $usualWidthFileLocations)) {
+                                $srcStr = $usualWidthFileLocations[$width];
+                                break;
+                            }
+                        }
+                        echo $srcStr;
+                    ?>"
+                    alt="<?= $alttext ?>"
+                    usemap="#nav-on-comic"
+                    id="single_page"
+                >
+                    <!-- style="display: inline;" -->
+                    <!-- width="1080"
+                    height="1350" -->
+                <!-- Resource on web accessibility for complex images: 
+                https://www.w3.org/WAI/tutorials/images/complex/ -->
+                
+                <!-- <p><a href="#text_description">Text Description</a></p> -->
+
+                <nav>
+                    <p class="nav-line">
+                        <!-- To change with PHP (href) -->
+                        <a href="<?= $prevLink ?>" 
+                            class="nav-button prev-button">Previous</a>
+                        <!-- To change with PHP (href) -->
+                        <a href="<?= $nextLink ?>" 
+                            class="nav-button next-button">Next</a>
+                    </p>
+                    <p class="nav-line">
+                        <!-- To change with PHP (href) -->
+                        <a href="<?= $prevUpd8Link ?>" class="nav-button prev-upd8-button">Skip back</a>
+                        <a href="archive_page.html" class="nav-button">Archive</a>
+                        <!-- To change with PHP (href) -->
+                        <a href="<?= $nextUpd8Link ?>" class="nav-button next-upd8-button">Skip forth</a>
+                    </p>
+                    <p class="nav-line">
+                        <a href="home_page.html" class="nav-button">Home</a>
+                    </p>
+                </nav>
+
+                <section id="tag_section">
+                    <h2>Tags</h2>
+                    <!-- To change with PHP (add <a> tag links) -->
+                    <p id="tags-para">
+                    <?php
+                        foreach ($tags as $tag) {
+                            echo "<a href=$searchPageLocation?tag=$tag>$tag</a>\n";
+                        }
+                    ?>
+                    </p>
+                </section>
+
+                <section id="cw_section">
+                    <h2>Content Warnings</h2>
+                    <!-- To change with PHP (add <a> tag links) -->
+                    <p id="cws-para">
+                    <?php
+                        foreach ($contWarns as $cw) {
+                            echo "<a href=$searchPageLocation?cw=$cw>$cw</a>\n";
+                        }
+                    ?>
+                    </p>
+                </section>
+
+                <section id="desc_section">
+                    <h2>Text Description</h2>
+                    <!-- To change with PHP (add description text) -->
+                    <p id="text-para">
+                        <?= $pageRecord["imagedesc"] ?>
+                    </p>
+                </section>
+            </main>
+
+            <footer>
+                <!-- Can be changed with PHP (change years) -->
+                <p class="copyright">
+                    ©Copyright 2025-<?= getdate()['year'] ?> by Briel Comics.
+                    All rights reserved.
+                </p>
+            </footer>
+
+        </div>  
+        
+        <!-- To be changed with PHP (href)-->
+        <a href="<?= $nextLink ?>" class="nav-button next-button" title="Next"></a>
+    </body>
+</html>
+
+<?php
+    return file_put_contents($pageRecord['location'], ob_get_flush());
 }
 
 ?>

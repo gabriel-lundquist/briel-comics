@@ -82,7 +82,8 @@ h2 {
 } */
 
 section[id="desc_section"], 
-section[id="tag_section"] {
+section[id="tag_section"],
+section[id="cw_section"] {
     border: 0.14em solid var(--secondary-color);
     max-width: calc(var(--shrink-factor) * var(--comic-page-width) - (2 * 0.14em + 2 * 0.5em + 1em));
     margin: 0.5em auto;

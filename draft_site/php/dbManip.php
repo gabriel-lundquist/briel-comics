@@ -1,5 +1,5 @@
 <?php
-namespace Briel {
+namespace Briel;
 
 const SQLLOADFILENULL = '\N';
 const SQLNULL = 'NULL';
@@ -26,20 +26,17 @@ const FILEINSERTCOLUMNS = ["fileid",
                           "pageid",
                           "ratio"];
 
-// class DoubleLink {
-//     public $next = NULL;
-
-//     public function __construct($nextLink) {
-//         $next = $nextLink;
-//     }
-
-//     public function getEnd() {
-        
-//     }
-// }
+const PAGEINSERTCOLUMNS = ["pageid", 
+                           "title",
+                           "location",
+                           "imagedesc",
+                           "spreadid",
+                           "stylelocation"];
 
 /**
- * 
+ * Summary of Briel\promptInput
+ * @param mixed $prompt
+ * @return string
  */
 function promptInput($prompt) {
     echo $prompt;
@@ -47,22 +44,29 @@ function promptInput($prompt) {
 }
 
 /**
- * Returns the PDO connction if successful, 
- * returns false if not.
- * 
- * Default values are from my laptop SQL server.
+ * Summary of Briel\pdoConnect
+ * Returns the PDO connection if successful, `false` if not.
+ * Default values come from my laptop server settings.
+ * @param mixed $dbhost
+ * @param mixed $dbuser
+ * @param mixed $dbname
+ * @param mixed $dbport
+ * @param mixed $echoConnSuccess
+ * @return bool|\PDO
  */
 function pdoConnect( $dbhost = 'localhost', 
                      $dbuser = 'root', 
                      $dbname = 'briel_comics_test', 
                      $dbport = 3307, 
+                     $dbpassword = false,
                      $echoConnSuccess = false ) {
     try {
         $conn = new \PDO("mysql:host=$dbhost;
                           dbname=$dbname;
                           port=$dbport", 
                          $dbuser, 
-                         promptInput("Enter password: "));
+                         $dbpassword ? 
+                            $dbpassword : promptInput("Enter password: "));
         $conn->setAttribute(\PDO::ATTR_ERRMODE, 
                             \PDO::ERRMODE_EXCEPTION);
         if ( $echoConnSuccess ) echo "Connected successfully.\n";
@@ -74,16 +78,39 @@ function pdoConnect( $dbhost = 'localhost',
 }
 
 /**
- * 
+ * Summary of Briel\execAndFetch
+ * @param mixed $statement
+ * @param mixed $executeArr
+ * @param mixed $mode
  */
-function executeAndFetch($statement, 
-                         $executeArr, 
-                         $mode = \PDO::FETCH_BOTH) {
+function execAndFetch($statement, 
+                        $executeArr, 
+                        $mode = \PDO::FETCH_BOTH) {
     if ($statement->execute($executeArr)) {
         return $statement->fetch($mode);
     } else return false;
 }
 
+/**
+ * Summary of Briel\execAndFetchScalar
+ * @param mixed $statement
+ * @param mixed $execVar
+ */
+function execAndFetchScalar($statement, 
+                            $execVar) {
+    return $statement->execute([$execVar]) 
+            ? $statement->fetch(\PDO::FETCH_NUM)[0] : false;
+}
+
+/**
+ * Summary of Briel\generateFileRecordInteractive
+ * @param mixed $filePath
+ * @param mixed $pdoConn
+ * @param mixed $ratioStr
+ * @return bool|array{alttext: string, fileid: string, filesize: int, 
+ *                    filetype: string, height: mixed, location: bool|string, 
+ *                    pageid: string, ratio: mixed, width: mixed|bool}
+ */
 function generateFileRecordInteractive($filePath, 
                                        $pdoConn, 
                                        $ratioStr = NULL) {
@@ -99,7 +126,7 @@ function generateFileRecordInteractive($filePath,
 
     $alttext = promptInput("Enter alt text (or a path to it):\n> ");
     if (is_readable($alttext)) {
-        $alttext = file_get_contents($alttext);
+        if (!($alttext = file_get_contents($alttext))) $alttext = "";
     }
 
     $fileExt = substr($filePath, strrpos($filePath, ".") + 1);
@@ -134,16 +161,24 @@ function generateFileRecordInteractive($filePath,
             "ratio"     => $ratioID];
 }
 
+function rowPlaceholder($n) {
+    return '(?' . str_repeat(', ?', $n) . ')';
+}
+
 /**
- * 
+ * Summary of Briel\prepareInsertRecords
+ * @param mixed $pdoConn An existing PDO object.
+ * @param mixed $tableName String containing name of the table in the database
+ * @param mixed $insertColumns Array of strings with titles of columns
+ * @param mixed $records 2D array of strings, indexed by record then by column
  */
 function prepareInsertRecords($pdoConn, 
                               $tableName, 
                               $insertColumns, 
                               $records) {
-    $rowPlaceholderStr = "(?" . str_repeat(", ?", \count($insertColumns)-1) . ")";
-    $allPlaceholderStr = $rowPlaceholderStr . str_repeat(", \n$rowPlaceholderStr", 
-                                                         \count($records)-1);
+    $allPlaceholderStr = rowPlaceholder(\count($insertColumns)) 
+                         . str_repeat(", \n" . rowPlaceholder(\count($insertColumns)), 
+                                      \count($records) - 1);
 
     return $pdoConn->prepare("INSERT INTO $tableName ("
                              . implode(",", $insertColumns) 
@@ -187,6 +222,13 @@ function executeInsertRecords($pdoConn,
     }
 }
 
+/**
+ * Summary of Briel\queryInsertRecords
+ * @param mixed $pdoConn An existing PDO object.
+ * @param mixed $tableName String containing name of the table in the database
+ * @param mixed $insertColumns Array of strings with titles of columns
+ * @param mixed $records 2D array of strings, indexed by record then by column
+ */
 function queryInsertRecords($pdoConn, 
                             $tableName, 
                             $insertColumns, 
@@ -202,6 +244,11 @@ function queryInsertRecords($pdoConn,
     }
 }
 
+/**
+ * Summary of Briel\insertFileRecords
+ * @param mixed $records
+ * @param mixed $pdoConn
+ */
 function insertFileRecords($records, 
                            $pdoConn) {
 
@@ -218,6 +265,14 @@ function insertFileRecords($records,
     return $queryResult;
 }
 
+/**
+ * Summary of Briel\insertFileRecordsFolder
+ * @param mixed $dirPath
+ * @param mixed $pdoConn
+ * @return array<array{alttext: bool|string, fileid: string, filesize: int, 
+ *                              filetype: string, height: mixed, location: bool|string, 
+ *                              pageid: string, ratio: mixed, width: mixed|bool>}
+ */
 function insertFileRecordsFolder($dirPath, $pdoConn) {
 
     $fileInfo = \finfo_open(\FILEINFO_MIME_TYPE);
@@ -239,6 +294,14 @@ function insertFileRecordsFolder($dirPath, $pdoConn) {
     return $records;
 }
 
+/**
+ * Summary of Briel\loadFileRecords
+ * @param mixed $dirPath
+ * @param mixed $dbhost
+ * @param mixed $dbuser
+ * @param mixed $dbname
+ * @param mixed $dbport
+ */
 function loadFileRecords($dirPath, 
                          $dbhost = 'localhost', 
                          $dbuser = 'root', 
@@ -253,36 +316,69 @@ function loadFileRecords($dirPath,
                              $pdoConn);
 }
 
+function insertPageRecords($records, $pdoConn) {
+    $queryResult = queryInsertRecords($pdoConn, 
+                                      'page',
+                                      PAGEINSERTCOLUMNS, 
+                                      $records);
+    if ($pdoConn->inTransaction()) {
+        echo "Query result is: ";
+        var_dump($queryResult);
+        echo "If you don't commit now, this change may be rolled back.";
+        if (promptInput("Commit transaction? (y/n) > ") == "y") $pdoConn->commit();
+    }
+    return $queryResult;
+}
+
+/**
+ * Summary of Briel\getFileWidthLocations
+ * @param mixed $pageid
+ * @param mixed $pdoConn
+ */
 function getFileWidthLocations($pageid, $pdoConn) {
     
     if ($selectFile = $pdoConn->prepare('SELECT width, location FROM file 
                                          WHERE pageid = ?;')
             AND $selectFile->execute([$pageid])) {
 
-        return $selectFile->fetchAll(\PDO::FETCH_UNIQUE | \PDO::FETCH_ASSOC);
+        return $selectFile->fetchAll(\PDO::FETCH_KEY_PAIR);
         // Writes location values into an array indexed by width
     } else {
         return false;
     }
 }
 
+/**
+ * Summary of Briel\is_file_path
+ * @param mixed $str
+ * @param mixed $fileExt
+ * @return bool|int
+ */
 function is_file_path($str, $fileExt = ".+") {
-    return preg_match("(.*/.+\.$fileExt)");
+    return preg_match("(.*/.+\.$fileExt)", $str);
 }
 
+/**
+ * Summary of Briel\generatePageRecordInteractive
+ * @param mixed $pdoConn
+ * @return array{imagedesc: bool|string, location: string, 
+ *               pageid: string, spreadid: mixed, 
+ *               stylelocation: string, title: string}
+ */
 function generatePageRecordInteractive($pdoConn) {
     echo "Generating new page record...";
     
     // Set title
-    $allTitles = $pdoConn->query("SELECT title FROM page;")
-                          ->fetchAll(\PDO::FETCH_COLUMN, 0);
     $title = promptInput("Enter title: > ");
     $findFileFromTitle = $pdoConn->prepare("SELECT location FROM page 
                                             WHERE title = ?;");
+    $existingTitle = $pdoConn->prepare("SELECT EXISTS(
+                                            SELECT title FROM page
+                                            WHERE title = ?);");                                 
     $useAnyway = false;
-    while (in_array($title, $allTitles) AND !$useAnyway) {
+    while (execAndFetchScalar($existingTitle, $title) AND !$useAnyway) {
         echo "Warning: $title already exists in page at "
-             . $findFileFromTitle->execute([$title])->fetch()[0] 
+             . execAndFetchScalar($findFileFromTitle, $title)
              . "\n";
         if (promptInput("Use this title anyway? (y/n) > ") == "y") {
             $useAnyway = true;
@@ -302,7 +398,7 @@ function generatePageRecordInteractive($pdoConn) {
             $location = $promptHTMLPath();
         } else if (file_exists($location)) {
             if (promptInput("Warning: $location already exists.\n"
-                            . "Use it? (y/n) > ") == "y") {
+                            . "Use it anyway? (y/n) > ") == "y") {
                 $useAnyway = true;
             } else $location = $promptHTMLPath();
         }
@@ -318,9 +414,9 @@ function generatePageRecordInteractive($pdoConn) {
     // Get spread ID
     $getSpreadID = $pdoConn->prepare("SELECT spreadid FROM spread
                                         WHERE spreadtype = ?;");
-    $getSpreadID->execute([(promptInput("Double spread? (y/n) > ") == "y")
-                            ? "double" : "normal"]);
-    $spreadID = $getSpreadID->fetch()[0];
+    $spreadID = execAndFetchScalar($getSpreadID, 
+                                   (promptInput("Double spread? (y/n) > ") == "y")
+                                    ? "double" : "normal");
 
     // Get location of a special style (if present)
     $styleLocation = promptInput("Enter path to special style (or 'n' if none):\n> ");
@@ -330,18 +426,101 @@ function generatePageRecordInteractive($pdoConn) {
     }
     if ($styleLocation == "n") $styleLocation = SQLNULL;
 
-    return ["pageid"        => SQLNULL, 
-            "title"         => $title, 
-            "location"      => $location, 
-            "imagedesc"     => $imageDesc, 
-            "spreadid"      => $spreadID, 
-            "stylelocation" => $styleLocation];
+    return array_combine(PAGEINSERTCOLUMNS, [SQLNULL, 
+                                             $title, 
+                                             $location, 
+                                             $imageDesc, 
+                                             $spreadID, 
+                                             $styleLocation]);
 }
 
 /**
- * Assumes $pageRecord is filled out, with an assigned `pageid`.
+ * Summary of Briel\insertAssociationsInteractive
+ * @param mixed $pageRecord
+ * @param mixed $table
+ * @param mixed $pdoConn
+ * @return bool|string[]
+ */
+function insertAssociationsInteractive($pageRecord, $table, $pdoConn) {
+    if (!$pdoConn->beginTransaction()) {
+        echo "Error: can't begin transaction. Aborting $table assocation.";
+        return false;
+    }
+
+    $existing = $pdoConn->query("SELECT name FROM $table;")
+                            ->fetchAll(\PDO::FETCH_COLUMN);
+    $insertNew = $pdoConn->prepare("INSERT INTO $table ({$table}id, name) VALUE (?,?);");
+    $getIDFromName = $pdoConn->prepare("SELECT {$table}id FROM $table WHERE name = ?;");
+
+    $listStr = promptInput("Adding $table associations with {$pageRecord['title']}...\n"
+                                . "Type in comma-separated {$table}s. Existing {$table}s:\n"
+                                . implode("\t", $existing)
+                                . "\n> ");
+    $tieList = array_map(fn($s) => trim($s), explode(",", $listStr));
+
+    
+    $exists = $pdoConn->prepare("SELECT EXISTS(
+                                    SELECT name FROM $table 
+                                    WHERE name = ?
+                                 );");
+    $assocRecords = [];
+    $finalList = [];
+    foreach ($tieList as $tie) {
+
+        if (!preg_match('([\w]+[-\w]*)', $tie)) {
+            echo "Warning: only permitted special characters are - and _\n"
+                . "and - can't start the $table. \nSkipping $tie.\n";
+            continue;
+        } 
+        
+        // Only get below here if the name matches allowed characters.
+        if (!execAndFetchScalar($exists, $tie)) {
+            if (promptInput("$tie not an existing $table. Add it? (y/n) > ") == "y") {
+                $insertNew->execute([SQLNULL, $tie]);
+            } else {
+                echo "Okay, skipping $tie...\n";
+                continue;
+            }
+        }
+
+        $assocRecords[] = [execAndFetchScalar($getIDFromName, $tie), 
+                              $pageRecord["pageid"]];
+        $finalList[] = $tie;
+    }
+
+    if (queryInsertRecords($pdoConn, 
+                           "{$table}page", 
+                           ["{$table}id", "pageid"], 
+                           $assocRecords)) {
+        if (promptInput("{$table}s now associated with this page:\n"
+                        . implode("\n", $finalList)
+                        . "\nAcceptable? (y/n) > ") == "y") {
+            echo "Sick. Committing...\n";
+            $pdoConn->commit();
+            return $finalList;
+        } else {
+            echo "Okay. Rolling back changes...\n";
+            $pdoConn->rollback();
+            return false;
+        }
+    } else {
+        echo "Error: could not insert records. Rolling back and returning...\n";
+        $pdoConn->rollback();
+        return false;
+    }
+
+}
+
+/**
+ * Summary of Briel\insertTagAssociationsInteractive
+ * Assumes `$pageRecord` is filled out and given a page ID
+ * @param mixed $pageRecord
+ * @param mixed $pdoConn
+ * @return bool|string[]
  */
 function insertTagAssociationsInteractive($pageRecord, $pdoConn) {
+    return insertAssociationsInteractive($pageRecord, "tag", $pdoConn);
+    /*
     if (!$pdoConn->beginTransaction()) {
         echo "Error: can't begin transaction. Aborting tag assocation.";
         return false;
@@ -358,6 +537,10 @@ function insertTagAssociationsInteractive($pageRecord, $pdoConn) {
                                 . "\n> ");
     $tagList = array_map(fn($s) => trim($s), explode(",", $tagListStr));
 
+    $tagExists = $pdoConn->prepare("SELECT EXISTS(
+                                        SELECT name FROM tag 
+                                        WHERE name = ?
+                                   );");
     $tagAssocRecords = [];
     $finalTagList = [];
     foreach ($tagList as $tag) {
@@ -369,7 +552,7 @@ function insertTagAssociationsInteractive($pageRecord, $pdoConn) {
         } 
         
         // Only get below here if the name matches allowed characters.
-        if (!in_array($tag, $existingTags)) {
+        if (!execAndFetchScalar($tagExists, $tag)) {
             if (promptInput("$tag not an existing tag. Add it? (y/n) > ") == "y") {
                 $insertNewTag->execute([SQLNULL, $tag]);
             } else {
@@ -399,23 +582,30 @@ function insertTagAssociationsInteractive($pageRecord, $pdoConn) {
             return false;
         }
     } else {
-        echo "Error: could not insert records. Rolling back and aborting...\n";
+        echo "Error: could not insert records. Rolling back and returning...\n";
         $pdoConn->rollback();
         return false;
     }
+    */
 }
 
 /**
- * Assumes $pageRecord is filled out, with an assigned `pageid`.
+ * Summary of Briel\insertCWAssociationsInteractive
+ * Assumes `$pageRecord` is filled out and given a page ID
+ * @param mixed $pageRecord
+ * @param mixed $pdoConn
+ * @return bool|string[]
  */
 function insertCWAssociationsInteractive($pageRecord, $pdoConn) {
+    return insertAssociationsInteractive($pageRecord, "contwarning", $pdoConn);
+    /*
     if (!$pdoConn->beginTransaction()) {
         echo "Error: can't begin transaction. Aborting content warning assocation.";
         return false;
     }
 
     $existingCWs = $pdoConn->query("SELECT name FROM contwarning;")
-                            ->fetchALL(\PDO::FETCH_COLUMN);
+                           ->fetchALL(\PDO::FETCH_COLUMN);
     $insertNewCW = $pdoConn->prepare("INSERT INTO contwarning (contwarningid, name) 
                                         VALUE (?,?);");
     $getCWIDFromName = $pdoConn->prepare("SELECT contwarningid FROM contwarning 
@@ -428,29 +618,33 @@ function insertCWAssociationsInteractive($pageRecord, $pdoConn) {
                                 . "\n> ");
     $cwList = array_map(fn($s) => trim($s), explode(",", $cwListStr));
 
+    $cwExists = $pdoConn->prepare("SELECT EXISTS(
+                                        SELECT name FROM contwarning 
+                                        WHERE name = ?
+                                   );");
     $cwAssocRecords = [];
     $finalCWList = [];
     foreach ($cwList as $contWarn) {
 
         if (!preg_match('([\w]+[-\w]*)', $contWarn)) {
             echo "Warning: only permitted special characters are - and _\n"
-                . "and - can't start the content warning. \nSkipping $contWarn.\n";
+                . "and - can't start the content warning. \nSkipping '$contWarn'.\n";
             continue;
         } 
         
         // Only get below here if the name matches allowed characters.
-        if (!in_array($contWarn, $existingCWs)) {
-            if (promptInput("$contWarn not an existing content warning."
+        if (!execAndFetchScalar($cwExists, $contWarn)) {
+            if (promptInput("'$contWarn' not an existing content warning."
                             . "Add it? (y/n) > ") == "y") {
                 $insertNewCW->execute([SQLNULL, $contWarn]);
             } else {
-                echo "Okay, skipping $contWarn...\n";
+                echo "Okay, skipping '$contWarn'...\n";
                 continue;
             }
         }
-
-        $cwAssocRecords[] = [$getCWIDFromName->execute([$contWarn])->fetch()[0], 
-                              $pageRecord["pageid"]];
+                            
+        $cwAssocRecords[] = [execAndFetchScalar($getCWIDFromName, $contWarn), 
+                             $pageRecord["pageid"]];
         $finalCWList[] = $contWarn;
     }
 
@@ -470,15 +664,50 @@ function insertCWAssociationsInteractive($pageRecord, $pdoConn) {
             return false;
         }
     } else {
-        echo "Error: could not insert records. Rolling back and aborting...\n";
+        echo "Error: could not insert records. Rolling back and returning...\n";
         $pdoConn->rollback();
         return false;
     }
+    */
 }
 
+function upList($pageID,
+                $getSource, 
+                $delRowByTarget) {
+    $getSource->execute([$pageID]);
+    if ($sourceRec = $getSource->fetch(\PDO::FETCH_ASSOC)) {
+        $delRowByTarget->execute([$pageID]);
+        $aboveList = upList($sourceRec["sourceid"], 
+                            $getSource, 
+                            $delRowByTarget);
+        $aboveList[] = $pageID;
+        return $aboveList; // append
+    } else {    // No entries where sourceid = $pageID
+        return [$pageID];
+    }
+}
+
+function downList($pageID, $getTarget, $delRowBySource) {
+    $getTarget->execute([$pageID]);
+    if ($targetRec = $getTarget->fetch(\PDO::FETCH_ASSOC)) {
+        $delRowBySource->execute([$pageID]);
+        $listBelow = downList($targetRec["targetid"], 
+                                $getTarget, 
+                                $delRowBySource);
+        return array_unshift($listBelow, $pageID); // prepend
+    } else {    // No entries where targetid = $pageID
+        return [$pageID];
+    }
+}
+
+/**
+ * Summary of Briel\getPageOrderLists
+ * @param mixed $pdoConn
+ * @return array[]
+ */
 function getPageOrderLists($pdoConn) {
-    $pdoConn->query("CREATE TEMPORARY TABLE temppageorder 
-                        AS SELECT * FROM pageorder;");
+    $pdoConn->exec("CREATE TEMPORARY TABLE temppageorder 
+                    AS SELECT * FROM pageorder;");
 
     $rowExists = $pdoConn->prepare("SELECT sourceid, targetid FROM temppageorder 
                                     LIMIT 1;");
@@ -491,38 +720,30 @@ function getPageOrderLists($pdoConn) {
     $delRowBySource = $pdoConn->prepare("DELETE FROM temppageorder
                                             WHERE sourceid = ?;");
     
-    function upList($pageID) {
-        $getSource->execute([$pageID]);
-        if ($sourceRec = $getSource->fetch(\PDO::FETCH_ASSOC)) {
-            $delRowByTarget->execute([$pageID]);
-            return array_push(upList($sourceRec["sourceid"]), $pageID); // append
-        } else {    // No entries where sourceid = $pageID
-            return [$pageID];
-        }
-    }
-    function downList($pageID) {
-        $getTarget->execute([$pageID]);
-        if ($targetRec = $getTarget->fetch(\PDO::FETCH_ASSOC)) {
-            $delRowBySource->execute([$pageID]);
-            return array_unshift(downList($targetRec["targetid"]), $pageID); // prepend
-        } else {    // No entries where targetid = $pageID
-            return [$pageID];
-        }
-    }
-
     $orderLists = [];
     $rowExists->execute();
     while ($record = $rowExists->fetch(\PDO::FETCH_ASSOC)) {
-        $orderLists[] = array_merge(upList($record["sourceid"]), 
-                                    downList($record["targetid"]));
+        $orderLists[] = array_merge(upList($record["sourceid"],
+                                           $getSource,
+                                           $delRowByTarget), 
+                                    downList($record["targetid"],
+                                             $getTarget, 
+                                             $delRowBySource)
+                                    );
         $rowExists->execute();
     }
 
-    return orderLists;
+    $pdoConn->exec("DROP TEMPORARY TABLE temppageorder;");
 
-    $pdoConn->query("DROP TEMPORARY TABLE temppageorder;");
+    return $orderLists;
 }
 
+/**
+ * Summary of Briel\insertPageAfter
+ * @param mixed $prevPageID
+ * @param mixed $pageID
+ * @param mixed $pdoConn
+ */
 function insertPageAfter($prevPageID, $pageID, $pdoConn) {
     $getNext = $pdoConn->prepare("SELECT targetid FROM pageorder
                                     WHERE sourceid = ?;");
@@ -531,12 +752,18 @@ function insertPageAfter($prevPageID, $pageID, $pdoConn) {
                                  INSERT INTO pageorder 
                                     VALUE (:pageID, :nextPageID);");
 
-    $nextPageID = executeAndFetch($getNext, [$prevPageID], \PDO::FETCH_NUM)[0];
+    $nextPageID = execAndFetchScalar($getNext, $prevPageID);
     return $insert->execute([":pageID"     => $pageID, 
                              ":prevPageID" => $prevPageID, 
                              ":nextPageID" => $nextPageID]);
 }
 
+/**
+ * Summary of Briel\deletePageAfter
+ * @param mixed $pdoConn
+ * @param mixed $pageID
+ * @param mixed $prevPageID
+ */
 function deletePageAfter($pdoConn, $pageID, $prevPageID) {
     $getNext = $pdoConn->prepare("SELECT targetid FROM pageorder
                                     WHERE sourceid = ?;");
@@ -555,10 +782,16 @@ function deletePageAfter($pdoConn, $pageID, $prevPageID) {
                               ":prevID" => $prevPageID]);
 }
 
+/**
+ * Summary of Briel\appendPages
+ * @param mixed $pageIDs
+ * @param mixed $lastPageID
+ * @param mixed $pdoConn
+ */
 function appendPages($pageIDs, $lastPageID, $pdoConn) {
     $records = [];
     $records[] = [$lastPageID, $pageIDs[0]];
-    for ($i = 1; $i < count($pageIDs); $i++) {
+    for ($i = 1; $i < \count($pageIDs); $i++) {
         $records[] = [$pageIDs[$i-1], $pageIDs[$i]];
     }
     return queryInsertRecords($pdoConn, 
@@ -567,6 +800,215 @@ function appendPages($pageIDs, $lastPageID, $pdoConn) {
                               $records);
 }
 
+function associateWithInteractive($record, 
+                                  $table, 
+                                  $tableID, 
+                                  $srcTable, 
+                                  $pdoConn) {
+    echo "Associating {$table}s with {$record['title']}...\n";
+    if (!$pdoConn->beginTransaction()) {
+        echo "Error: can't begin transaction. Aborting assocation.\n";
+        return false;
+    }
+
+    $recsToStrs = fn($recs) => array_map(fn($rec) => $rec['pageid'] 
+                                                     . '----' 
+                                                     . $rec['title'], 
+                                         $recs);
+    $sources = $pdoConn->query("SELECT {$srcTable}id, title FROM $srcTable;")
+                     ->fetchAll(\PDO::FETCH_ASSOC);
+
+    echo "\n---------------------------------\n$srcTable list:\nID-----Title/Location" 
+         . implode("\n", $recsToStrs($sources)) 
+         . "\n---------------------------------\n";
+    
+    $pdoConn->exec("CREATE TEMPORARY TABLE associd 
+                    ({$srcTable}id int unsigned);");
+    $inputStr = promptInput("Enter $srcTable IDs separated by commas, or \n"
+                            . "a ? followed by a regular expression for titles."
+                            . "\n> ");
+    if (preg_match("((\d+,\s*)*\d+)", $inputStr)) {
+        queryInsertRecords($pdoConn, 
+                           "associd", 
+                           "{$srcTable}id", 
+                           array_map(fn($s) => trim($s), 
+                                     explode(",", $inputStr)));
+
+        if (!empty($notrealIDs = 
+                    $pdoConn->query('SELECT * FROM associd 
+                                     WHERE {$srcTable}id NOT IN (
+                                        SELECT {$srcTable}id FROM file
+                                     );')->fetchALL(\PDO::FETCH_COLUMN))) {
+            echo "Error: page IDs [" 
+                 . implode(', ', $notrealIDs)
+                 . "] don't correspond to existing {$srcTable}s.\n"
+                 . "Rolling back and returning...\n";
+            $pdoConn->rollback();
+            return false;
+        }
+
+    } else if ($inputStr[0] == "?") {
+        $regExp = $pdoConn->prepare("INSERT INTO associd ({$srcTable}id)
+                                        SELECT {$srcTable}id FROM file 
+                                        WHERE REGEXP_LIKE(location, 
+                                                          ?, 
+                                                          'c');");
+        $regExp->execute([substr($inputStr,1)]);
+
+    } else {
+        echo "'$inputStr' invalid. Rolling back and returning...";
+        $pdoConn->rollback();
+        return false;
+    }
+
+    $assocSelect = $pdoConn->query("SELECT {$srcTable}id, location FROM $srcTable
+                                    WHERE {$srcTable}id IN (
+                                        SELECT * FROM associd
+                                    );");
+    echo "{$srcTable}s to associate with {$record['title']}:\n" 
+         . "ID-----Title/Location\n"
+         . implode("\n", $recsToStrs($assocSelect->fetchAll(\PDO::FETCH_ASSOC)))
+         . "---------------------------------\n";
+
+    if (promptInput("Okay to associate? (y/n) > ") == "y") {
+        $updateAssoc = $pdoConn->prepare("UPDATE $srcTable SET $tableID = ?
+                                          WHERE {$srcTable}id IN (
+                                            SELECT * FROM associd
+                                          );");
+        $updateAssoc->execute([$record[$tableID]]);
+        $srcIDs = $pdoConn->query('SELECT * FROM associd')
+                           ->fetchAll(\PDO::FETCH_COLUMN);
+        echo "Files associated.\n";
+        if (promptInput("Roll back? (y/n) > ") == "y") {
+            echo "Sick. Committing...\n";
+            $pdoConn->exec("DROP TEMPORARY TABLE associd;");    
+            $pdoConn->commit();
+            return $srcIDs;
+        } else {
+            echo "Okay. Rolling back changes...";
+            $pdoConn->rollback();
+            return false;
+        }
+        
+    } else {
+        echo "Okay. Rolling back and returning without associating...\n";
+        $pdoConn->rollback();
+        return false;
+    }
+}
+
+function associatePagesWithUpdateInteractive($updateRecord, $pdoConn) {
+    return associateWithInteractive($updateRecord, 
+                                    "comicupdate", 
+                                    "updateid", 
+                                    "page", 
+                                    $pdoConn);
+}
+
+/**
+ * Summary of Briel\associateFilesWithPageInteractive
+ * @param mixed $pdoConn
+ * @param mixed $pageRecord
+ */
+function associateFilesWithPageInteractive($pageRecord, 
+                                           $pdoConn) {
+    return associateWithInteractive($pageRecord, 
+                                    "page", 
+                                    "pageid", 
+                                    "file", 
+                                    $pdoConn);
+    /*
+    echo "Associating files with {$pageRecord['title']}...\n";
+    if (!$pdoConn->beginTransaction()) {
+        echo "Error: can't begin transaction. Aborting page-file assocation.\n";
+        return false;
+    }
+
+    $filesToStrs = fn($recs) => array_map(fn($rec) => $rec['fileid'] 
+                                                      . '----' 
+                                                      . $rec['location'], 
+                                          $recs);
+    $files = $pdoConn->query("SELECT fileid, location FROM file;")
+                     ->fetchAll(\PDO::FETCH_ASSOC);
+
+    echo "\n---------------------------------\nFile list:\nID-----Path" 
+         . implode("\n", $filesToStrs($files)) 
+         . "\n---------------------------------\n";
+    
+    $pdoConn->exec('CREATE TEMPORARY TABLE inputfileid 
+                    (fileid int unsigned);');
+    $inputStr = promptInput("Enter file IDs separated by commas, or \n"
+                            . "a ? followed by a regular expression for paths."
+                            . "\n> ");
+    if (preg_match("((\d+,\s*)*\d+)", $inputStr)) {
+        queryInsertRecords($pdoConn, 
+                           "inputfileid", 
+                           "fileid", 
+                           array_map(fn($s) => trim($s), 
+                                     explode(",", $inputStr)));
+        
+        if (!empty($notrealIDs = 
+                    $pdoConn->query('SELECT * FROM inputfileid 
+                                     WHERE fileid NOT IN (
+                                        SELECT fileid FROM file
+                                     );')->fetchALL(\PDO::FETCH_COLUMN))) {
+            echo "Error: file IDs [" 
+                 . implode(', ', $notrealIDs)
+                 . "] don't correspond to existing files.\n"
+                 . "Rolling back and returning...\n";
+            $pdoConn->rollback();
+            return false;
+        }
+
+    } else if ($inputStr[0] == "?") {
+        $filesRegExp = $pdoConn->prepare("INSERT INTO inputfileid (fileid)
+                                          SELECT fileid FROM file 
+                                            WHERE REGEXP_LIKE(location, 
+                                                              ?, 
+                                                              'c');");
+        $filesRegExp->execute([substr($inputStr,1)]);
+
+    } else {
+        echo "'$inputStr' invalid. Rolling back and returning...";
+        $pdoConn->rollback();
+        return false;
+    }
+
+    $assocSelect = $pdoConn->query('SELECT fileid, location FROM file
+                                    WHERE fileid IN (
+                                        SELECT * FROM inputfileid
+                                    );');
+    echo "Files to associate with {$pageRecord['title']}:\n" 
+         . "ID-----Path\n"
+         . implode("\n", $filesToStrs($assocSelect->fetchAll(\PDO::FETCH_ASSOC)))
+         . "---------------------------------\n";
+
+    if (promptInput("Okay to associate? (y/n) > ") == "y") {
+        $updateAssoc = $pdoConn->prepare('UPDATE file SET pageid = ?
+                                          WHERE fileid IN (
+                                            SELECT * FROM inputfileid
+                                          );');
+        $updateAssoc->execute([$pageRecord['pageid']]);
+        $fileIDs = $pdoConn->query('SELECT * FROM inputfileid')
+                           ->fetchAll(\PDO::FETCH_COLUMN);
+        echo "Files associated.\n";
+        if (promptInput("Roll back? (y/n) > ") == "y") {
+            echo "Sick. Committing...\n";
+            $pdoConn->exec("DROP TEMPORARY TABLE inputfileid;");    
+            $pdoConn->commit();
+            return $fileIDs;
+        } else {
+            echo "Okay. Rolling back changes...";
+            $pdoConn->rollback();
+            return false;
+        }
+        
+    } else {
+        echo "Okay. Rolling back and returning without associating...\n";
+        $pdoConn->rollback();
+        return false;
+    }
+        */
 }
 
 ?>
