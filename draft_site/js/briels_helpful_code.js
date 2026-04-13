@@ -168,12 +168,13 @@ class ImageSizeInfo {
     }
 }
 
-export function resizeImageMaps(newWindowWidth,
-                                containingElement, 
-                                imgSelector,
-                                areaPrevSelector, 
-                                areaNextSelector) {
-    const sizeInfo = new ImageSizeInfo(containingElement.querySelector(imgSelector));
-    const areaPrev = containingElement.querySelector(areaPrevSelector);
-    
+export function resizeNavImageMaps(imgElement, 
+                                areaPrevElement, 
+                                areaNextElement) {
+    const imgWidth = imgElement.clientWidth;
+    const imgHeight = imgElement.clientHeight;
+    areaPrevElement.setAttribute("coords", 
+                        `0,0,${Math.ceil(0.25 * imgWidth)},${imgHeight}`);
+    areaNextElement.setAttribute("coords", 
+                        `${Math.ceil(0.75 * imgWidth)},0,${imgWidth},${imgHeight}`);
 }
