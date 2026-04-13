@@ -12,7 +12,7 @@ const prevKeyCodes = new Set(["ArrowLeft",
                               "z", 
                               "Z"]);
 
-import {getLink, keyNavigate } from "./briels_helpful_code.js";
+import {getLink, keyNavigate, resizeImageMaps} from "./briels_helpful_code.js";
 
 document.addEventListener("keydown", (event) => 
         keyNavigate(event, 
@@ -25,3 +25,13 @@ document.addEventListener("keydown", (event) =>
                     getLink(document, ".next-upd8-button"), 
         )
 );
+
+const comicImg = document.querySelector("img.comic-page");
+const areaPrevButton = document.querySelector("area.prev-button");
+const areaNextButton = document.querySelector("area.next-button");
+resizeImageMaps(comicImg, areaPrevButton, areaNextButton);
+
+window.addEventListener("resize", (event) =>
+        resizeImageMaps(comicImg, areaPrevButton, areaNextButton)
+);
+
