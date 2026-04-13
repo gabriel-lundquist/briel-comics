@@ -4,11 +4,11 @@ html {
     /* background-size: 100% 100%;  */
     /* To stretch an image to always fit. 
      Remove to make the background image repeat. */
-    --primary-color: #221a1a;
-    --secondary-color: #ffffff;
-    --tertiary-color: #000000;
-    --quaternary-color: #aaaaaa;
-    background-color: var(--primary-color); /* For just a solid color */
+    --bg-color: #221a1a;
+    --text-color: #ffffff;
+    --hilite-color: #000000;
+    --visited-color: #aaaaaa;
+    background-color: var(--bg-color); /* For just a solid color */
 
     font-family: Courier, monospace;
     font-size: large;
@@ -24,6 +24,8 @@ body {
     /* --comic-page-height: 1000px; */
 }
 
+/* These don't affect image sizes, 
+    but they do affect the text section sizes*/
 @media screen and (min-width: 1500px) {
     body {
         --comic-page-width: 1400px;
@@ -39,7 +41,7 @@ body {
 body, 
 footer {
     /* Can change color depending on page */
-    color: var(--secondary-color);
+    color: var(--text-color);
     text-align: center;
 }
 
@@ -84,7 +86,7 @@ h2 {
 section[id="desc_section"], 
 section[id="tag_section"],
 section[id="cw_section"] {
-    border: 0.14em solid var(--secondary-color);
+    border: 0.14em solid var(--text-color);
     max-width: calc(var(--shrink-factor) * var(--comic-page-width) - (2 * 0.14em + 2 * 0.5em + 1em));
     margin: 0.5em auto;
     padding: 0.7em 1em;
@@ -113,14 +115,20 @@ a:link {
 
 a:visited {
     /* Can change color depending on page */
-    color: var(--quaternary-color)
+    color: var(--visited-color)
 }
 
 a:hover {
     /* font-style: oblique; */
     /* Can change color depending on page */
-    color: var(--secondary-color);
-    background: var(--tertiary-color);
+    color: var(--text-color);
+    background: var(--hilite-color);
+}
+
+a.text_desc_heading {
+    color: var(--text-color);
+    text-decoration: inherit;
+    background: inherit;
 }
 
 /* .nav-button {
@@ -167,8 +175,8 @@ a:hover {
 .page-display img.comic-page {
     /* margin: clamp(0px, 0.1*(100vw - 1080px), 5vh) auto; */
     max-width: 100%;
-    /* Change 5vh for the default preferred top margin  */
-    margin-top: clamp(0px, 0.5*(100vw - var(--comic-page-width)), 5vh);
+    /* Change 8vh for the default preferred top margin  */
+    margin-top: clamp(0px, 0.5*(100vw - var(--comic-page-width)), 8vh);
 }
 
 /* @media screen and (width <= 1080) {

@@ -456,7 +456,7 @@ function insertAssociationsInteractive($pageRecord, $table, $pdoConn) {
                                 . "Type in comma-separated {$table}s. Existing {$table}s:\n"
                                 . implode("\t", $existing)
                                 . "\n> ");
-    $tieList = array_map(fn($s) => trim($s), explode(",", $listStr));
+    $tieList = array_map('trim', explode(",", $listStr));
 
     
     $exists = $pdoConn->prepare("SELECT EXISTS(
@@ -831,7 +831,7 @@ function associateWithInteractive($record,
         queryInsertRecords($pdoConn, 
                            "associd", 
                            "{$srcTable}id", 
-                           array_map(fn($s) => trim($s), 
+                           array_map('trim', 
                                      explode(",", $inputStr)));
 
         if (!empty($notrealIDs = 

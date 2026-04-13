@@ -1,6 +1,5 @@
 <?php
 namespace Briel;
-// var_dump($argv);
 
 function classIs($node, $className) {
     return str_contains($node->className, $className);
@@ -23,14 +22,6 @@ function assignNavLink($node,
 
     return false;
 }
-
-// function srcsetStrFromWidths($widthFileLocations, $desiredWidths) {
-//     srcsetStr = "";
-//     foreach ($desiredWidths as $width) {
-//         if (array_key_exists($width, $widthFileLocations)) {
-
-//     }
-// }
 
 function generateComicPageDOMHTML($pageRecord, 
                                     $prevLink, 
@@ -132,16 +123,34 @@ function generateComicPageDOMHTML($pageRecord,
     return $doc->saveHtmlFile($pageRecord['location']);
 }
 
+/**
+ * Summary of Briel\generateComicPage
+ * @param mixed $pageRecord
+ * @param mixed $prevLink
+ * @param mixed $nextLink
+ * @param mixed $prevUpd8Link
+ * @param mixed $nextUpd8Link
+ * @param mixed $fileRecords
+ * @param mixed $tags
+ * @param mixed $contWarns
+ * @param mixed $windowWidthsOrder
+ * @param mixed $searchPageLocation
+ * @param mixed $srcDefaultWidths
+ * @param mixed $defaultStyleURL
+ * @return bool|int
+ */
 function generateComicPage($pageRecord, 
                             $prevLink, 
                             $nextLink, 
                             $prevUpd8Link, 
                             $nextUpd8Link,
-                            $widthFileLocations, // values: locations, keys: widths
-                            $alttext, 
-                            $tags, // array of strings
-                            $contWarns, // array of strings
-                            $searchPageLocation) {
+                            $fileRecords, 
+                            $tags, 
+                            $contWarns, 
+                            $windowWidthsOrder = [1500, 2400], 
+                            $searchPageLocation = 'search_page.html', 
+                            $srcDefaultWidths = [1400, 800, 2000], 
+                            $defaultStyleURL = "./styles/reading_page_style.css") {
     ob_start(); 
 ?>
 <!doctype html>
@@ -159,10 +168,9 @@ function generateComicPage($pageRecord,
         <title><<?= $pageRecord['title'] ?> | Breel Comix</title>
         <link rel="icon" href="./images/smileicon.ico" type="image/x-icon">
 
-        <!-- Can be changed with PHP -->
         <link href="<?= $pageRecord['stylelocation'] == 'NULL' 
-                        ? "./styles/reading_page_style.css" 
-                        : $pageRecord['stylelocation'] ?>" 
+                            ? $defaultStyleURL
+                            : $pageRecord['stylelocation'] ?>" 
               rel="stylesheet" 
               id="reading_stylesheet">
 
@@ -170,72 +178,77 @@ function generateComicPage($pageRecord,
     </head>
 
     <body>
-        <!-- To change with PHP (href) -->
         <a href="<?= $prevLink ?>" class="nav-button prev-button" title="Previous"></a>
 
         <div class="page-display">
             <main> 
+                <?php
+    $filesWidthOrder = array_combine(array_column($fileRecords, 
+                                                'width'), 
+                                     $fileRecords);
+    ksort($filesWidthOrder);
+
+    $srcWidth = NULL;
+    foreach ($srcDefaultWidths as $width) {
+        if (\array_key_exists($width, $filesWidthOrder)) {
+            $srcWidth = $width;
+            break;
+        }
+    }
+                ?>
                 <!-- Will need to use javascript to make this responsive -->
                 <map name="nav-on-comic">
                     <!-- Left quarter of image goes back -->
-                    <!-- To change with PHP (href) -->
                     <!-- To change with javascript (coords) -->
                     <area
                         shape="rect"
-                        coords="0,0,200,1000"
+                        coords="0,0,<?= $srcWidth / 4 ?>,<?= 
+                                $filesWidthOrder[$srcWidth]['height'] 
+                            ?>"
                         href="<?= $prevLink ?>"
                         alt="Previous"
                         class="nav-button prev-button"
                     />
                     <!-- Right quarter goes forward -->
-                    <!-- To change with PHP (href)-->
                     <!-- To change with javascript (coords) -->
                     <area
                         shape="rect"
-                        coords="600,0,800,1000"
+                        coords="<?= 3 * $srcWidth / 4 ?>,0,<?= $srcWidth ?>,<?= 
+                                $filesWidthOrder[$srcWidth]['height'] 
+                            ?>"
                         href="<?= $nextLink ?>"
                         alt="Next"
                         class="nav-button next-button"
                     />
                 </map>
 
-                <!-- Specifying width and height are good -->
-                <!-- To change with PHP (srcset, src, alt) -->
                 <img
                     class="comic-page"
                     srcset="<?php
-                        $usualWidthFileLocations = [];
-                        $srcsetStr = "";
-                        foreach (["800", "1400", "2000"] as $width) {
-                            if (\array_key_exists($width, $widthFileLocations)) {
-                                $usualWidthFileLocations[$width] = $widthFileLocations[$width];
-                                $srcsetStr .= "{$widthFileLocations[$width]} {$width}w\n";
-                            }
-                        }
-                        echo $srcsetStr;
+    foreach ($filesWidthOrder as $file) {
+        echo $file['location'] . ' ' . $file['width'] . "w\n";
+    }
+
+    reset($filesWidthOrder);
                     ?>"
-                    sizes="(max-width: 800px) 100vw, 
-                            (max-width: 1500px) 800px, 
-                            (max-width: 2400px) 1400px, 
-                            2000px
-                            "   
-                    src="<?php 
-                        $srcStr = "";
-                        foreach (["1400", "800", "2000"] as $width) {
-                            if (\array_key_exists($width, $usualWidthFileLocations)) {
-                                $srcStr = $usualWidthFileLocations[$width];
-                                break;
-                            }
-                        }
-                        echo $srcStr;
-                    ?>"
-                    alt="<?= $alttext ?>"
+                    sizes="(max-width: <?= 
+                                current($filesWidthOrder)['width'] 
+                            ?>px) 100vw, 
+                            <?php 
+
+    // Undefined behavior if `count(filesWidthOrder) != count($windowWidthsOrder) + 1`
+    foreach ($windowWidthsOrder as $maxWidth) {
+        echo "(max-width: {$maxWidth}px) "
+                . next($filesWidthOrder)['width'] 
+                . "px,\n";
+    }
+                            ?>
+                            <?=array_last($filesWidthOrder)['width']?>px"   
+                    src="<?=$filesWidthOrder[$width]['location']?>"
+                    alt="<?= $filesWidthOrder[$srcWidth]['alttext'] ?>"
                     usemap="#nav-on-comic"
                     id="single_page"
                 >
-                    <!-- style="display: inline;" -->
-                    <!-- width="1080"
-                    height="1350" -->
                 <!-- Resource on web accessibility for complex images: 
                 https://www.w3.org/WAI/tutorials/images/complex/ -->
                 
@@ -287,9 +300,9 @@ function generateComicPage($pageRecord,
                 </section>
 
                 <section id="desc_section">
-                    <h2>Text Description</h2>
-                    <!-- To change with PHP (add description text) -->
-                    <p id="text-para">
+                    <h2><a href="#text_description" 
+                           class="text_desc_heading">Text Description</a></h2>
+                    <p class="text-desc">
                         <?= $pageRecord["imagedesc"] ?>
                     </p>
                 </section>
@@ -312,6 +325,173 @@ function generateComicPage($pageRecord,
 
 <?php
     return file_put_contents($pageRecord['location'], ob_get_flush());
+}
+
+/**
+ * Summary of Briel\generateReadingStyle
+ * @param mixed $filePath
+ * @param mixed $bgColor
+ * @param mixed $textColor
+ * @param mixed $hiliteColor
+ * @param mixed $visitedColor
+ * @param mixed $comicDefaultWidth
+ * @param mixed $pageSectionShrinkFactor
+ * @param mixed $fileWidthsOrder
+ * @param mixed $windowWidthsOrder
+ * @param mixed $gradient
+ * @param mixed $bgImageURL
+ * @param mixed $stretchBGImg
+ * @param mixed $comicTopMargin
+ * @return bool|int
+ */
+function generateReadingStyle($filePath, 
+                              $bgColor, 
+                              $textColor, 
+                              $hiliteColor, 
+                              $visitedColor,
+                              $comicDefaultWidth,
+                              $fileWidthsOrder = [800, 1400, 2000], 
+                              $windowWidthsOrder = [1500, 2400],
+                              $pageSectionShrinkFactor = 0.95,
+                              $comicTopMargin = 8,
+                              $gradient = NULL, 
+                              $bgImageURL = NULL, 
+                              $stretchBGImg = false) {
+    ob_start(); 
+?>
+html {
+    <?= $gradient ? "background: $gradient;" : ""; ?>
+    <?= $bgImageURL ? "background-image: url($bgImageURL);" : "" ?>
+    <?= $stretchBGImg ? "background-size: 100% 100%;" : "" ?>
+    /* To stretch an image to always fit. 
+     Otherwise, the background image repeats. */
+    --bg-color: <?= $bgColor ?>;
+    --text-color: <?= $textColor ?>;
+    --hilite-color: <?= $hiliteColor ?>;
+    --visited-color: <?= $visitedColor ?>;
+    background-color: var(--bg-color); /* For just a solid color */
+
+    font-family: Courier, monospace;
+    font-size: large;
+}
+
+body {
+    margin: 0;
+
+    display: flex;
+    justify-content: space-between;
+    --comic-page-width: <?= $comicDefaultWidth ?>px;
+    --shrink-factor: <?= $pageSectionShrinkFactor ?>;
+}
+
+/* These don't affect image sizes, 
+    but they do affect the text section sizes */
+<?php
+    for ($i = 0; $i < \count($windowWidthsOrder); $i++) {
+?>
+@media screen and (min-width: <?= $windowWidthsOrder[$i] ?>px) {
+    body {
+        --comic-page-width: <?= $fileWidthsOrder[$i + 1] ?>px;
+    }
+}
+<?php } ?>
+
+body, 
+footer {
+    color: var(--text-color);
+    text-align: center;
+}
+
+/* Selects the big navigation buttons to the side of the page */
+body > a.nav-button {
+    width: max(0px, 0.25 * (100vw - var(--comic-page-width)));
+    max-height: 100%;
+}
+
+@media screen and (max-width: <?= $fileWidthsOrder[0] ?>px) {
+    body {
+        --shrink-factor: 1;
+    }
+
+    body > a.nav-button {
+        display: none;
+    }
+}
+
+h2 {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+section[id="desc_section"], 
+section[id="tag_section"],
+section[id="cw_section"] {
+    border: <?= $sectionBorderWidth = 0.14 ?>em solid var(--text-color);
+    margin: <?= $sectionMarginHori = 0.5 ?>em auto;
+    padding: <?= $sectionPadding = 1 ?>em;
+    padding-top: 0.7em;
+    max-width: calc(var(--shrink-factor) * var(--comic-page-width) - <?= 
+        2*$sectionBorderWidth + 2*$sectionMarginHori + $sectionPadding
+    ?>em);
+}
+
+/* selects paragraph elements directly preceded by header 2 elements */
+h2 + p {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+nav {
+    /* Make font size of text in the nav pane (previous, next, etc.) 4 
+    points bigger than the inherited size */
+    font-size: calc(1em + 4pt);
+}
+
+a:link {
+    color: inherit;
+    padding: 0.1em;
+    border-radius: 0.1em;
+}
+
+a:visited {
+    color: var(--visited-color)
+}
+
+a:hover {
+    color: var(--text-color);
+    background: var(--hilite-color);
+}
+
+a.text_desc_heading {
+    color: var(--text-color);
+    text-decoration: inherit;
+    background: inherit;
+}
+
+.nav-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: calc(var(--shrink-factor) * var(--comic-page-width));
+    margin: 0 auto;
+}
+
+.nav-line a.nav-button {
+    display: block;
+    flex: 1 12em;
+    padding: 0.5em;
+    border-radius: 0;
+    text-align: center;
+}
+
+.page-display img.comic-page {
+    max-width: 100%;
+    margin-top: clamp(0px, 0.5*(100vw - var(--comic-page-width)), <?= 
+        $comicTopMargin ?>vh);
+}
+
+<?php
+    return file_put_contents($filePath, ob_get_flush());
 }
 
 ?>

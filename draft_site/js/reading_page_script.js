@@ -12,13 +12,7 @@ const prevKeyCodes = new Set(["ArrowLeft",
                               "z", 
                               "Z"]);
 
-import {/* getNavLinks,*/ getLink, keyNavigate } from "./briels_helpful_code.js";
-
-// const navLinks = getNavLinks(document, 
-//                              ".prev-button", 
-//                              ".next-button", 
-//                              ".prev-upd8-button", 
-//                              ".next-upd8-button");
+import {getLink, keyNavigate } from "./briels_helpful_code.js";
 
 document.addEventListener("keydown", (event) => 
         keyNavigate(event, 

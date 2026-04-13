@@ -67,17 +67,17 @@ export function addImageDivToggleListeners(document,
     const imageDivs = document.querySelectorAll(imageDivClass);
     const images = document.querySelectorAll(imageClass);
     toggleButtons.forEach(
-            (btn) => btn.addEventListener("click", 
-                                          () => toggleImageDiv(thumbnailState,
-                                                               toggleButtons, 
-                                                               imageDivs, 
-                                                               images, 
-                                                               imgSrcAttrName, 
-                                                               dispPropertyName, 
-                                                               dispHidePropertyName, 
-                                                               hideButtonText, 
-                                                               showButtonText)
-                                         )
+        (btn) => btn.addEventListener("click", 
+                                      () => toggleImageDiv(thumbnailState,
+                                                           toggleButtons, 
+                                                           imageDivs, 
+                                                           images, 
+                                                           imgSrcAttrName, 
+                                                           dispPropertyName, 
+                                                           dispHidePropertyName, 
+                                                           hideButtonText, 
+                                                           showButtonText)
+                                      )
     );  
 }
 
@@ -122,7 +122,10 @@ export function getNavLinks(readPageDocument,
                             prevUpdateClass,
                             nextUpdateClass) {
     const navLinks = [];
-    for (const navClass of [prevPageClass, nextPageClass, prevUpdateClass, nextUpdateClass]) {
+    for (const navClass of [prevPageClass, 
+                            nextPageClass, 
+                            prevUpdateClass, 
+                            nextUpdateClass]) {
         navLinks.push(readPageDocument.querySelector(navClass).href);
     }
     return navLinks;
@@ -130,4 +133,47 @@ export function getNavLinks(readPageDocument,
 
 export function getLink(document, linkClass) {
     return document.querySelector(linkClass).href;
+}
+
+class ImageSize {
+    constructor(width, height, maxWindowWidth) {
+        this.width = width;
+        this.height = height;
+        this.maxWindowWidth = maxWindowWidth;
+    }
+}
+
+class ImageSizeInfo {
+    constructor(imgElement) {
+        this.ratio = imgElement.clientHeight / imgElement.clientWidth;
+        this.srcsetStr = imgElement.getAttribute("srcset");
+        this.sizesStr = imgElement.getAttribute("sizes");
+
+        const srcsets = this.srcsetStr.split(",");
+        const sizes = this.sizesStr.split(",");
+
+        this.info = new Array(srcsets.length);
+
+        for (let i = 0; i < srcsets.length - 1; i++) {
+            const fileWidth = parseInt(srcsets[i].match(/\d+/g)
+                                                 .pop());
+            this.info[i] = new ImageSize(fileWidth, 
+                                         fileWidth * this.ratio, 
+                                         parseInt(sizes[i+1].match(/\d+/g)[0]));
+        }
+        
+        if (!sizes[sizes.length - 1].includes("(max-width:")) {
+            this.info[this.info.length - 1].maxWindowWidth = Infinity;
+        }
+    }
+}
+
+export function resizeImageMaps(newWindowWidth,
+                                containingElement, 
+                                imgSelector,
+                                areaPrevSelector, 
+                                areaNextSelector) {
+    const sizeInfo = new ImageSizeInfo(containingElement.querySelector(imgSelector));
+    const areaPrev = containingElement.querySelector(areaPrevSelector);
+    
 }
