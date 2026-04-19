@@ -8,10 +8,13 @@ html {
     --text-color: #ffffff;
     --hilite-color: #000000;
     --visited-color: #aaaaaa;
-    background-color: var(--bg-color); /* For just a solid color */
+    /* For just a solid color */
+    /* background-color: var(--bg-color);  */
 
-    font-family: Courier, monospace;
-    font-size: large;
+    background: conic-gradient(from 304deg at 12% -10% in hsl shorter hue, rgb(48, 21, 27) 50%, #491d25ff 55%, #230b0dff 73%);
+
+    font-family: "Briel Nib Bold", Courier, monospace;
+    font-size: x-large;
 }
 
 body {
@@ -45,6 +48,11 @@ footer {
     text-align: center;
 }
 
+footer {
+    font-size: large;
+    font-family: "Briel Fixed Width", Courier, monospace;
+}
+
 /* Selects the big navigation buttons to the side of the page */
 body > a.nav-button {
     width: max(0px, 0.25 * (100vw - var(--comic-page-width)));
@@ -65,6 +73,8 @@ h2 {
     /* margin-top: 0.5em; */
     margin-top: 0;
     margin-bottom: 0;
+    font-weight: inherit;
+    /* font-family: "Briel Fixed Width Bold"; */
 }
 
 /* main {
@@ -86,11 +96,17 @@ h2 {
 section[id="desc_section"], 
 section[id="tag_section"],
 section[id="cw_section"] {
-    border: 0.14em solid var(--text-color);
+    border-left: 0.3em solid var(--text-color);
+    border-right: 0.3em solid var(--text-color);
+    /* border-top: 0.1em dashed var(--visited-color);
+    border-bottom: 0.1em dashed var(--text-color); */
+    border-radius: 0.7em;
+    /* border-top-left-radius: 1em; */
+    /* border-bottom-right-radius: 0.5em; */
     max-width: calc(var(--shrink-factor) * var(--comic-page-width) - (2 * 0.14em + 2 * 0.5em + 1em));
     margin: 0.5em auto;
-    padding: 0.7em 1em;
-    padding-bottom: 1em;
+    padding: 0.3em 1em;
+    /* padding-bottom: 1em; */
 }
 
 /* selects paragraph elements directly preceded by header 2 elements */
@@ -101,10 +117,19 @@ h2 + p {
     margin-bottom: 0;
 }
 
+h2 + p.text-desc {
+    font-family: "Courier New", Courier, monospace;
+    font-size: large;
+}
+
 nav {
     /* Make font size of text in the nav pane (previous, next, etc.) 4 
     points bigger than the inherited size */
-    font-size: calc(1em + 4pt);
+    font-size: x-large;
+    /* border-left: 0.3em solid var(--visited-color);
+    border-right: 0.3em solid var(--text-color);
+    border-radius: 0.2em; */
+
 }
 
 a:link {
@@ -126,7 +151,8 @@ a:hover {
 }
 
 a.text_desc_heading {
-    color: var(--text-color);
+    /* Keeps # links from looking like links */
+    color: inherit;
     text-decoration: inherit;
     background: inherit;
 }
@@ -142,7 +168,10 @@ a.text_desc_heading {
     justify-content: center;
     max-width: calc(var(--shrink-factor) * var(--comic-page-width));
     /* width: 0.75 * (100vw - var(--comic-page-width)); */
+    /* border-bottom: 0.1em dotted var(--text-color);
+    border-radius: 0.5em; */
     margin: 0 auto;
+
 }
 
 .nav-line a.nav-button {
@@ -151,11 +180,55 @@ a.text_desc_heading {
     padding: 0.5em;
     border-radius: 0;
     text-align: center;
-    /* display: block;
-    text-align: center; */
-    /* display: block;
-    text-align: inherit; 
-    align-self: center; */
+    /* border-left: 0.1em dotted var(--text-color);
+    border-right: 0.1em dotted var(--text-color);
+    border-radius: 0.5em; */
+    --nav-btn-brdr-radius: 0.3em;
+}
+
+.nav-line a.prev-button, 
+.nav-line a.prev-upd8-button, 
+.nav-line a.archive-button {
+    border-right: 0.1em solid var(--text-color);
+    /* border-left: none; */
+    /* border-top-left-radius: 0;
+    border-bottom-left-radius: 0; */
+    border-top-right-radius: var(--nav-btn-brdr-radius);
+    border-bottom-right-radius: var(--nav-btn-brdr-radius);
+}
+
+.nav-line a.next-button, 
+.nav-line a.next-upd8-button, 
+.nav-line a.archive-button {
+    border-left: 0.1em solid var(--text-color);
+    border-top-left-radius: var(--nav-btn-brdr-radius);
+    border-bottom-left-radius: var(--nav-btn-brdr-radius);
+    /* border-right: none; */
+    /* border-top-right-radius: 0;
+    border-bottom-right-radius: 0; */
+}
+
+.nav-line a.next-button, 
+.nav-line a.prev-button {
+    border-width: 0.056em;
+    font-size: larger;
+}
+
+.nav-line a.next-button {
+    /* border-top-left-radius: 2em;
+    border-bottom-left-radius: 2em; */
+}
+
+.nav-line a.prev-button {
+    /* border-top-right-radius: 2em;
+    border-bottom-right-radius: 2em; */
+}
+
+.nav-line a.home-button {
+    /* border: 0.15em solid var(--text-color);
+    border-radius: 0.25em;
+    border-top: none;
+    border-bottom: none; */
 }
 
 .prev-button {}

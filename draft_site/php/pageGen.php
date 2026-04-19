@@ -168,6 +168,7 @@ function generateComicPage($pageRecord,
         <title><<?= $pageRecord['title'] ?> | Breel Comix</title>
         <link rel="icon" href="./images/smileicon.ico" type="image/x-icon">
 
+        <link href="./styles/briel_font-faces.css" rel="stylesheet">
         <link href="<?= $pageRecord['stylelocation'] == 'NULL' 
                             ? $defaultStyleURL
                             : $pageRecord['stylelocation'] ?>" 
@@ -184,7 +185,7 @@ function generateComicPage($pageRecord,
             <main> 
                 <?php
     $filesWidthOrder = array_combine(array_column($fileRecords, 
-                                                'width'), 
+                                                  'width'), 
                                      $fileRecords);
     ksort($filesWidthOrder);
 
@@ -196,7 +197,6 @@ function generateComicPage($pageRecord,
         }
     }
                 ?>
-                <!-- Will need to use javascript to make this responsive -->
                 <map name="nav-on-comic">
                     <!-- Left quarter of image goes back -->
                     <!-- To change with javascript (coords) -->
@@ -231,9 +231,7 @@ function generateComicPage($pageRecord,
 
     reset($filesWidthOrder);
                     ?>"
-                    sizes="(max-width: <?= 
-                                current($filesWidthOrder)['width'] 
-                            ?>px) 100vw, 
+                    sizes="(max-width: <?= current($filesWidthOrder)['width'] ?>px) 100vw, 
                             <?php 
 
     // Undefined behavior if `count(filesWidthOrder) != count($windowWidthsOrder) + 1`
@@ -243,8 +241,8 @@ function generateComicPage($pageRecord,
                 . "px,\n";
     }
                             ?>
-                            <?=array_last($filesWidthOrder)['width']?>px"   
-                    src="<?=$filesWidthOrder[$width]['location']?>"
+                            <?= array_last($filesWidthOrder)['width'] ?>px"   
+                    src="<?= $filesWidthOrder[$srcWidth]['location'] ?>"
                     alt="<?= $filesWidthOrder[$srcWidth]['alttext'] ?>"
                     usemap="#nav-on-comic"
                     id="single_page"
@@ -256,28 +254,23 @@ function generateComicPage($pageRecord,
 
                 <nav>
                     <p class="nav-line">
-                        <!-- To change with PHP (href) -->
                         <a href="<?= $prevLink ?>" 
-                            class="nav-button prev-button">Previous</a>
-                        <!-- To change with PHP (href) -->
+                           class="nav-button prev-button">Previous</a>
                         <a href="<?= $nextLink ?>" 
-                            class="nav-button next-button">Next</a>
+                           class="nav-button next-button">Next</a>
                     </p>
                     <p class="nav-line">
-                        <!-- To change with PHP (href) -->
                         <a href="<?= $prevUpd8Link ?>" class="nav-button prev-upd8-button">Skip back</a>
-                        <a href="archive_page.html" class="nav-button">Archive</a>
-                        <!-- To change with PHP (href) -->
+                        <a href="home_page.html" class="nav-button home-button">Home</a>
                         <a href="<?= $nextUpd8Link ?>" class="nav-button next-upd8-button">Skip forth</a>
                     </p>
                     <p class="nav-line">
-                        <a href="home_page.html" class="nav-button">Home</a>
+                        <a href="archive_page.html" class="nav-button archive-button">Archive</a>
                     </p>
                 </nav>
 
                 <section id="tag_section">
                     <h2>Tags</h2>
-                    <!-- To change with PHP (add <a> tag links) -->
                     <p id="tags-para">
                     <?php
                         foreach ($tags as $tag) {
@@ -289,7 +282,6 @@ function generateComicPage($pageRecord,
 
                 <section id="cw_section">
                     <h2>Content Warnings</h2>
-                    <!-- To change with PHP (add <a> tag links) -->
                     <p id="cws-para">
                     <?php
                         foreach ($contWarns as $cw) {
@@ -309,7 +301,6 @@ function generateComicPage($pageRecord,
             </main>
 
             <footer>
-                <!-- Can be changed with PHP (change years) -->
                 <p class="copyright">
                     ©Copyright 2025-<?= getdate()['year'] ?> by Briel Comics.
                     All rights reserved.
@@ -318,7 +309,6 @@ function generateComicPage($pageRecord,
 
         </div>  
         
-        <!-- To be changed with PHP (href)-->
         <a href="<?= $nextLink ?>" class="nav-button next-button" title="Next"></a>
     </body>
 </html>
@@ -371,8 +361,8 @@ html {
     --visited-color: <?= $visitedColor ?>;
     background-color: var(--bg-color); /* For just a solid color */
 
-    font-family: Courier, monospace;
-    font-size: large;
+    font-family: "Briel Nib Bold", Courier, monospace;
+    font-size: x-large;
 }
 
 body {
@@ -394,12 +384,19 @@ body {
         --comic-page-width: <?= $fileWidthsOrder[$i + 1] ?>px;
     }
 }
-<?php } ?>
+<?php 
+    } 
+?>
 
 body, 
 footer {
     color: var(--text-color);
     text-align: center;
+}
+
+footer {
+    font-size: large;
+    font-family: "Briel Fixed Width", Courier, monospace;
 }
 
 /* Selects the big navigation buttons to the side of the page */
@@ -421,17 +418,20 @@ body > a.nav-button {
 h2 {
     margin-top: 0;
     margin-bottom: 0;
+    font-weight: inherit;
 }
 
 section[id="desc_section"], 
 section[id="tag_section"],
 section[id="cw_section"] {
-    border: <?= $sectionBorderWidth = 0.14 ?>em solid var(--text-color);
-    margin: <?= $sectionMarginHori = 0.5 ?>em auto;
-    padding: <?= $sectionPadding = 1 ?>em;
+    border-left: <?= $sectionBorderWidth = 0.3 ?>em solid var(--text-color);
+    border-right: <?= $sectionBorderWidth ?>em solid var(--text-color);
+    border-radius: 0.7em;
+    margin: <?= $sectionMarginHori = 0.5 //wait, what? ?>em auto;
+    padding: 0.3em <?= $sectionHoriPadding = 1 ?>em;
     padding-top: 0.7em;
     max-width: calc(var(--shrink-factor) * var(--comic-page-width) - <?= 
-        2*$sectionBorderWidth + 2*$sectionMarginHori + $sectionPadding
+        2*$sectionBorderWidth + 2*$sectionMarginHori + $sectionHoriPadding
     ?>em);
 }
 
@@ -441,10 +441,17 @@ h2 + p {
     margin-bottom: 0;
 }
 
+/* Courier is more legible than my handmade font, for accessibility */
+h2 + p.text-desc {
+    font-family: "Courier New", Courier, monospace;
+    font-size: large;
+}
+
 nav {
+    font-size: x-large;
     /* Make font size of text in the nav pane (previous, next, etc.) 4 
     points bigger than the inherited size */
-    font-size: calc(1em + 4pt);
+    /* font-size: calc(1em + 4pt); */
 }
 
 a:link {
@@ -463,7 +470,7 @@ a:hover {
 }
 
 a.text_desc_heading {
-    color: var(--text-color);
+    color: inherit;
     text-decoration: inherit;
     background: inherit;
 }
@@ -480,8 +487,31 @@ a.text_desc_heading {
     display: block;
     flex: 1 12em;
     padding: 0.5em;
-    border-radius: 0;
     text-align: center;
+    border-radius: 0;
+    --nav-btn-brdr-radius: 0.3em;
+}
+
+.nav-line a.prev-button, 
+.nav-line a.prev-upd8-button, 
+.nav-line a.archive-button {
+    border-right: 0.1em solid var(--text-color);
+    border-top-right-radius: var(--nav-btn-brdr-radius);
+    border-bottom-right-radius: var(--nav-btn-brdr-radius);
+}
+
+.nav-line a.next-button, 
+.nav-line a.next-upd8-button, 
+.nav-line a.archive-button {
+    border-left: 0.1em solid var(--text-color);
+    border-top-left-radius: var(--nav-btn-brdr-radius);
+    border-bottom-left-radius: var(--nav-btn-brdr-radius);
+}
+
+.nav-line a.next-button, 
+.nav-line a.prev-button {
+    border-width: 0.056em;
+    font-size: larger;
 }
 
 .page-display img.comic-page {
