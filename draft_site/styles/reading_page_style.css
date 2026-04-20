@@ -217,11 +217,15 @@ a.text_desc_heading {
 .nav-line a.next-button {
     /* border-top-left-radius: 2em;
     border-bottom-left-radius: 2em; */
+    border-top-left-radius: calc(0.5 * var(--nav-btn-brdr-radius));
+    border-bottom-left-radius: calc(0.5 * var(--nav-btn-brdr-radius));
 }
 
 .nav-line a.prev-button {
     /* border-top-right-radius: 2em;
     border-bottom-right-radius: 2em; */
+    border-top-right-radius: calc(0.5 * var(--nav-btn-brdr-radius));
+    border-bottom-right-radius: calc(0.5 * var(--nav-btn-brdr-radius))
 }
 
 .nav-line a.home-button {

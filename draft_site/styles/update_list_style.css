@@ -1,12 +1,29 @@
 html {
     font-family: "Briel Nib", Courier, monospace;
     font-size: x-large;
-    color: #491400;
-    background-color: #fff5e1;
+
+    --bg-color: hsl(42, 100%, 89%);
+    --title-color: hsl(6, 100%, 23%);
+    --text-color: hsl(350, 100%, 12%);
+    --link-color: hsl(345, 71%, 50%);
+    --visited-color: hsl(355, 47%, 42%);
+    --hilite-color: hsl(30, 100%, 78%);
+    --button-color: hsl(52, 96%, 90%);
+    /* --button-light-emboss-color: hsl(54, 47%, 77%); */
+    --button-shadow-emboss-color: hsl(40, 34%, 67%);
+    --sect-border-color: hsl(27, 55%, 26%);
+    --bg-gradient: conic-gradient(from 330deg at 30% -20% in hsl shorter hue, hsl(10, 71%, 80%) 30%, hsl(42, 100%, 89%) 50%, hsl(18, 73%, 70%) 100%);
+
+    --thumbnail-size: 100px;
+
+    color: var(--text-color);
+    background-color: var(--bg-color);
+    background: var(--bg-gradient);
 }
 
 h1 {
     font-family: "Briel Marker", Courier, monospace;
+    color: var(--title-color);
     margin: 0;
     /* margin-top: 0.05em;
     margin-bottom: 0.05em; */
@@ -21,13 +38,17 @@ h2 {
 }
 
 header, main, footer {
-    /* padding: 0.2em; */
     margin: 0.2em 1em;
     
 }
 
 footer {
     text-align: center;
+}
+
+footer > p {
+    font-size: large;
+    font-family: "Briel Fixed Width", Courier, monospace;
 }
 
 h3,
@@ -41,27 +62,33 @@ p {
     margin-bottom: 0;
 }
 
+form {
+    margin-bottom: 0.5em;
+    text-align: left;
+    font-size: unset;
+}
+
 /* Normalize forms, so font and box size changes affect forms */
 button,
 input,
 select,
 textarea {
-    font-family: inherit;
+    /* font-family: inherit; */
     font-size: 100%;
-    border-radius: 0.2em; 
+    border-radius: 0.2rem; 
   /* box-sizing: border-box;
   padding: 0;
   margin: 0; */
 }
 
 input[type="search"] {
-    /* border-radius: 1px; */
-    /* flood-color: #ffefcf; */
-    /* background-color: #ffefcf; */
-    background-color: inherit;
-    border-color: #ddc494;
-    /* margin: 0.5em auto; */
-    padding: 0.3em 0.4em 0.23em;
+    /* flood-color: var(--bg-color); */
+    background-color: var(--bg-color);
+    border-color: var(--button-shadow-emboss-color);
+    font-family: "Courier New", Courier, monospace;
+    font-size: smaller;
+    padding: 0.42rem 0.4rem 0.28rem;
+    margin: 0;
     /* padding-bottom: inherit; */
 }
 
@@ -70,66 +97,62 @@ input[type="checkbox"] {
 }
 
 button {
-    /* margin: 0.5em 0; */
     color: inherit; 
-    background-color: #ffeecc;
-    border-color: #c89c73;
-    padding: 0.3em 0.4em 0.25em;
+    background-color: var(--button-color);
+    border-color: var(--button-shadow-emboss-color);
+    padding: 0.27rem 0.4rem 0.28rem;
     font-family: "Briel Nib Bold", Courier, monospace;
-    /* padding-bottom: inherit; */
-}
-
-form {
-    margin-bottom: 0.5em;
-    text-align: left;
+    margin: auto;
 }
 
 form button {
-    margin: 0;
-    margin-top: 0.2em;
+    /* margin: 0;
+    margin-top: 0.2em; */
     text-align: center;
+}
+
+label {
+    font-size: smaller;
+    font-family: "Briel Fixed Width", Courier, monospace;
 }
 
 label[for="search"] {
     display: block;
-    margin: 0.4em;
+    margin: 0.3em 0.4em 0.1em;
 }
 
 a:link {
     border-radius: 0.1em;
-    color: #d84268;
+    color: var(--link-color);
+}
+
+main {
+    margin: 1em;
+}
+
+main button {
+    font-size: smaller;
 }
 
 a:hover {
-    background-color:#f7bb83;
-    /* font-weight: bold; */
-    /* text-decoration: none; */
-  /* background: #ff00ff; */
+    background-color:var(--hilite-color);
 }
 
 a:visited {
-    color: #8c394b;
+    color: var(--visited-color);
 }
-
-/* h3 a:hover {
-    font-weight: normal;
-} */
-
-/* .thumbnail {
-    
-} */
 
 .archive-entry,
 .search-entry {
     display: block;
-    border: 0.14em solid #673d22;
+    /* background: conic-gradient(from 200deg at 10% 150% in hsl shorter hue, hsl(18, 73%, 70%) 17%, hsl(42, 100%, 89%) 52%, hsl(10, 71%, 72%) 87%); */
+    background-color: var(--bg-color);
+    border: 0.14em solid var(--sect-border-color);
     border-top-width: 0.1em;
     border-bottom-width: 0.1em;
     border-radius: 0.2em; 
     padding: 0.4em 0.2em;
-    margin: 1em auto;
-    /* margin-top: 0.2em; */
-    --thumbnail-size: 100px
+    margin: 0.5em auto 1em;
 }
 
 @media screen and (width >= 600px) {
@@ -148,12 +171,8 @@ a:visited {
 }
 
 .thumbnails-div {
-    /* padding: 0; */
     margin: 0 0.3em;
-    /* display: none; */
     flex-wrap: wrap;
-    /* justify-content: right; */
-    /* overflow: hidden; */
 }
 
 .search-entry .thumbnails-div {

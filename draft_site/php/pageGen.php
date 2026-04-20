@@ -150,7 +150,7 @@ function generateComicPage($pageRecord,
                             $windowWidthsOrder = [1500, 2400], 
                             $searchPageLocation = 'search_page.html', 
                             $srcDefaultWidths = [1400, 800, 2000], 
-                            $defaultStyleURL = "./styles/reading_page_style.css") {
+                            $defaultStyleURL = "../styles/reading_page_style.css") {
     ob_start(); 
 ?>
 <!doctype html>
@@ -165,92 +165,27 @@ function generateComicPage($pageRecord,
         <meta name="author" content="Breel">
         <meta name="description" content="A page displaying a comic.">
         
-        <title><<?= $pageRecord['title'] ?> | Breel Comix</title>
-        <link rel="icon" href="./images/smileicon.ico" type="image/x-icon">
+        <title><?= $pageRecord['title'] ?> | Breel Comix</title>
+        <link rel="icon" href="../images/smileicon.ico" type="image/x-icon">
 
-        <link href="./styles/briel_font-faces.css" rel="stylesheet">
+        <link href="../styles/briel_font-faces.css" rel="stylesheet">
         <link href="<?= $pageRecord['stylelocation'] == 'NULL' 
                             ? $defaultStyleURL
                             : $pageRecord['stylelocation'] ?>" 
               rel="stylesheet" 
               id="reading_stylesheet">
 
-        <script type="module" src="./js/reading_page_script.js"></script>
+        <script type="module" src="../js/reading_page_script.js"></script>
     </head>
 
     <body>
+
         <a href="<?= $prevLink ?>" class="nav-button prev-button" title="Previous"></a>
 
         <div class="page-display">
             <main> 
-                <?php
-    $filesWidthOrder = array_combine(array_column($fileRecords, 
-                                                  'width'), 
-                                     $fileRecords);
-    ksort($filesWidthOrder);
 
-    $srcWidth = NULL;
-    foreach ($srcDefaultWidths as $width) {
-        if (\array_key_exists($width, $filesWidthOrder)) {
-            $srcWidth = $width;
-            break;
-        }
-    }
-                ?>
-                <map name="nav-on-comic">
-                    <!-- Left quarter of image goes back -->
-                    <!-- To change with javascript (coords) -->
-                    <area
-                        shape="rect"
-                        coords="0,0,<?= $srcWidth / 4 ?>,<?= 
-                                $filesWidthOrder[$srcWidth]['height'] 
-                            ?>"
-                        href="<?= $prevLink ?>"
-                        alt="Previous"
-                        class="nav-button prev-button"
-                    />
-                    <!-- Right quarter goes forward -->
-                    <!-- To change with javascript (coords) -->
-                    <area
-                        shape="rect"
-                        coords="<?= 3 * $srcWidth / 4 ?>,0,<?= $srcWidth ?>,<?= 
-                                $filesWidthOrder[$srcWidth]['height'] 
-                            ?>"
-                        href="<?= $nextLink ?>"
-                        alt="Next"
-                        class="nav-button next-button"
-                    />
-                </map>
-
-                <img
-                    class="comic-page"
-                    srcset="<?php
-    foreach ($filesWidthOrder as $file) {
-        echo $file['location'] . ' ' . $file['width'] . "w\n";
-    }
-
-    reset($filesWidthOrder);
-                    ?>"
-                    sizes="(max-width: <?= current($filesWidthOrder)['width'] ?>px) 100vw, 
-                            <?php 
-
-    // Undefined behavior if `count(filesWidthOrder) != count($windowWidthsOrder) + 1`
-    foreach ($windowWidthsOrder as $maxWidth) {
-        echo "(max-width: {$maxWidth}px) "
-                . next($filesWidthOrder)['width'] 
-                . "px,\n";
-    }
-                            ?>
-                            <?= array_last($filesWidthOrder)['width'] ?>px"   
-                    src="<?= $filesWidthOrder[$srcWidth]['location'] ?>"
-                    alt="<?= $filesWidthOrder[$srcWidth]['alttext'] ?>"
-                    usemap="#nav-on-comic"
-                    id="single_page"
-                >
-                <!-- Resource on web accessibility for complex images: 
-                https://www.w3.org/WAI/tutorials/images/complex/ -->
-                
-                <!-- <p><a href="#text_description">Text Description</a></p> -->
+                <?php require 'comicDisplayElements.php'; ?>
 
                 <nav>
                     <p class="nav-line">
@@ -268,48 +203,19 @@ function generateComicPage($pageRecord,
                         <a href="archive_page.html" class="nav-button archive-button">Archive</a>
                     </p>
                 </nav>
+                
+                <?php require 'comicTagsCWsDescElements.php'; ?>
 
-                <section id="tag_section">
-                    <h2>Tags</h2>
-                    <p id="tags-para">
-                    <?php
-                        foreach ($tags as $tag) {
-                            echo "<a href=$searchPageLocation?tag=$tag>$tag</a>\n";
-                        }
-                    ?>
-                    </p>
-                </section>
-
-                <section id="cw_section">
-                    <h2>Content Warnings</h2>
-                    <p id="cws-para">
-                    <?php
-                        foreach ($contWarns as $cw) {
-                            echo "<a href=$searchPageLocation?cw=$cw>$cw</a>\n";
-                        }
-                    ?>
-                    </p>
-                </section>
-
-                <section id="desc_section">
-                    <h2><a href="#text_description" 
-                           class="text_desc_heading">Text Description</a></h2>
-                    <p class="text-desc">
-                        <?= $pageRecord["imagedesc"] ?>
-                    </p>
-                </section>
             </main>
 
             <footer>
-                <p class="copyright">
-                    ©Copyright 2025-<?= getdate()['year'] ?> by Briel Comics.
-                    All rights reserved.
-                </p>
+                <?php require 'copyrightElement.php'; ?>
             </footer>
 
         </div>  
         
         <a href="<?= $nextLink ?>" class="nav-button next-button" title="Next"></a>
+
     </body>
 </html>
 
