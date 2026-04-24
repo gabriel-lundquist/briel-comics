@@ -1,11 +1,13 @@
 <?php
-if (!isset($fileRecords)) $fileRecords = [['width' => '', 
-                                           'height' => '', 
-                                           'location' => '', 
-                                           'alttext' => '']];
+if (!defined('UNSETDEFAULT')) define('UNSETDEFAULT', '');
+
+if (!isset($fileRecords)) $fileRecords = [['width' => UNSETDEFAULT, 
+                                           'height' => UNSETDEFAULT, 
+                                           'location' => UNSETDEFAULT, 
+                                           'alttext' => UNSETDEFAULT]];
 if (!isset($srcDefaultWidths)) $srcDefaultWidths = [1400, 800, 2000];
-if (!isset($prevLink)) $prevLink = '';
-if (!isset($nextLink)) $nextLink = '';
+if (!isset($prevLink)) $prevLink = UNSETDEFAULT;
+if (!isset($nextLink)) $nextLink = UNSETDEFAULT;
 if (!isset($windowWidthsOrder)) $windowWidthsOrder = [1500, 2400];
 
 $filesWidthOrder = array_combine(array_column($fileRecords, 

@@ -1,3 +1,9 @@
+<?php 
+if (!defined('UNSETDEFAULT')) define('UNSETDEFAULT', '');
+
+if (!isset($prevLink)) $prevLink = UNSETDEFAULT;
+if (!isset($prevUpd8Link)) $prevUpd8Link = UNSETDEFAULT;
+?>
 <!doctype html>
 <html lang="en-US">
     <head>
@@ -24,69 +30,84 @@
     <body>
         <a href="<?= $prevLink ?>" class="nav-button prev-button" title="Previous"></a>
 
-        <div class="page-display">
-            <main> 
-                <?php require 'comicDisplayElements.php'; ?>
+        <div class="page-display">         
+            <header>
+                <?php
+    $bannerFileStem = '';
+    $bannerAlt = 'Blank banner';
+    switch(rand(0,1)) {
+        case 1: 
+            $bannerFileStem = '2026-04-21BrielComicsBanner';
+            $bannerAlt = 'Briel Comics';
+            break;
+        default: 
+            $bannerFileStem = '2026-04-20BreelComixBanner';
+            $bannerAlt = 'Breel Comics';
+    }
+                ?>
+                <img
+                    srcset="./images/<?= $bannerFileStem ?>_800w.png 800w, 
+                            ./images/<?= $bannerFileStem ?>_1400w.png 1400w"
+                    src="./images/<?= $bannerFileStem ?>_800w.png"
+                    sizes="(max-width: 800px) 100vw, 
+                           (max-width: 1500px) 800px, 
+                           1400px"
+                    alt="<?= $bannerAlt ?>";
+                >
+            </header>
 
+            <main> 
+                <?php 
+    require 'comicDisplayElements.php'; 
+                ?>
                 <nav>
                     <p class="nav-line">
                         <a href="<?= $prevLink ?>" 
                            class="nav-button prev-button">Previous</a>
                         <?php
-
     if (isset($nextLink)) {
                         ?>
                         <a href="<?= $nextLink ?>" 
                            class="nav-button next-button">Next</a>
                         <?php 
     }
-
                         ?>
                     </p>
                     <p class="nav-line">
-                        <a href="<?= $prevUpd8Link ?>" class="nav-button prev-upd8-button">Skip back</a>
+                        <a href="<?= $prevUpd8Link ?>" 
+                           class="nav-button prev-upd8-button">Skip back</a>
+                        <?php
+    if (isset($nextUpd8Link)) {
+                        ?>
+                        <a href="<?= $nextUpd8Link ?>" 
+                           class="nav-button next-upd8-button">Next</a>
+                        <?php 
+    }
+                        ?>
                     </p>
                     <p class="nav-line">
-                        <a href="archive_page.html" class="nav-button archive-button">Archive</a>
+                        <a href="archive_page.html" 
+                           class="nav-button archive-button">Archive</a>
                     </p>
                 </nav>
 
-                <section id="tag_section">
-                    <h2>Tags</h2>
-                    <p id="tags-para">
-                    <?php
-                        foreach ($tags as $tag) {
-                            echo "<a href=$searchPageLocation?tag=$tag>$tag</a>\n";
-                        }
-                    ?>
-                    </p>
+                <section id="blog_section">
+                    <h2>Web log</h2>
+                    <br>
+                    <?= $blogText ?>
+                    <br>
+                    <?= $blogPostDate ?>
                 </section>
 
-                <section id="cw_section">
-                    <h2>Content Warnings</h2>
-                    <p id="cws-para">
-                    <?php
-                        foreach ($contWarns as $cw) {
-                            echo "<a href=$searchPageLocation?cw=$cw>$cw</a>\n";
-                        }
-                    ?>
-                    </p>
-                </section>
-
-                <section id="desc_section">
-                    <h2><a href="#text_description" 
-                           class="text_desc_heading">Text Description</a></h2>
-                    <p class="text-desc">
-                        <?= $pageRecord["imagedesc"] ?>
-                    </p>
-                </section>
+                <?php 
+    require 'comicTagsCWsDescElements.php'; 
+                ?>
             </main>
 
             <footer>
-                <p class="copyright">
-                    ©Copyright 2025-<?= getdate()['year'] ?> by Briel Comics.
-                    All rights reserved.
-                </p>
+                <?php
+    require 'copyrightElement.php';
+                ?>
             </footer>
 
         </div>  
