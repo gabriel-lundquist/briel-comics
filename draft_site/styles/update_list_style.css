@@ -21,6 +21,12 @@ html {
     background: var(--bg-gradient);
 }
 
+@media screen and (min-width: 1500px) {
+    html {
+        font-size: xx-large;
+    }
+}
+
 h1 {
     font-family: "Briel Marker", Courier, monospace;
     color: var(--title-color);

@@ -57,9 +57,11 @@ if (!isset($prevUpd8Link)) $prevUpd8Link = UNSETDEFAULT;
             </header>
 
             <main> 
+
                 <?php 
     require 'comicDisplayElements.php'; 
                 ?>
+
                 <nav>
                     <p class="nav-line">
                         <a href="<?= $prevLink ?>" 
@@ -97,6 +99,7 @@ if (!isset($prevUpd8Link)) $prevUpd8Link = UNSETDEFAULT;
                     <?= $blogText ?>
                     <br>
                     <?= $blogPostDate ?>
+                    <p><a href="./weblog_archive.html">Web log archive</a></p>
                 </section>
 
                 <?php 
