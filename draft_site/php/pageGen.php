@@ -1,6 +1,68 @@
 <?php
 namespace Briel;
 
+const DISPLAYWIDTH1 = 1920;
+const DISPLAYWIDTH2 = 3000;
+
+class pageInfo {
+    public $pageRecord; 
+    public $prevLink;
+    public $nextLink; 
+    public $prevUpd8Link; 
+    public $nextUpd8Link;
+    public $fileRecords; 
+    public $tags; 
+    public $contWarns; 
+    public $windowWidthsOrder;
+    public $srcDefaultWidths;
+    public $date;
+
+    public function __construct($pageRecord, 
+                                $prevLink, 
+                                $prevUpd8Link, 
+                                $fileRecords, 
+                                $tags = null, 
+                                $contWarns = null, 
+                                $nextLink = null, 
+                                $nextUpd8Link = null,
+                                $windowWidthsOrder = [DISPLAYWIDTH1, DISPLAYWIDTH2],  
+                                $srcDefaultWidths = [1400, 800, 2000]) {
+    
+        $this->pageRecord = $pageRecord;
+        $this->prevLink = $prevLink;
+        $this->prevUpd8Link = $prevUpd8Link; 
+        $this->fileRecords = $fileRecords; 
+        $this->tags = $tags;
+        $this->contWarns = $contWarns;
+        $this->nextLink = $nextLink;
+        $this->nextUpd8Link = $nextUpd8Link;
+        $this->windowWidthsOrder = $windowWidthsOrder;
+        $this->srcDefaultWidths = $srcDefaultWidths;
+        $this->date = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', 
+                                                           $pageRecord['postdate']);
+    }
+}
+
+class updateInfo {
+    public $updateRecord;
+    public $date;
+    public $tags;
+    public $pageRecordsOrdered;
+    public $thumbnailRecordsOrdered;
+
+    public function __construct($updateRecord,
+                                $tags,
+                                $pageRecordsOrdered,
+                                $thumbnailRecordsOrdered) {
+        $this->$updateRecord = $updateRecord;
+        $this->$date = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', 
+                                                            $updateRecord['postdate']);
+        $this->$tags = $tags;
+        $this->$pageRecordsOrdered = $pageRecordsOrdered;
+        $this->$thumbnailRecordsOrdered = $thumbnailRecordsOrdered;
+    }
+}
+
 function classIs($node, $className) {
     return str_contains($node->className, $className);
 }
@@ -147,7 +209,7 @@ function generateComicPage($pageRecord,
                             $fileRecords, 
                             $tags, 
                             $contWarns, 
-                            $windowWidthsOrder = [1500, 2400], 
+                            $windowWidthsOrder = [DISPLAYWIDTH1, DISPLAYWIDTH2], 
                             $searchPageLocation = 'search_page.html', 
                             $srcDefaultWidths = [1400, 800, 2000], 
                             $defaultStyleURL = "../styles/reading_page_style.css") {
@@ -166,7 +228,7 @@ function generateComicPage($pageRecord,
         <meta name="description" content="A page displaying a comic.">
         
         <title><?= $pageRecord['title'] ?> | Breel Comix</title>
-        <link rel="icon" href="../images/smileicon.ico" type="image/x-icon">
+        <link rel="icon" href="images/smileicon.ico" type="image/x-icon">
 
         <link href="../styles/briel_font-faces.css" rel="stylesheet">
         <link href="<?= $pageRecord['stylelocation'] == 'NULL' 
@@ -175,7 +237,7 @@ function generateComicPage($pageRecord,
               rel="stylesheet" 
               id="reading_stylesheet">
 
-        <script type="module" src="../js/reading_page_script.js"></script>
+        <script type="module" src="js/reading_page_script.js"></script>
     </head>
 
     <body>
@@ -247,7 +309,7 @@ function generateReadingStyle($filePath,
                               $visitedColor,
                               $comicDefaultWidth,
                               $fileWidthsOrder = [800, 1400, 2000], 
-                              $windowWidthsOrder = [1500, 2400],
+                              $windowWidthsOrder = [DISPLAYWIDTH1, DISPLAYWIDTH2],
                               $pageSectionShrinkFactor = 0.95,
                               $comicTopMargin = 8,
                               $gradient = NULL, 
@@ -256,7 +318,7 @@ function generateReadingStyle($filePath,
     ob_start(); 
 ?>
 html {
-    <?= $gradient ? "background: $gradient;" : ""; ?>
+    <?= $gradient ? "background: $gradient; height: 100%; background-size: cover;" : ""; ?>
     <?= $bgImageURL ? "background-image: url($bgImageURL);" : "" ?>
     <?= $stretchBGImg ? "background-size: 100% 100%;" : "" ?>
     /* To stretch an image to always fit. 
@@ -285,7 +347,11 @@ body {
 <?php
     for ($i = 0; $i < \count($windowWidthsOrder); $i++) {
 ?>
-@media screen and (min-width: <?= $windowWidthsOrder[$i] ?>px) {
+@media screen and (min-width: <?= $windowWidthsOrder[$i] + 1 ?>px) {
+    html {
+        font-size: xx-large;
+    }
+
     body {
         --comic-page-width: <?= $fileWidthsOrder[$i + 1] ?>px;
     }
@@ -301,7 +367,7 @@ footer {
 }
 
 footer {
-    font-size: large;
+    font-size: smaller;
     font-family: "Briel Fixed Width", Courier, monospace;
 }
 
@@ -335,7 +401,6 @@ section[id="cw_section"] {
     border-radius: 0.7em;
     margin: <?= $sectionMarginHori = 0.5 //wait, what? ?>em auto;
     padding: 0.3em <?= $sectionHoriPadding = 1 ?>em;
-    padding-top: 0.7em;
     max-width: calc(var(--shrink-factor) * var(--comic-page-width) - <?= 
         2*$sectionBorderWidth + 2*$sectionMarginHori + $sectionHoriPadding
     ?>em);
@@ -350,11 +415,11 @@ h2 + p {
 /* Courier is more legible than my handmade font, for accessibility */
 h2 + p.text-desc {
     font-family: "Courier New", Courier, monospace;
-    font-size: large;
+    font-size: smaller;
 }
 
 nav {
-    font-size: x-large;
+    font-size: larger;
     /* Make font size of text in the nav pane (previous, next, etc.) 4 
     points bigger than the inherited size */
     /* font-size: calc(1em + 4pt); */
@@ -395,13 +460,14 @@ a.text_desc_heading {
     padding: 0.5em;
     text-align: center;
     border-radius: 0;
+    font-size: larger;
     --nav-btn-brdr-radius: 0.3em;
 }
 
 .nav-line a.prev-button, 
 .nav-line a.prev-upd8-button, 
 .nav-line a.archive-button {
-    border-right: 0.1em solid var(--text-color);
+    border-right: 0.3rem solid var(--text-color);
     border-top-right-radius: var(--nav-btn-brdr-radius);
     border-bottom-right-radius: var(--nav-btn-brdr-radius);
 }
@@ -409,15 +475,26 @@ a.text_desc_heading {
 .nav-line a.next-button, 
 .nav-line a.next-upd8-button, 
 .nav-line a.archive-button {
-    border-left: 0.1em solid var(--text-color);
+    border-left: 0.3rem solid var(--text-color);
     border-top-left-radius: var(--nav-btn-brdr-radius);
     border-bottom-left-radius: var(--nav-btn-brdr-radius);
 }
 
 .nav-line a.next-button, 
 .nav-line a.prev-button {
-    border-width: 0.056em;
+    border-width: 0.15rem;
     font-size: larger;
+    --prev-next-btn-border-radius: calc(0.5 * var(--nav-btn-brdr-radius));
+}
+
+.nav-line a.next-button {
+    border-top-left-radius: var(--prev-next-btn-border-radius);
+    border-bottom-left-radius: var(--prev-next-btn-border-radius);
+}
+
+.nav-line a.prev-button {
+    border-top-right-radius: var(--prev-next-btn-border-radius);
+    border-bottom-right-radius: var(--prev-next-btn-border-radius);
 }
 
 .page-display img.comic-page {

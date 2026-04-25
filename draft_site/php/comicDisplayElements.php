@@ -1,5 +1,7 @@
 <?php
 if (!defined('UNSETDEFAULT')) define('UNSETDEFAULT', '');
+if (!defined('DISPLAYWIDTH1')) define('DISPLAYWIDTH1', 1920);
+if (!defined('DISPLAYWIDTH2')) define('DISPLAYWIDTH2', 3000);
 
 if (!isset($fileRecords)) $fileRecords = [['width' => UNSETDEFAULT, 
                                            'height' => UNSETDEFAULT, 
@@ -8,7 +10,7 @@ if (!isset($fileRecords)) $fileRecords = [['width' => UNSETDEFAULT,
 if (!isset($srcDefaultWidths)) $srcDefaultWidths = [1400, 800, 2000];
 if (!isset($prevLink)) $prevLink = UNSETDEFAULT;
 if (!isset($nextLink)) $nextLink = UNSETDEFAULT;
-if (!isset($windowWidthsOrder)) $windowWidthsOrder = [1500, 2400];
+if (!isset($windowWidthsOrder)) $windowWidthsOrder = [DISPLAYWIDTH1, DISPLAYWIDTH2];
 
 $filesWidthOrder = array_combine(array_column($fileRecords, 
                                               'width'), 
@@ -29,7 +31,7 @@ foreach ($srcDefaultWidths as $width) {
     <!-- To change with javascript (coords) -->
     <area
         shape="rect"
-        coords="0,0,<?= $srcWidth / 4 ?>,<?= 
+        coords="0,0,<?= 0.25 * $srcWidth ?>,<?= 
                 $filesWidthOrder[$srcWidth]['height'] 
             ?>"
         href="<?= $prevLink ?>"
@@ -40,7 +42,7 @@ foreach ($srcDefaultWidths as $width) {
     <!-- To change with javascript (coords) -->
     <area
         shape="rect"
-        coords="<?= 3 * $srcWidth / 4 ?>,0,<?= $srcWidth ?>,<?= 
+        coords="<?= 0.75 * $srcWidth ?>,0,<?= $srcWidth ?>,<?= 
                 $filesWidthOrder[$srcWidth]['height'] 
                 ?>"
         href="<?= $nextLink ?>"
@@ -55,7 +57,6 @@ foreach ($srcDefaultWidths as $width) {
 foreach ($filesWidthOrder as $file) {
     echo $file['location'] . ' ' . $file['width'] . "w\n";
 }
-
 reset($filesWidthOrder);
     ?>"
     sizes="(max-width: <?= current($filesWidthOrder)['width'] ?>px) 100vw, 

@@ -101,9 +101,17 @@ export function keyNavigate(keyEvent,
                             prevUpdateLink, 
                             nextUpdateLink) {
     if (prevKeyCodes.has(keyEvent.key)) {
-        window.location.href = (keyEvent.shiftKey ? prevUpdateLink : prevPageLink);
+        if (keyEvent.shiftKey) {
+            if (prevUpdateLink) window.location.href = prevUpdateLink;
+        } else {
+            if (prevPageLink) window.location.href = prevPageLink;
+        }
     } else if (nextKeyCodes.has(keyEvent.key)) {
-        window.location.href = (keyEvent.shiftKey ? nextUpdateLink : nextPageLink);
+        if (keyEvent.shiftKey) {
+            if (nextUpdateLink) window.location.href = nextUpdateLink;
+        } else {
+            if (nextPageLink) window.location.href = nextPageLink;
+        }
     }
 }
 

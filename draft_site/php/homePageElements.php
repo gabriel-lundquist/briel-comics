@@ -50,7 +50,7 @@ if (!isset($prevUpd8Link)) $prevUpd8Link = UNSETDEFAULT;
                             ./images/<?= $bannerFileStem ?>_1400w.png 1400w"
                     src="./images/<?= $bannerFileStem ?>_800w.png"
                     sizes="(max-width: 800px) 100vw, 
-                           (max-width: 1500px) 800px, 
+                           (max-width: 1920) 800px, 
                            1400px"
                     alt="<?= $bannerAlt ?>";
                 >

@@ -22,7 +22,7 @@ document.addEventListener("keydown", (event) =>
                     getLink(document, ".prev-button"), 
                     getLink(document, ".next-button"),
                     getLink(document, ".prev-upd8-button"), 
-                    getLink(document, ".next-upd8-button"), 
+                    getLink(document, ".next-upd8-button")
         )
 );
 

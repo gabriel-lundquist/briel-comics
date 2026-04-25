@@ -92,7 +92,7 @@ ob_start();
                     class="comic-page"
                     srcset=""
                     sizes="(max-width: 800px) 100vw, 
-                            (max-width: 1500px) 800px, 
+                            (max-width: 1920) 800px, 
                             (max-width: 2400px) 1400px, 
                             2000px
                             "   

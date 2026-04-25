@@ -29,7 +29,7 @@ body {
 
 /* These don't affect image sizes, 
     but they do affect the text section sizes*/
-@media screen and (min-width: 1500px) {
+@media screen and (min-width: 1921px) {
     html {
         font-size: xx-large;
     }
@@ -39,7 +39,7 @@ body {
     }
 }
 
-@media screen and (min-width: 2400px) {
+@media screen and (min-width: 3001px) {
     /* html {
         font-size: calc(xx-large) * 2;
     } */
@@ -84,22 +84,6 @@ h2 {
     font-weight: inherit;
     /* font-family: "Briel Fixed Width Bold"; */
 }
-
-/* main {
-    display: flex;
-    justify-content: space-between;
-    --comic-page-width: 800px;
-    --comic-page-height: 1000px;
-} */
-
-/* main a.nav-button {
-    width: max(0px, 0.25 * (100vw - var(--comic-page-width)));
-    max-height: 100%;
-} */
-
-/* main {
-    align-items: center;
-} */
 
 section[id="desc_section"], 
 section[id="tag_section"],

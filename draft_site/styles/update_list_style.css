@@ -19,12 +19,18 @@ html {
     color: var(--text-color);
     background-color: var(--bg-color);
     background: var(--bg-gradient);
+    background-size: cover;
+    height: 100%;
 }
 
-@media screen and (min-width: 1500px) {
+@media screen and (min-width: 1921px) {
     html {
         font-size: xx-large;
     }
+}
+
+body {
+    
 }
 
 h1 {
@@ -69,9 +75,10 @@ p {
 }
 
 form {
-    margin-bottom: 0.5em;
-    text-align: left;
+    /* margin-bottom: 0.5em; */
+    /* text-align: center; */
     font-size: unset;
+    text-align: left;
 }
 
 /* Normalize forms, so font and box size changes affect forms */
@@ -95,6 +102,7 @@ input[type="search"] {
     font-size: smaller;
     padding: 0.42rem 0.4rem 0.28rem;
     margin: 0;
+    margin-bottom: 0.2em;
     /* padding-bottom: inherit; */
 }
 
@@ -133,7 +141,8 @@ a:link {
 }
 
 main {
-    margin: 1em;
+    margin-bottom: 1em;
+    text-align: center;
 }
 
 main button {
@@ -151,6 +160,7 @@ a:visited {
 .archive-entry,
 .search-entry {
     display: block;
+    text-align: left;
     /* background: conic-gradient(from 200deg at 10% 150% in hsl shorter hue, hsl(18, 73%, 70%) 17%, hsl(42, 100%, 89%) 52%, hsl(10, 71%, 72%) 87%); */
     background-color: var(--bg-color);
     border: 0.14em solid var(--sect-border-color);
@@ -211,4 +221,10 @@ a:visited {
 .archive-entry h4, 
 .search-entry h4 {
     display: inline;
+}
+
+.archive-pos {
+    /* background-color: var(--bg-color); */
+    text-align: center;
+    font-family: "Briel Nib Bold", Courier, monospace;
 }
