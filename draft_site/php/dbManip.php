@@ -45,6 +45,7 @@ function promptInput($prompt) {
 
 /**
  * Summary of Briel\pdoConnect
+ * WILL NEED TO EDIT IN AN ENVIRONMENT VARIABLE FOR THE PASSWORD
  * Returns the PDO connection if successful, `false` if not.
  * Default values come from my laptop server settings.
  * @param mixed $dbhost
@@ -58,21 +59,21 @@ function pdoConnect( $dbhost = 'localhost',
                      $dbuser = 'root', 
                      $dbname = 'briel_comics_test', 
                      $dbport = 3307, 
-                     $dbpassword = false,
+                     $enterPassword = false,
                      $echoConnSuccess = false ) {
     try {
         $conn = new \PDO("mysql:host=$dbhost;
                           dbname=$dbname;
                           port=$dbport", 
                          $dbuser, 
-                         $dbpassword ? 
-                            $dbpassword : promptInput("Enter password: "));
+                         $enterPassword ? 
+                            $promptInput("Enter password: ") : getenv('MySQLBreelPassword'));
         $conn->setAttribute(\PDO::ATTR_ERRMODE, 
                             \PDO::ERRMODE_EXCEPTION);
         if ( $echoConnSuccess ) echo "Connected successfully.\n";
         return $conn;
     } catch (\PDOException $e) {
-        if ( $echoConnSuccess ) echo "Connection failed: " . $e->getMessage();
+        if ( $echoConnSuccess ) echo "Connection failed.\n" . $e->getMessage();
         return false;
     }
 }
@@ -1011,4 +1012,8 @@ function associateFilesWithPageInteractive($pageRecord,
         */
 }
 
+function searchComics($searchStr, $pdoConn) {
+    $tokens = explode(' ', $searchStr);
+    $pdoConn->query();
+}
 ?>

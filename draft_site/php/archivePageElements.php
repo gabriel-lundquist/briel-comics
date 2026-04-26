@@ -57,21 +57,21 @@ if (!isset($earliestArchiveLink)) $earliestArchiveLink = UNSETDEFAULT;
 
         <main>
             <button class="toggle-nails">Hide thumbnails</button>
-
 <?php
 foreach ($updateInfos as $update) {
 ?>
             <article class="archive-entry">
                 <div class="detail-div">
                     <!-- The update page should just lead to the first page? -->
-                    <h3><a href="<?= $update->pageRecordsOrdered[0]->location ?>" 
-                        class="page-link"><?= $update->updateRecord->title ?></a></h3>
+                    <h3><a href="<?= $update->pageRecordsOrdered[0]['location'] ?>" 
+                        class="page-link"><?= $update->updateRecord['title'] ?></a></h3>
+                    <p><?= $update->updateRecord['desc'] ?></p>
 <?php
     if (\count($update->pageRecordsOrdered) > 1) {
 ?>
-                    <p class="pages-list">Pages: 
+                    <p class="pages-list"><h4>Pages:</h4> 
 <?php   for ($i = 0; $i < \count($update->pageRecordsOrdered); $i++) { ?>      
-                        <a href="<?= $update->pageRecordsOrdered[$i]->location ?>" 
+                        <a href="<?= $update->pageRecordsOrdered[$i]['location'] ?>" 
                            class="page-link"><?= $i + 1 ?></a> 
 <?php
         }
@@ -97,10 +97,7 @@ foreach ($updateInfos as $update) {
 ?>                  </p>
 <?php
     }
-?>
-                    <p><h4>Description:</h4> <?= $update->updateRecord['desc'] ?></p>
 
-<?php
     if (\count($update->contWarns) != 0) {
 ?>
                     <p><h4>Content Warnings:</h4>

@@ -4,6 +4,20 @@ namespace Briel;
 const DISPLAYWIDTH1 = 1920;
 const DISPLAYWIDTH2 = 3000;
 
+enum ResultType: string {
+    case Update = 'comicupdate';
+    case Page = 'page';
+    // case File = 'file';
+}
+
+enum MatchedField {
+    case Tag;
+    case Date;
+    case Title;
+    case PageNum;
+    case ImgDesc;
+}
+
 class pageInfo {
     public $pageRecord; 
     public $prevLink;
@@ -65,6 +79,24 @@ class updateInfo {
         $this->$thumbnailRecordsOrdered = $thumbnailRecordsOrdered;
     }
 }
+
+// class matchInfo {
+//     public $term;
+//     public $field; 
+
+//     function __construct($matchSubstr, $fieldOfMatch) {
+//         $this->term = $matchSubstr;
+//         $this->field = $fieldOfMatch;
+//     }
+// }
+
+// class searchResultInfo {
+//     public $resultType;
+//     public $matches; //matchInfo array
+//     public $resultInfo; //updateInfo or pageInfo
+    
+//     function __construct()
+// }
 
 function classIs($node, $className) {
     return str_contains($node->className, $className);
