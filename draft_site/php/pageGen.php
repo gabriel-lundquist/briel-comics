@@ -21,8 +21,8 @@ class pageInfo {
                                 $prevLink, 
                                 $prevUpd8Link, 
                                 $fileRecords, 
-                                $tags = null, 
-                                $contWarns = null, 
+                                $tags = [], 
+                                $contWarns = [], 
                                 $nextLink = null, 
                                 $nextUpd8Link = null,
                                 $windowWidthsOrder = [DISPLAYWIDTH1, DISPLAYWIDTH2],  
@@ -47,17 +47,20 @@ class updateInfo {
     public $updateRecord;
     public $date;
     public $tags;
+    public $contWarns;
     public $pageRecordsOrdered;
     public $thumbnailRecordsOrdered;
 
     public function __construct($updateRecord,
-                                $tags,
                                 $pageRecordsOrdered,
-                                $thumbnailRecordsOrdered) {
+                                $thumbnailRecordsOrdered,
+                                $tags = [],
+                                $contWarns = []) {
         $this->$updateRecord = $updateRecord;
         $this->$date = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', 
                                                             $updateRecord['postdate']);
         $this->$tags = $tags;
+        $this->contWarns = $contWarns;
         $this->$pageRecordsOrdered = $pageRecordsOrdered;
         $this->$thumbnailRecordsOrdered = $thumbnailRecordsOrdered;
     }

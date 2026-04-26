@@ -1,4 +1,7 @@
 <?php
+// 
+//  THESE WOULD BE DEFINED IN PHP THAT REQUIRES THIS
+//
 if (!defined('UNSETDEFAULT')) define('UNSETDEFAULT', '');
 if (!defined('DISPLAYWIDTH1')) define('DISPLAYWIDTH1', 1920);
 if (!defined('DISPLAYWIDTH2')) define('DISPLAYWIDTH2', 3000);
@@ -7,13 +10,21 @@ if (!isset($fileRecords)) $fileRecords = [['width' => UNSETDEFAULT,
                                            'height' => UNSETDEFAULT, 
                                            'location' => UNSETDEFAULT, 
                                            'alttext' => UNSETDEFAULT]];
-if (!isset($srcDefaultWidths)) $srcDefaultWidths = [1400, 800, 2000];
+if (!isset($srcDefaultWidths)) {
+    $srcDefaultWidths = array_column($fileRecords, 'width');
+    if (count($srcDefaultWidths) > 1) {
+        sort($srcDefaultWidths);
+        [$srcDefaultWidths[0], $srcDefaultWidths[1]] = [$srcDefaultWidths[1], $srcDefaultWidths[0]];
+    }
+}
 if (!isset($prevLink)) $prevLink = UNSETDEFAULT;
 if (!isset($nextLink)) $nextLink = UNSETDEFAULT;
 if (!isset($windowWidthsOrder)) $windowWidthsOrder = [DISPLAYWIDTH1, DISPLAYWIDTH2];
 
-$filesWidthOrder = array_combine(array_column($fileRecords, 
-                                              'width'), 
+//
+//  START OF ACTUAL CODE
+//
+$filesWidthOrder = array_combine(array_column($fileRecords, 'width'), 
                                  $fileRecords);
 ksort($filesWidthOrder);
 
@@ -74,5 +85,3 @@ foreach ($windowWidthsOrder as $maxWidth) {
         usemap="#nav-on-comic"
         id="single_page"
 >
-<!-- Resource on web accessibility for complex images: 
-https://www.w3.org/WAI/tutorials/images/complex/ -->

@@ -85,11 +85,11 @@ foreach ($updateInfos as $update) {
                             $update->$date->format('Y, M. js, l')?></time>
                     </p>
 <?php
-    if ($tags and \count($tags) != 0) {
+    if (\count($update->tags) != 0) {
 ?>
                     <p><h4>Tags:</h4>
 <?php
-        foreach ($tags as $tag) {
+        foreach ($update->tags as $tag) {
 ?>
                         <a href="search_page.php?tag=<?= $tag ?>"><?= $tag ?></a>
 <?php
@@ -99,6 +99,21 @@ foreach ($updateInfos as $update) {
     }
 ?>
                     <p><h4>Description:</h4> <?= $update->updateRecord['desc'] ?></p>
+
+<?php
+    if (\count($update->contWarns) != 0) {
+?>
+                    <p><h4>Content Warnings:</h4>
+<?php
+        foreach ($update->contWarns as $contWarn) {
+?>
+                        <a href="search_page.php?tag=<?= $contWarn ?>"><?= $contWarn ?></a>
+<?php
+        }
+?>                  </p>
+<?php
+    }
+?>
                 </div>
                 <div class="thumbnails-div">
 <?php 
@@ -122,28 +137,25 @@ foreach ($updateInfos as $update) {
             </article>
 <?php
 }
-?>
-        </main>
 
-        <footer>
-<?php
 if ($archivePageCount > 1) {
 ?>
             <nav class='archive-pos'>
+                <h3>Archive navigation</h3>
 <?php
-    $archiveMoreRecentLink = function($pos, $link) use ($archivePagePos) {
-        if ($archivePagePos > $pos) {
-            echo '<a href="' . $link . '>' . ($archivePagePos - $pos) . '</a> ';
-            return true;
-        } else return false;
-    };
+    // $archiveMoreRecentLink = function($pos, $link) use ($archivePagePos) {
+    //     if ($archivePagePos > $pos) {
+    //         echo '<a href="' . $link . '>' . ($archivePagePos - $pos) . '</a> ';
+    //         return true;
+    //     } else return false;
+    // };
 
-    $archiveEarlierLink = function($pos, $link) use ($archivePageCount, $archivePagePos) {
-        if ($archivePageCount - $archivePagePos >= $pos) {
-            echo ' <a href="' . $link . '>' . ($archivePagePos + $pos) . '</a>';
-            return true;
-        } else return false;
-    };
+    // $archiveEarlierLink = function($pos, $link) use ($archivePageCount, $archivePagePos) {
+    //     if ($archivePageCount - $archivePagePos >= $pos) {
+    //         echo ' <a href="' . $link . '>' . ($archivePagePos + $pos) . '</a>';
+    //         return true;
+    //     } else return false;
+    // };
 
     if ($archivePagePos > 3) {
         echo '<a href="' . $recentestArchiveLink . '">Latest</a> ... ';
@@ -186,8 +198,11 @@ if ($archivePageCount > 1) {
             </nav>
 <?php 
 }
+?>
+        </main>
 
-require 'copyrightElement.php'; ?>
+        <footer>
+            <?php require 'copyrightElement.php'; ?>
         </footer>
     </body>
 

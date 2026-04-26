@@ -33,17 +33,17 @@ if (!isset($prevUpd8Link)) $prevUpd8Link = UNSETDEFAULT;
         <div class="page-display">         
             <header>
                 <?php
-    $bannerFileStem = '';
-    $bannerAlt = 'Blank banner';
-    switch(rand(0,1)) {
-        case 1: 
-            $bannerFileStem = '2026-04-21BrielComicsBanner';
-            $bannerAlt = 'Briel Comics';
-            break;
-        default: 
-            $bannerFileStem = '2026-04-20BreelComixBanner';
-            $bannerAlt = 'Breel Comics';
-    }
+$bannerFileStem = '';
+$bannerAlt = 'Blank banner';
+switch(rand(0,1)) {
+    case 1: 
+        $bannerFileStem = '2026-04-21BrielComicsBanner';
+        $bannerAlt = 'Briel Comics';
+        break;
+    default: 
+        $bannerFileStem = '2026-04-20BreelComixBanner';
+        $bannerAlt = 'Breel Comics';
+}
                 ?>
                 <img
                     srcset="./images/<?= $bannerFileStem ?>_800w.png 800w, 
@@ -59,7 +59,7 @@ if (!isset($prevUpd8Link)) $prevUpd8Link = UNSETDEFAULT;
             <main> 
 
                 <?php 
-    require 'comicDisplayElements.php'; 
+require 'comicDisplayElements.php'; 
                 ?>
 
                 <nav>
@@ -67,24 +67,24 @@ if (!isset($prevUpd8Link)) $prevUpd8Link = UNSETDEFAULT;
                         <a href="<?= $prevLink ?>" 
                            class="nav-button prev-button">Previous</a>
                         <?php
-    if (isset($nextLink)) {
+if (isset($nextLink)) {
                         ?>
                         <a href="<?= $nextLink ?>" 
                            class="nav-button next-button">Next</a>
                         <?php 
-    }
+}
                         ?>
                     </p>
                     <p class="nav-line">
                         <a href="<?= $prevUpd8Link ?>" 
                            class="nav-button prev-upd8-button">Skip back</a>
                         <?php
-    if (isset($nextUpd8Link)) {
+if (isset($nextUpd8Link)) {
                         ?>
                         <a href="<?= $nextUpd8Link ?>" 
                            class="nav-button next-upd8-button">Next</a>
                         <?php 
-    }
+}
                         ?>
                     </p>
                     <p class="nav-line">
@@ -103,13 +103,13 @@ if (!isset($prevUpd8Link)) $prevUpd8Link = UNSETDEFAULT;
                 </section>
 
                 <?php 
-    require 'comicTagsCWsDescElements.php'; 
+require 'comicTagsCWsDescElements.php'; 
                 ?>
             </main>
 
             <footer>
                 <?php
-    require 'copyrightElement.php';
+require 'copyrightElement.php';
                 ?>
             </footer>
 

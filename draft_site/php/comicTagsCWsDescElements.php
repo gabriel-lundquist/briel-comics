@@ -1,8 +1,8 @@
 <?php
 if (!defined('UNSETDEFAULT')) define('UNSETDEFAULT', '');
 
-if (!isset($tags)) $tags = [UNSETDEFAULT];
-if (!isset($contWarns)) $contWarns = [UNSETDEFAULT];
+if (!isset($tags)) $tags = [];
+if (!isset($contWarns)) $contWarns = [];
 if (!isset($pageRecord)) $pageRecord = ['imagedesc' => UNSETDEFAULT];
 ?>
 
