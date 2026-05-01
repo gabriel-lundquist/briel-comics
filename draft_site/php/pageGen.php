@@ -57,6 +57,14 @@ class pageInfo {
     }
 }
 
+class searchResultInfo {
+    public $pageRecord;
+    public $date;
+    public $tags;
+    public $contWarns;
+    public $thumbnailRecord;
+}
+
 class updateInfo {
     public $updateRecord;
     public $date;
@@ -80,23 +88,7 @@ class updateInfo {
     }
 }
 
-// class matchInfo {
-//     public $term;
-//     public $field; 
 
-//     function __construct($matchSubstr, $fieldOfMatch) {
-//         $this->term = $matchSubstr;
-//         $this->field = $fieldOfMatch;
-//     }
-// }
-
-// class searchResultInfo {
-//     public $resultType;
-//     public $matches; //matchInfo array
-//     public $resultInfo; //updateInfo or pageInfo
-    
-//     function __construct()
-// }
 
 function classIs($node, $className) {
     return str_contains($node->className, $className);

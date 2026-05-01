@@ -21,22 +21,22 @@ if (!isset($earliestArchiveLink)) $earliestArchiveLink = UNSETDEFAULT;
         <!-- Good to include charset just to prevent weird errors later on. -->
         <meta name="viewport" content="width=device-width"/>
         <meta name="author" content="Breel">
-        <meta name="description" content="Breel comics update archive.">
+        <meta name="description" content="Breel comics search page.">
         
-        <title>Archive | Breel Comix</title>
+        <title>Search | Breel Comix</title>
         <link rel="icon" href="images/smileicon.ico" type="image/x-icon" />
 
         <link href="styles/defaults.css" rel="stylesheet" />
         <link href="styles/briel_font-faces.css" rel="stylesheet" />
         <link href="styles/update_list_style.css" rel="stylesheet" />
-        <link href="styles/archive_page_style.css" rel="stylesheet" />
+        <link href="styles/search_page_style.css" rel="stylesheet" />
         
-        <script type="module" src="js/archive_page_script.js"></script>
+        <script type="module" src="js/search_page_script.js"></script>
     </head>
 
     <body>
         <header>
-            <h1>Archive</h1>
+            <h1>Search</h1>
 
             <form role="search" action="search_page.html" method="get">
                 <p>
@@ -45,7 +45,7 @@ if (!isset($earliestArchiveLink)) $earliestArchiveLink = UNSETDEFAULT;
                         name="search" 
                         id="search"
                         placeholder="Search comic pages..."
-                        minlength="2"
+                        minlength="3"
                         maxlength="256"
                         size="34"
                         aria-label="Search comic pages"/> 

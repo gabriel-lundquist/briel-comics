@@ -44,6 +44,15 @@ function promptInput($prompt) {
 }
 
 /**
+ * Summary of Briel\createDateFromSQLDateTime
+ * @param mixed $dateStr
+ * @return bool|\DateTimeImmutable
+ */
+function createDateFromSQLDateTime($dateStr) {
+    return \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $dateStr);
+}
+
+/**
  * Summary of Briel\pdoConnect
  * WILL NEED TO EDIT IN AN ENVIRONMENT VARIABLE FOR THE PASSWORD
  * Returns the PDO connection if successful, `false` if not.
@@ -67,7 +76,7 @@ function pdoConnect( $dbhost = 'localhost',
                           port=$dbport", 
                          $dbuser, 
                          $enterPassword ? 
-                            $promptInput("Enter password: ") : getenv('MySQLBreelPassword'));
+                            promptInput("Enter password: ") : getenv('MySQLBreelPassword'));
         $conn->setAttribute(\PDO::ATTR_ERRMODE, 
                             \PDO::ERRMODE_EXCEPTION);
         if ( $echoConnSuccess ) echo "Connected successfully.\n";
@@ -1012,8 +1021,166 @@ function associateFilesWithPageInteractive($pageRecord,
         */
 }
 
-function searchComics($searchStr, $pdoConn) {
-    $tokens = explode(' ', $searchStr);
-    $pdoConn->query();
+function searchComics($searchStr, 
+                      $pdoConn, 
+                      $searchImgDesc = false, 
+                      $matchExactly = false) {
+    $matchOp = $matchExactly ? '=' : 'REGEXP';
+
+    // Split search string into unique tokens separated by spaces
+    $tokens = array_unique(array_filter(explode(' ', trim($searchStr)), 
+                                        fn($str) => (\count($str) > 0)));
+
+    $tokenKeys = array_map(fn($i) => (':t' . $i), 
+                           range(0, \count($tokens) - 1));
+    $tokenExecList = array_combine($tokenKeys, $tokens);
+
+    $tokenClauses = [];
+    $tagMatch = fn($key) => "name $matchOp $key";
+    $titleHasExactWord = fn($key) => 
+        "title REGEXP (^$key[:space:]|[:space:]$key$|[:space:]$key[:space:]) 
+         OR title = $key";
+    $dayNameMatch = fn($key) => "DAYNAME(postdate) = $key";
+    $dayOfMonthMatch = fn($key) => "DAYOFMONTH(postdate) = $key";
+    $monthMatch = fn($key) => "DAYOFMONTH(postdate) = $key";
+    $yearMatch = fn($key) => "YEAR(postdate) = $key";
+
+
+    foreach($tokenExecList as $key => $token) {
+        if (preg_match('/^\d{1,2}$/', $token)) {
+            $tokenClauses[] = "({$titleHasExactWord($key)} 
+                                OR DAYOFMONTH(postdate) = $key)";
+
+        } else if (preg_match('/^(19|20|21)\d{2}$/', $token)) {
+            $tokenClauses[] = "({$titleHasExactWord($key)} 
+                                OR YEAR(postdate) = $key)";
+
+        } else if (\strlen($token) > 2) {
+            $tokenClauses[] = "(name $matchOp $key" 
+                                . ' OR ' . ($matchExactly // match title
+                                                ? $titleHasExactWord($key) 
+                                                : "title $matchOp $key")
+                                . " OR MONTHNAME(postdate) = $key"
+                                . " OR DAYNAME(postdate) = $key"
+                                . " OR name $matchOp $key"
+                                . ')';
+        }
+
+        // If a token isn't numeric and is of length 2 or less, discard it
+    }
+
+    $whereClause = \implode(' AND ', $tokenClauses);
+
+
+    // It's not very useful to search for tokens of lengths 1 or 2
+    $tooSmallTokens = array_filter($tokens, fn($str) => (\count($str) < 2));
+    $tokens = array_diff($tokens, $tooSmallTokens);
+
+    if (!$tokens) {
+        return [];
+    }
+
+    $whereClause = fn($column, $terms) => 
+        \implode(' OR ', \array_fill(0, \count($terms), "$column $matchOp ?"));
+
+    $whereClauseExact = fn($column, $terms) => 
+        \implode(' OR ', \array_fill(0, \count($terms), "$column = ?"));
+
+    //
+    // Search titles 
+    // (useful to search for small numbers, e.g. "page 5")
+    $smallNumberTokens = array_filter($tooSmallTokens, 
+                                      fn($str) => \preg_match('(^\d+$)', $str));
+    $tokensInclSmallNums = $tokens + $smallNumberTokens;
+    $titleHasExactWordes = $pdoConn->prepare("SELECT pageid, title FROM page 
+                                        WHERE {$whereClause('title', 
+                                                            $tokensInclSmallNums)}
+                                        ;");
+    $titleHasExactWordes->execute($tokensInclSmallNums);
+
+/* 
+NOPE. MASSIVE REDO NECESSARY.
+
+We need to find the *intersection* of all these sets of pages.
+Additional search terms should be "and" rather than "or".
+
+What we do is have a big OR ... OR ... OR clause for each search 
+term according to its formatting, then AND all the clauses together
+in one big WHERE. 
+
+For 1- or 2-digit numbers, check title and day of the month.
+
+For year-looking numbers, check year and title (and image desc).
+
+For all other tokens, check title, month (exact), day of the 
+week (exact), and tags (and image desc).
+
+Also, add support for colon prefixes for searching specific fields.
+*/
+
+    //
+    // Search years
+    // 
+    $yearTokens = array_filter($tokens, 
+                               fn($str) => \preg_match('(^\d{4}$)', $str));
+    $yearMatches = null;
+    if ($yearTokens) {
+        $yearMatches = $pdoConn->prepare(
+            "SELECT pageid, YEAR(postdate) FROM page 
+                WHERE {$whereClause('YEAR(postdate)', $yearTokens)};");
+        $yearMatches->execute($yearTokens);
+    }
+
+    // 
+    // Search month names
+    // 
+    $monthMatches = $pdoConn->prepare(
+        "SELECT pageid, MONTHNAME(postdate) FROM page
+            WHERE {$whereClauseExact('MONTHNAME(postdate)', $tokens)};");
+    $monthMatches->execute($tokens);
+    
+    // 
+    // Search days of month
+    // 
+    $dayOfMonthMatches = null;
+    if ($smallNumberTokens) {
+        $dayOfMonthMatches = $pdoConn->prepare(
+            "SELECT pageid, DAYOFMONTH(postdate) FROM page
+                WHERE {$whereClauseExact('DAYOFMONTH(postdate)', 
+                                         $smallNumberTokens)};");
+        $dayOfMonthMatches->execute($smallNumberTokens);
+    }
+
+    //
+    // Search day names (monday, tuesday, etc.)
+    //
+    $dayNameMatches = $pdoConn->prepare(
+        "SELECT pageid, DAYNAME(postdate) FROM page
+            WHERE {$whereClauseExact('DAYNAME(postdate)', $tokens)};");
+    $dayNameMatches->execute($tokens); 
+
+    // 
+    // Search tags
+    //
+    $tagMatches = $pdoConn->prepare(
+        "SELECT pageid, name 
+            FROM page LEFT JOIN (
+                tagpage LEFT JOIN tag USING (tagid)
+            ) USING (pageid)
+            WHERE {$whereClause('name', $tokens)};");
+    // Results will already be grouped by pageID since 
+    // page is on the left side of the JOIN
+    $tagMatches->execute($tokens);
+
+    $tagPageMatches = $pdoConn->prepare("SELECT DISTINCT pageid FROM 
+                                        page LEFT JOIN (
+                                            tagpage LEFT JOIN tag USING (tagid)
+                                        ) USING (pageid)
+                                        WHERE {$whereClause('name', $tokens)};");
+    // SHOULD be the same order as $tagMatches above...
+    // Consider modifying both with an ORDER BY pageid or whatever if needed
+    $tagPageMatches->execute($tokens);
+
+    
 }
 ?>
