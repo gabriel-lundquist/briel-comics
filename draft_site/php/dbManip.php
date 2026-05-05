@@ -3,6 +3,7 @@ namespace Briel;
 
 const SQLLOADFILENULL = '\N';
 const SQLNULL = 'NULL';
+const SQLSPACEREGEX = '[:space:]'
 
 const FILECOLUMNS = ["fileid",
                      "location",
@@ -927,104 +928,12 @@ function associateFilesWithPageInteractive($pageRecord,
                                     "pageid", 
                                     "file", 
                                     $pdoConn);
-    /*
-    echo "Associating files with {$pageRecord['title']}...\n";
-    if (!$pdoConn->beginTransaction()) {
-        echo "Error: can't begin transaction. Aborting page-file assocation.\n";
-        return false;
-    }
-
-    $filesToStrs = fn($recs) => array_map(fn($rec) => $rec['fileid'] 
-                                                      . '----' 
-                                                      . $rec['location'], 
-                                          $recs);
-    $files = $pdoConn->query("SELECT fileid, location FROM file;")
-                     ->fetchAll(\PDO::FETCH_ASSOC);
-
-    echo "\n---------------------------------\nFile list:\nID-----Path" 
-         . implode("\n", $filesToStrs($files)) 
-         . "\n---------------------------------\n";
-    
-    $pdoConn->exec('CREATE TEMPORARY TABLE inputfileid 
-                    (fileid int unsigned);');
-    $inputStr = promptInput("Enter file IDs separated by commas, or \n"
-                            . "a ? followed by a regular expression for paths."
-                            . "\n> ");
-    if (preg_match("((\d+,\s*)*\d+)", $inputStr)) {
-        queryInsertRecords($pdoConn, 
-                           "inputfileid", 
-                           "fileid", 
-                           array_map(fn($s) => trim($s), 
-                                     explode(",", $inputStr)));
-        
-        if (!empty($notrealIDs = 
-                    $pdoConn->query('SELECT * FROM inputfileid 
-                                     WHERE fileid NOT IN (
-                                        SELECT fileid FROM file
-                                     );')->fetchALL(\PDO::FETCH_COLUMN))) {
-            echo "Error: file IDs [" 
-                 . implode(', ', $notrealIDs)
-                 . "] don't correspond to existing files.\n"
-                 . "Rolling back and returning...\n";
-            $pdoConn->rollback();
-            return false;
-        }
-
-    } else if ($inputStr[0] == "?") {
-        $filesRegExp = $pdoConn->prepare("INSERT INTO inputfileid (fileid)
-                                          SELECT fileid FROM file 
-                                            WHERE REGEXP_LIKE(location, 
-                                                              ?, 
-                                                              'c');");
-        $filesRegExp->execute([substr($inputStr,1)]);
-
-    } else {
-        echo "'$inputStr' invalid. Rolling back and returning...";
-        $pdoConn->rollback();
-        return false;
-    }
-
-    $assocSelect = $pdoConn->query('SELECT fileid, location FROM file
-                                    WHERE fileid IN (
-                                        SELECT * FROM inputfileid
-                                    );');
-    echo "Files to associate with {$pageRecord['title']}:\n" 
-         . "ID-----Path\n"
-         . implode("\n", $filesToStrs($assocSelect->fetchAll(\PDO::FETCH_ASSOC)))
-         . "---------------------------------\n";
-
-    if (promptInput("Okay to associate? (y/n) > ") == "y") {
-        $updateAssoc = $pdoConn->prepare('UPDATE file SET pageid = ?
-                                          WHERE fileid IN (
-                                            SELECT * FROM inputfileid
-                                          );');
-        $updateAssoc->execute([$pageRecord['pageid']]);
-        $fileIDs = $pdoConn->query('SELECT * FROM inputfileid')
-                           ->fetchAll(\PDO::FETCH_COLUMN);
-        echo "Files associated.\n";
-        if (promptInput("Roll back? (y/n) > ") == "y") {
-            echo "Sick. Committing...\n";
-            $pdoConn->exec("DROP TEMPORARY TABLE inputfileid;");    
-            $pdoConn->commit();
-            return $fileIDs;
-        } else {
-            echo "Okay. Rolling back changes...";
-            $pdoConn->rollback();
-            return false;
-        }
-        
-    } else {
-        echo "Okay. Rolling back and returning without associating...\n";
-        $pdoConn->rollback();
-        return false;
-    }
-        */
 }
 
 function searchComics($searchStr, 
                       $pdoConn, 
-                      $searchImgDesc = false, 
-                      $matchExactly = false) {
+                      $matchExactly = false, 
+                      $searchImgDesc = false) {
     $matchOp = $matchExactly ? '=' : 'REGEXP';
 
     // Split search string into unique tokens separated by spaces
@@ -1035,152 +944,160 @@ function searchComics($searchStr,
                            range(0, \count($tokens) - 1));
     $tokenExecList = array_combine($tokenKeys, $tokens);
 
-    $tokenClauses = [];
-    $tagMatch = fn($key) => "name $matchOp $key";
-    $titleHasExactWord = fn($key) => 
-        "title REGEXP (^$key[:space:]|[:space:]$key$|[:space:]$key[:space:]) 
-         OR title = $key";
+    // Common table expressions tokentagpage and tokencwpage defined in
+    // $tagWithClause and $cwWithClause
+    $tagMatch = fn($key) => "($key IN(SELECT token FROM tokentagpage))";
+    $tagGeneralMatch = fn($key) => "($key IN (SELECT token FROM tagsearch))";
+    $cwMatch = fn($key) => "($key IN(SELECT token FROM tokencwpage))";
+    $cwGeneralMatch = fn($key) => "($key IN (SELECT token FROM cwsearch))";
+    $titleExactMatch = fn($key) => 
+        "title REGEXP '(^|\\\s)$key(\\\s|$)'";
+    // SQL requires \\s to output \s, PHP requires \\\s to output \\s.
+    $titleMatch = fn($key) => $matchExactly ? $titleExactMatch($key)
+                                            : "title $matchOp $key";
     $dayNameMatch = fn($key) => "DAYNAME(postdate) = $key";
     $dayOfMonthMatch = fn($key) => "DAYOFMONTH(postdate) = $key";
     $monthMatch = fn($key) => "DAYOFMONTH(postdate) = $key";
     $yearMatch = fn($key) => "YEAR(postdate) = $key";
+    $descMatch = fn($key) => "MATCH (imagedesc) AGAINST ($key)";
 
-
+    $tokenClauses = [];
+    $tokenDataSelects = ['title' => [], 
+                         'dayOfMonth' => [], 
+                         'year' => [], 
+                         'month' => [], 
+                         'dayName' => []];
+    $wordTokens = [];
     foreach($tokenExecList as $key => $token) {
+
         if (preg_match('/^\d{1,2}$/', $token)) {
-            $tokenClauses[] = "({$titleHasExactWord($key)} 
-                                OR DAYOFMONTH(postdate) = $key)";
+            $tokenClauses[$token] = [$titleExactMatch($key), 
+                                     $dayOfMonthMatch($key)];
+
+            $tokenDataSelects['title'] += $titleExactMatch($key);
+            $tokenDataSelects['dayOfMonth'] += $dayOfMonthMatch($key);
+
+            if ($searchImgDesc) {
+                $tokenClauses[$token][] = $descMatch($key);
+                $tokenDataSelects['desc' . $token] = $descMatch($key);
+            }
 
         } else if (preg_match('/^(19|20|21)\d{2}$/', $token)) {
-            $tokenClauses[] = "({$titleHasExactWord($key)} 
-                                OR YEAR(postdate) = $key)";
+            $tokenClauses[$token] = [$titleExactMatch($key), 
+                                     $yearMatch($key)];
 
-        } else if (\strlen($token) > 2) {
-            $tokenClauses[] = "(name $matchOp $key" 
-                                . ' OR ' . ($matchExactly // match title
-                                                ? $titleHasExactWord($key) 
-                                                : "title $matchOp $key")
-                                . " OR MONTHNAME(postdate) = $key"
-                                . " OR DAYNAME(postdate) = $key"
-                                . " OR name $matchOp $key"
-                                . ')';
+            $tokenDataSelects['title'] += $titleExactMatch($key);
+            $tokenDataSelects['year'] += $yearMatch($key);
+            
+            if ($searchImgDesc) {
+                $tokenClauses[$token][] = $descMatch($key);
+                $tokenDataSelects['desc' . $token] = $descMatch($key);
+            }
+
+        } else if (\strlen($token) > 2 
+                    /*and !\in_array($token, $wordTokens)*/) { // 
+            $tokenClauses[$token] = [$tagMatch($key), 
+                                     $cwMatch($key),
+                                     $titleMatch($key), 
+                                     $monthMatch($key), 
+                                     $dayNameMatch($key)];
+
+            $tokenDataSelects['tag' . $token] = 
+                    $tagGeneralMatch($key) . "AS tag$key";
+            $tokenDataSelects['cw' . $token] = 
+                    $cwGeneralMatch($key) . "AS cw$key";
+            $tokenDataSelects['title'] += $titleMatch($key);
+            $tokenDataSelects['month'] += $monthMatch($key);
+            $tokenDataSelects['dayName'] += $dayNameMatch($key);
+            
+            if ($searchImgDesc) {
+                $tokenClauses[$token][] = $descMatch($key);
+                $tokenDataSelects['desc' . $token] = $descMatch($key);
+            }
+
+            $wordTokens[$key] = $token;
         }
-
-        // If a token isn't numeric and is of length 2 or less, discard it
+        // If a token isn't numeric and is of length 2 or less, ignore it
     }
 
-    $whereClause = \implode(' AND ', $tokenClauses);
-
-
-    // It's not very useful to search for tokens of lengths 1 or 2
-    $tooSmallTokens = array_filter($tokens, fn($str) => (\count($str) < 2));
-    $tokens = array_diff($tokens, $tooSmallTokens);
-
-    if (!$tokens) {
-        return [];
-    }
-
-    $whereClause = fn($column, $terms) => 
-        \implode(' OR ', \array_fill(0, \count($terms), "$column $matchOp ?"));
-
-    $whereClauseExact = fn($column, $terms) => 
-        \implode(' OR ', \array_fill(0, \count($terms), "$column = ?"));
-
-    //
-    // Search titles 
-    // (useful to search for small numbers, e.g. "page 5")
-    $smallNumberTokens = array_filter($tooSmallTokens, 
-                                      fn($str) => \preg_match('(^\d+$)', $str));
-    $tokensInclSmallNums = $tokens + $smallNumberTokens;
-    $titleHasExactWordes = $pdoConn->prepare("SELECT pageid, title FROM page 
-                                        WHERE {$whereClause('title', 
-                                                            $tokensInclSmallNums)}
-                                        ;");
-    $titleHasExactWordes->execute($tokensInclSmallNums);
-
-/* 
-NOPE. MASSIVE REDO NECESSARY.
-
-We need to find the *intersection* of all these sets of pages.
-Additional search terms should be "and" rather than "or".
-
-What we do is have a big OR ... OR ... OR clause for each search 
-term according to its formatting, then AND all the clauses together
-in one big WHERE. 
-
-For 1- or 2-digit numbers, check title and day of the month.
-
-For year-looking numbers, check year and title (and image desc).
-
-For all other tokens, check title, month (exact), day of the 
-week (exact), and tags (and image desc).
-
-Also, add support for colon prefixes for searching specific fields.
-*/
-
-    //
-    // Search years
-    // 
-    $yearTokens = array_filter($tokens, 
-                               fn($str) => \preg_match('(^\d{4}$)', $str));
-    $yearMatches = null;
-    if ($yearTokens) {
-        $yearMatches = $pdoConn->prepare(
-            "SELECT pageid, YEAR(postdate) FROM page 
-                WHERE {$whereClause('YEAR(postdate)', $yearTokens)};");
-        $yearMatches->execute($yearTokens);
-    }
-
-    // 
-    // Search month names
-    // 
-    $monthMatches = $pdoConn->prepare(
-        "SELECT pageid, MONTHNAME(postdate) FROM page
-            WHERE {$whereClauseExact('MONTHNAME(postdate)', $tokens)};");
-    $monthMatches->execute($tokens);
+    $wordsWithClause = 'searchwords (token) AS (VALUES '
+                        . \implode(', ', 
+                                    \array_map(fn($k) => "ROW($k)", 
+                                                \array_keys($wordTokens))
+                                    )
+                        . ')';
     
-    // 
-    // Search days of month
-    // 
-    $dayOfMonthMatches = null;
-    if ($smallNumberTokens) {
-        $dayOfMonthMatches = $pdoConn->prepare(
-            "SELECT pageid, DAYOFMONTH(postdate) FROM page
-                WHERE {$whereClauseExact('DAYOFMONTH(postdate)', 
-                                         $smallNumberTokens)};");
-        $dayOfMonthMatches->execute($smallNumberTokens);
-    }
-
-    //
-    // Search day names (monday, tuesday, etc.)
-    //
-    $dayNameMatches = $pdoConn->prepare(
-        "SELECT pageid, DAYNAME(postdate) FROM page
-            WHERE {$whereClauseExact('DAYNAME(postdate)', $tokens)};");
-    $dayNameMatches->execute($tokens); 
-
-    // 
-    // Search tags
-    //
-    $tagMatches = $pdoConn->prepare(
-        "SELECT pageid, name 
-            FROM page LEFT JOIN (
-                tagpage LEFT JOIN tag USING (tagid)
-            ) USING (pageid)
-            WHERE {$whereClause('name', $tokens)};");
-    // Results will already be grouped by pageID since 
-    // page is on the left side of the JOIN
-    $tagMatches->execute($tokens);
-
-    $tagPageMatches = $pdoConn->prepare("SELECT DISTINCT pageid FROM 
-                                        page LEFT JOIN (
-                                            tagpage LEFT JOIN tag USING (tagid)
-                                        ) USING (pageid)
-                                        WHERE {$whereClause('name', $tokens)};");
-    // SHOULD be the same order as $tagMatches above...
-    // Consider modifying both with an ORDER BY pageid or whatever if needed
-    $tagPageMatches->execute($tokens);
-
+    $tagWithClause = 'tagsearch (token, tagid) AS (
+                        SELECT token, tagid FROM 
+                        searchwords INNER JOIN tag '  
+                        . "ON tag.name $matchOp searchwords.token);";
     
+    $cwWithClause = 'cwsearch (token) AS (
+                        SELECT token, contwarningid FROM 
+                        searchwords INNER JOIN contwarning '  
+                        . "ON contwarning.name $matchOp searchwords.token);";
+
+    // Must place in a WITH statement *after* a page has been selected
+    $tagWithPageClause = 'tokentagpage (token) AS (
+                                    SELECT DISTINCT token FROM tagsearch
+                                INNER JOIN 
+                                    SELECT tagid FROM tagpage 
+                                    WHERE tagpage.pageid = page.pageid
+                                USING (tagid)
+                            );';
+    
+    // Must place in a WITH statement *after* a page has been selected
+    $cwWithPageClause = 'tokencwpage (token) AS (
+                                    SELECT DISTINCT token FROM cwsearch
+                                INNER JOIN
+                                    SELECT contwarningid FROM contwarningpage 
+                                    WHERE contwarningpage.pageid = page.pageid
+                                USING (contwarningid)
+                            );';
+
+    $whereSelectClause = \implode(' AND ', 
+                                    array_map(fn($tarr) => 
+                                                    '(' 
+                                                    . \implode(' OR ', 
+                                                                $tarr)
+                                                    . ')', 
+                                                $tokenClauses)
+                                    );
+
+    $selectMatchClause = '(' . \implode(' OR ', $tokenDataSelects['title']) 
+                            . ') AS titlematch,' 
+                        . '(' . \implode(' OR ', $tokenDataSelects['dayOfMonth']) 
+                            . ') AS dayofmonthmatch, '
+                        . '(' . \implode(' OR ', $tokenDataSelects['year'])
+                            . ') AS yearmatch, '
+                        . '(' . \implode(' OR ', $tokenDataSelects['month'])
+                            . ') AS monthmatch, '
+                        . '(' . \implode(' OR ', $tokenDataSelects['dayName'])
+                            . ') AS daynamematch, '
+                        . \implode(', ', 
+                                    \array_filter($tokenDataSelects, 
+                                                    fn($key) => str_starts_with($key, 'tag')
+                                                                or str_starts_with($key, 'cw')
+                                                                or str_starts_with($key, 'desc'), 
+                                                    ARRAY_FILTER_USE_KEY)
+                                    )
+                        ;
+
+    $pages = $pdoConn->prepare("WITH $wordsWithClause, 
+                                    $tagWithClause, 
+                                    $cwWithClause
+                                SELECT pageid, $selectMatchClause FROM page
+                                WHERE (
+                                    WITH $tagWithPageClause, 
+                                        $cwWithPageClause
+                                    SELECT $whereSelectClause
+                                );"
+                                );
+
+    $pages->execute($tokenExecList);
+
+    $results = $pages->fetchAll(PDO::FETCH_ASSOC);
+
+    return $results;
 }
 ?>
