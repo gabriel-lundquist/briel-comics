@@ -3,7 +3,7 @@ namespace Briel;
 
 const SQLLOADFILENULL = '\N';
 const SQLNULL = 'NULL';
-const SQLSPACEREGEX = '[:space:]'
+const SQLSPACEREGEX = '[[:space:]]';
 
 const FILECOLUMNS = ["fileid",
                      "location",
@@ -939,15 +939,31 @@ function searchComics($searchStr,
     // Split search string into unique tokens separated by spaces
     $tokens = array_unique(array_filter(explode(' ', trim($searchStr)), 
                                         fn($str) => (\count($str) > 0)));
+    $excludeTokens = array_filter($tokens, 
+                                    fn($str) => preg_match('/^-/', $str));
+    $includeTokens = array_diff($tokens, $excludeTokens);
 
-    $tokenKeys = array_map(fn($i) => (':t' . $i), 
-                           range(0, \count($tokens) - 1));
-    $tokenExecList = array_combine($tokenKeys, $tokens);
+    // trim the leading `-`
+    $excludeTokens = array_map(fn($str) => ltrim($str, '-'), 
+                                $excludeTokens);
 
-    // Common table expressions tokentagpage and tokencwpage defined in
-    // $tagWithClause and $cwWithClause
+    $fieldSpec = fn($toks, $fieldName) => 
+        array_map(fn($str) => substr($str, \strlen("$fieldName:")), 
+                    array_filter($toks, fn($str) => str_starts_with($str, "$fieldName:")));
+    
+    $includeTokensByField = [];
+    $excludeTokensByField = [];
+    foreach (['tag', 'cw', 'title', 'day', 'month', 'year', 'description']
+                as $field) {
+        $includeTokensByField[$field] = $fieldSpec($includeTokens, $field);
+        $excludeTokensByField[$field] = $fieldSpec($excludeTokens, $field);
+    }
+    $includeTokensNoField = array_diff($includeTokens, ...$includeTokensByField);
+    $excludeTokensNoField = array_diff($excludeTokens, ...$excludeTokensByField);
+
+    // Common table expressions defined below
     $tagMatch = fn($key) => "($key IN(SELECT token FROM tokentagpage))";
-    $tagGeneralMatch = fn($key) => "($key IN (SELECT token FROM tagsearch))";
+    $tagGeneralMatch = fn($key) => "($key IN(SELECT token FROM tagsearch))"; 
     $cwMatch = fn($key) => "($key IN(SELECT token FROM tokencwpage))";
     $cwGeneralMatch = fn($key) => "($key IN (SELECT token FROM cwsearch))";
     $titleExactMatch = fn($key) => 
@@ -967,10 +983,75 @@ function searchComics($searchStr,
                          'year' => [], 
                          'month' => [], 
                          'dayName' => []];
-    $wordTokens = [];
-    foreach($tokenExecList as $key => $token) {
+    $joinTokens = [];
 
-        if (preg_match('/^\d{1,2}$/', $token)) {
+    $tokenExcludeClauses = [];
+    $joinExcludeTokens = [];
+
+    $keyIdx = 0;
+    $tokenExecList = [];
+
+    foreach ($includeTokensByField['tag'] as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+
+        $tokenClauses[$token] = [$tagMatch($key)];
+        $tokenDataSelects["tag$token"] = 
+                $tagGeneralMatch($key) . "AS 'tag" . trim($key, ':') . "'";
+
+        $joinTokens[$key] = $token;
+    }
+
+    foreach ($includeTokensByField['cw'] as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+
+        $tokenClauses[$token] = [$cwMatch($key)];
+        $tokenDataSelects["cw$token"] = 
+                $cwGeneralMatch($key) . "AS 'cw" . trim($key, ':') . "'";
+
+        $joinTokens[$key] = $token;
+    }
+
+    foreach ($includeTokensByField['title'] as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+        
+        $tokenClauses[$token] = [$titleMatch($key)];
+        $tokenDataSelects['title'][] = $titleMatch($key);
+    }
+
+    foreach ($includeTokensByField['day'] as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+        
+        $tokenClauses[$token] = [$dayOfMonthMatch($key), 
+                                    $dayNameMatch($key)];
+        $tokenDataSelects['dayOfMonth'][] = $dayOfMonthMatch($key);
+        $tokenDataSelects['dayName'][] = $dayNameMatch($key);
+    }
+
+    foreach ($includeTokensByField['month'] as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+        
+        $tokenClauses[$token] = [$monthMatch($key)];
+        $tokenDataSelects['month'][] = $monthMatch($key);
+    }
+
+    foreach ($includeTokensByField['year'] as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+        
+        $tokenClauses[$token] = [$yearMatch($key)];
+        $tokenDataSelects['year'][] = $yearMatch($key);
+    }
+
+    foreach ($includeTokensByField['description'] as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+        
+        $tokenClauses[$token] = [$descMatch($key)];
+        $tokenDataSelects["desc$token"][] = $descMatch($key);
+    }
+
+    foreach ($includeTokensNoField as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+
+        if (preg_match('/^\d{1,2}$/', $token)) { 
             $tokenClauses[$token] = [$titleExactMatch($key), 
                                      $dayOfMonthMatch($key)];
 
@@ -979,7 +1060,7 @@ function searchComics($searchStr,
 
             if ($searchImgDesc) {
                 $tokenClauses[$token][] = $descMatch($key);
-                $tokenDataSelects['desc' . $token] = $descMatch($key);
+                $tokenDataSelects["desc$token"] = $descMatch($key);
             }
 
         } else if (preg_match('/^(19|20|21)\d{2}$/', $token)) {
@@ -991,70 +1072,165 @@ function searchComics($searchStr,
             
             if ($searchImgDesc) {
                 $tokenClauses[$token][] = $descMatch($key);
-                $tokenDataSelects['desc' . $token] = $descMatch($key);
+                $tokenDataSelects["desc$token"] = $descMatch($key);
             }
 
-        } else if (\strlen($token) > 2 
-                    /*and !\in_array($token, $wordTokens)*/) { // 
+        } else if (\strlen($token) > 2) { 
             $tokenClauses[$token] = [$tagMatch($key), 
                                      $cwMatch($key),
                                      $titleMatch($key), 
                                      $monthMatch($key), 
                                      $dayNameMatch($key)];
 
-            $tokenDataSelects['tag' . $token] = 
-                    $tagGeneralMatch($key) . "AS tag$key";
-            $tokenDataSelects['cw' . $token] = 
-                    $cwGeneralMatch($key) . "AS cw$key";
-            $tokenDataSelects['title'] += $titleMatch($key);
-            $tokenDataSelects['month'] += $monthMatch($key);
-            $tokenDataSelects['dayName'] += $dayNameMatch($key);
+            $tokenDataSelects["tag$token"] = 
+                    $tagGeneralMatch($key) . "AS 'tag" . trim($key, ':') . "'";
+            $tokenDataSelects["cw$token"] = 
+                    $cwGeneralMatch($key) . "AS 'cw" . trim($key, ':') . "'";
+            $tokenDataSelects['title'][] = $titleMatch($key);
+            $tokenDataSelects['month'][] = $monthMatch($key);
+            $tokenDataSelects['dayName'][] = $dayNameMatch($key);
             
             if ($searchImgDesc) {
                 $tokenClauses[$token][] = $descMatch($key);
-                $tokenDataSelects['desc' . $token] = $descMatch($key);
+                $tokenDataSelects["desc$token"] = $descMatch($key);
             }
 
-            $wordTokens[$key] = $token;
+            $joinTokens[$key] = $token;
         }
         // If a token isn't numeric and is of length 2 or less, ignore it
     }
 
-    $wordsWithClause = 'searchwords (token) AS (VALUES '
+    foreach ($excludeTokensByField['tag'] as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+
+        $joinExcludeTokens[$key] = $token;
+    }
+
+    foreach ($excludeTokensByField['cw'] as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+
+        $joinExcludeTokens[$key] = $token;
+    }
+
+    foreach ($excludeTokensByField['title'] as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+        
+        $tokenExcludeClauses[$token] = [$titleMatch($key)];
+    }
+
+    foreach ($excludeTokensByField['day'] as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+        
+        $tokenExcludeClauses[$token] = [$dayOfMonthMatch($key), 
+                                        $dayNameMatch($key)];
+    }
+
+    foreach ($excludeTokensByField['month'] as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+        
+        $tokenExcludeClauses[$token] = [$monthMatch($key)];
+    }
+
+    foreach ($excludeTokensByField['year'] as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+        
+        $tokenExcludeClauses[$token] = [$yearMatch($key)];
+    }
+
+    foreach ($excludeTokensByField['description'] as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+        
+        $tokenExcludeClauses[$token] = [$descMatch($key)];
+    }
+
+    foreach ($excludeTokensNoField as $token) {
+        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
+
+        if (preg_match('/^\d{1,2}$/', $token)) { 
+            $tokenExcludeClauses[$token] = [$titleExactMatch($key), 
+                                            $dayOfMonthMatch($key)];
+            if ($searchImgDesc) {
+                $tokenExcludeClauses[$token][] = $descMatch($key);
+            }
+
+        } else if (preg_match('/^(19|20|21)\d{2}$/', $token)) {
+            $tokenExcludeClauses[$token] = [$titleExactMatch($key), 
+                                            $yearMatch($key)];
+            if ($searchImgDesc) {
+                $tokenExcludeClauses[$token][] = $descMatch($key);
+            }
+
+        } else if (\strlen($token) > 2) { 
+            $tokenExcludeClauses[$token] = [$titleMatch($key), 
+                                            $monthMatch($key), 
+                                            $dayNameMatch($key)];
+            if ($searchImgDesc) {
+                $tokenExcludeClauses[$token][] = $descMatch($key);
+            }
+
+            $joinExcludeTokens[$key] = $token;
+        }
+        // If a token isn't numeric and is of length 2 or less, ignore it
+    }
+
+    $joinSearch = $pdoConn->exec("CREATE TEMPORARY TABLE joinsearch;
+                                    INSERT INTO joinsearch VALUES "
+                                    . \implode(', ', 
+                                                \array_map(fn($k) => "('$k')", 
+                                                            )))
+
+    $joinWithClause = 'joinsearch (token) AS (VALUES '
                         . \implode(', ', 
                                     \array_map(fn($k) => "ROW($k)", 
-                                                \array_keys($wordTokens))
+                                                \array_keys($joinTokens))
                                     )
                         . ')';
-    
+
     $tagWithClause = 'tagsearch (token, tagid) AS (
                         SELECT token, tagid FROM 
-                        searchwords INNER JOIN tag '  
-                        . "ON tag.name $matchOp searchwords.token);";
+                        joinsearch INNER JOIN tag '  
+                        . "ON tag.name $matchOp joinsearch.token)";
     
     $cwWithClause = 'cwsearch (token) AS (
                         SELECT token, contwarningid FROM 
-                        searchwords INNER JOIN contwarning '  
-                        . "ON contwarning.name $matchOp searchwords.token);";
+                        joinsearch INNER JOIN contwarning '  
+                        . "ON contwarning.name $matchOp joinsearch.token)";
 
     // Must place in a WITH statement *after* a page has been selected
     $tagWithPageClause = 'tokentagpage (token) AS (
                                     SELECT DISTINCT token FROM tagsearch
                                 INNER JOIN 
                                     SELECT tagid FROM tagpage 
-                                    WHERE tagpage.pageid = page.pageid
+                                        WHERE tagpage.pageid = page.pageid
                                 USING (tagid)
-                            );';
+                            )';
     
     // Must place in a WITH statement *after* a page has been selected
     $cwWithPageClause = 'tokencwpage (token) AS (
                                     SELECT DISTINCT token FROM cwsearch
                                 INNER JOIN
                                     SELECT contwarningid FROM contwarningpage 
-                                    WHERE contwarningpage.pageid = page.pageid
+                                        WHERE contwarningpage.pageid = page.pageid
                                 USING (contwarningid)
-                            );';
+                            )';
 
+    $joinExcludeWithClause = 'joinsearchexclude (token) AS (VALUES '
+                            . \implode(', ', 
+                                        \array_map(fn($k) => "ROW($k)", 
+                                                    \array_keys($joinExcludeTokens))
+                                        )
+                            . ')';
+    
+    $tagExcludeWithClause = 'tagsearchexclude (token, tagid) AS (
+                                SELECT token, tagid FROM 
+                                joinsearchexclude INNER JOIN tag '  
+                                . "ON tag.name $matchOp joinsearchexclude.token)";
+    
+    $cwExcludeWithClause = 'cwsearchexclude (token) AS (
+                            SELECT token, contwarningid FROM 
+                            joinsearchexclude INNER JOIN contwarning '  
+                            . "ON contwarning.name $matchOp joinsearchexclude.token)";
+    
     $whereSelectClause = \implode(' AND ', 
                                     array_map(fn($tarr) => 
                                                     '(' 
@@ -1063,6 +1239,25 @@ function searchComics($searchStr,
                                                     . ')', 
                                                 $tokenClauses)
                                     );
+
+    $whereNotSelectClause = \implode(' OR ', 
+                                        array_map(fn($tarr) => 
+                                                        \implode(' OR ', $tarr), 
+                                                    $tokenExcludeClauses)
+                                    )
+                            . ' OR EXISTS(
+                                        SELECT tagid FROM tagsearchexclude
+                                    INNER JOIN
+                                        SELECT tagid FROM tagpage
+                                            WHERE tagpage.pageid = page.pageid
+                                    USING (tagid)
+                                ) OR EXISTS(
+                                        SELECT contwarningid FROM cwsearchexclude
+                                    INNER JOIN
+                                        SELECT contwarningid FROM contwarningpage
+                                            WHERE contwarningpage.pageid = page.pageid
+                                    USING (contwarningid)
+                                )';
 
     $selectMatchClause = '(' . \implode(' OR ', $tokenDataSelects['title']) 
                             . ') AS titlematch,' 
@@ -1083,21 +1278,28 @@ function searchComics($searchStr,
                                     )
                         ;
 
-    $pages = $pdoConn->prepare("WITH $wordsWithClause, 
-                                    $tagWithClause, 
-                                    $cwWithClause
+    $pages = $pdoConn->prepare("WITH $joinWithClause, 
+                                     $tagWithClause, 
+                                     $cwWithClause, 
+                                     $joinExcludeWithClause, 
+                                     $tagExcludeWithClause, 
+                                     $cwExcludeWithClause 
                                 SELECT pageid, $selectMatchClause FROM page
                                 WHERE (
                                     WITH $tagWithPageClause, 
                                         $cwWithPageClause
-                                    SELECT $whereSelectClause
+                                    SELECT (NOT ($whereNotSelectClause))
+                                        AND $whereSelectClause
                                 );"
                                 );
 
     $pages->execute($tokenExecList);
 
-    $results = $pages->fetchAll(PDO::FETCH_ASSOC);
+    $results = $pages->fetchAll(\PDO::FETCH_ASSOC);
 
-    return $results;
+    return [$results, 
+            $tokenExecList, 
+            $includeTokensNoField, 
+            $includeTokensByField];
 }
 ?>

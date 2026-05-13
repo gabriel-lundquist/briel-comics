@@ -41,8 +41,14 @@
                 <label for="title">Search page titles too</label>
                 <br /> -->
                 <p>
-                    <input type="checkbox" name="desc" id="desc">
-                    <label for="desc">Search image descriptions too</label>
+                    <div class="search-check">
+                        <input type="checkbox" name="desc" id="desc">
+                        <label for="desc">Search image descriptions too</label>
+                    </div>
+                    <div class="search-check">
+                        <input type="checkbox" name="exact" id="exact">
+                        <label for="exact">Match terms exactly</label>
+                    </div>
                 </p>
             </form>
 
@@ -78,6 +84,11 @@
                         <a href="search_page.html?tag=tag1">tag1</a>,
                         <em><a href="search_page.html?tag=tag2">tag2</a></em>,
                         <a href="search_page.html?tag=tag3">tag3</a>
+                    </p>
+                    <p><h4>Content Warnings:</h4>
+                        <a href="search_page.html?cw=cw1">cw1</a>,
+                        <em><a href="search_page.html?cw=cw2">cw2</a></em>,
+                        <a href="search_page.html?cw=cw3">cw3</a>
                     </p>
                     <p><h4>Image description:</h4>
                         A <em>silly</em> image. Here is more descriptive text.

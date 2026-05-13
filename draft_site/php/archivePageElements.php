@@ -5,9 +5,9 @@ if (!isset($updateInfos)) $updateInfos = [];
 if (!isset($archivePagePos)) $archivePagePos = 1;
 if (!isset($archivePageCount)) $archivePageCount = 1;
 if (!isset($recentestArchiveLink)) $recentestArchiveLink = UNSETDEFAULT;
-if (!isset($recenterArchiveLink5)) $recenterArchiveLink5 = UNSETDEFAULT;
-if (!isset($recenterArchiveLink2)) $recenterArchiveLink2 = UNSETDEFAULT;
-if (!isset($recenterArchiveLink1)) $recenterArchiveLink1 = UNSETDEFAULT;
+if (!isset($recentArchiveLink5)) $recentArchiveLink5 = UNSETDEFAULT;
+if (!isset($recentArchiveLink2)) $recentArchiveLink2 = UNSETDEFAULT;
+if (!isset($recentArchiveLink1)) $recentArchiveLink1 = UNSETDEFAULT;
 if (!isset($earlierArchiveLink1)) $earlierArchiveLink1 = UNSETDEFAULT;
 if (!isset($earlierArchiveLink2)) $earlierArchiveLink2 = UNSETDEFAULT;
 if (!isset($earlierArchiveLink5)) $earlierArchiveLink5 = UNSETDEFAULT;
@@ -159,32 +159,32 @@ if ($archivePageCount > 1) {
     }
 
     if ($archivePagePos > 5) {
-        echo '<a href="' . $recenterArchiveLink5 . '" class="later5">' 
+        echo '<a href="' . $recentArchiveLink5 . '" class="later5">' 
                 . ($archivePagePos - 5) . '</a> ... ';
     }
 
     if ($archivePagePos > 2) {
-        echo '<a href="' . $recenterArchiveLink2 . '">' . ($archivePagePos - 2) . '</a> ';
+        echo '<a href="' . $recentArchiveLink2 . '">' . ($archivePagePos - 2) . '</a> ';
     }
 
     if ($archivePagePos > 1) {
-        echo '<a href="' . $recenterArchiveLink1 . '" class="later1>' 
+        echo '<a href="' . $recentArchiveLink1 . '" class="later1>' 
             . ($archivePagePos - 1) . '</a> ';
     }
 
     echo $archivePagePos;
 
     if ($archivePageCount - $archivePagePos >= 1) {
-        echo ' <a href="' . $recenterArchiveLink1 . '" class="earlier1">' 
+        echo ' <a href="' . $recentArchiveLink1 . '" class="earlier1">' 
             . ($archivePagePos + 1) . '</a>';
     }
 
     if ($archivePageCount - $archivePagePos >= 2) {
-        echo ' <a href="' . $recenterArchiveLink2 . '">' . ($archivePagePos + 2) . '</a>';
+        echo ' <a href="' . $recentArchiveLink2 . '">' . ($archivePagePos + 2) . '</a>';
     }
 
     if ($archivePageCount - $archivePagePos >= 5) {
-        echo ' ... <a href="' . $recenterArchiveLink5 . '" class="earlier5">' 
+        echo ' ... <a href="' . $recentArchiveLink5 . '" class="earlier5">' 
             . ($archivePagePos + 5) . '</a>';
     }
 
