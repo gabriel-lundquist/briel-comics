@@ -962,20 +962,24 @@ function searchComics($searchStr,
     $excludeTokensNoField = array_diff($excludeTokens, ...$excludeTokensByField);
 
     // Common table expressions defined below
-    $tagMatch = fn($key) => "($key IN(SELECT token FROM tokentagpage))";
-    $tagGeneralMatch = fn($key) => "($key IN(SELECT token FROM tagsearch))"; 
-    $cwMatch = fn($key) => "($key IN(SELECT token FROM tokencwpage))";
-    $cwGeneralMatch = fn($key) => "($key IN (SELECT token FROM cwsearch))";
+    $tagMatch = fn($key) => "($key IN(SELECT token FROM tokentagpage))"; 
+    // $tagGeneralMatch = fn($key) => "($key IN(SELECT token FROM tagsearch))"; 
+    $cwMatch = fn($key) => "($key IN(SELECT token FROM tokencwpage))"; 
+    // $cwGeneralMatch = fn($key) => "($key IN (SELECT token FROM cwsearch))";
     $titleExactMatch = fn($key) => 
+        // SQL requires \\s to output \s, PHP requires \\\s to output \\s.
         "title REGEXP '(^|\\\s)$key(\\\s|$)'";
-    // SQL requires \\s to output \s, PHP requires \\\s to output \\s.
+    
     $titleMatch = fn($key) => $matchExactly ? $titleExactMatch($key)
                                             : "title $matchOp $key";
+    
     $dayNameMatch = fn($key) => "DAYNAME(postdate) = $key";
     $dayOfMonthMatch = fn($key) => "DAYOFMONTH(postdate) = $key";
     $monthMatch = fn($key) => "DAYOFMONTH(postdate) = $key";
     $yearMatch = fn($key) => "YEAR(postdate) = $key";
-    $descMatch = fn($key) => "MATCH (imagedesc) AGAINST ($key)";
+    $descExactMatch = fn($key) => "imagedesc REGEXP $key";
+    $descMatch = $matchExactly ? $descExactMatch
+                                : fn($key) => "MATCH (imagedesc) AGAINST ($key)";
 
     $tokenClauses = [];
     $tokenDataSelects = ['title' => [], 
@@ -989,195 +993,339 @@ function searchComics($searchStr,
     $joinExcludeTokens = [];
 
     $keyIdx = 0;
-    $tokenExecList = [];
+    $execList = [];
 
-    foreach ($includeTokensByField['tag'] as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-
-        $tokenClauses[$token] = [$tagMatch($key)];
-        $tokenDataSelects["tag$token"] = 
-                $tagGeneralMatch($key) . "AS 'tag" . trim($key, ':') . "'";
-
-        $joinTokens[$key] = $token;
-    }
-
-    foreach ($includeTokensByField['cw'] as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-
-        $tokenClauses[$token] = [$cwMatch($key)];
-        $tokenDataSelects["cw$token"] = 
-                $cwGeneralMatch($key) . "AS 'cw" . trim($key, ':') . "'";
-
-        $joinTokens[$key] = $token;
-    }
-
-    foreach ($includeTokensByField['title'] as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-        
-        $tokenClauses[$token] = [$titleMatch($key)];
-        $tokenDataSelects['title'][] = $titleMatch($key);
-    }
-
-    foreach ($includeTokensByField['day'] as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-        
-        $tokenClauses[$token] = [$dayOfMonthMatch($key), 
-                                    $dayNameMatch($key)];
-        $tokenDataSelects['dayOfMonth'][] = $dayOfMonthMatch($key);
-        $tokenDataSelects['dayName'][] = $dayNameMatch($key);
-    }
-
-    foreach ($includeTokensByField['month'] as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-        
-        $tokenClauses[$token] = [$monthMatch($key)];
-        $tokenDataSelects['month'][] = $monthMatch($key);
-    }
-
-    foreach ($includeTokensByField['year'] as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-        
-        $tokenClauses[$token] = [$yearMatch($key)];
-        $tokenDataSelects['year'][] = $yearMatch($key);
-    }
-
-    foreach ($includeTokensByField['description'] as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-        
-        $tokenClauses[$token] = [$descMatch($key)];
-        $tokenDataSelects["desc$token"][] = $descMatch($key);
-    }
-
-    foreach ($includeTokensNoField as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-
-        if (preg_match('/^\d{1,2}$/', $token)) { 
-            $tokenClauses[$token] = [$titleExactMatch($key), 
-                                     $dayOfMonthMatch($key)];
-
-            $tokenDataSelects['title'] += $titleExactMatch($key);
-            $tokenDataSelects['dayOfMonth'] += $dayOfMonthMatch($key);
-
-            if ($searchImgDesc) {
-                $tokenClauses[$token][] = $descMatch($key);
-                $tokenDataSelects["desc$token"] = $descMatch($key);
-            }
-
-        } else if (preg_match('/^(19|20|21)\d{2}$/', $token)) {
-            $tokenClauses[$token] = [$titleExactMatch($key), 
-                                     $yearMatch($key)];
-
-            $tokenDataSelects['title'] += $titleExactMatch($key);
-            $tokenDataSelects['year'] += $yearMatch($key);
-            
-            if ($searchImgDesc) {
-                $tokenClauses[$token][] = $descMatch($key);
-                $tokenDataSelects["desc$token"] = $descMatch($key);
-            }
-
-        } else if (\strlen($token) > 2) { 
-            $tokenClauses[$token] = [$tagMatch($key), 
-                                     $cwMatch($key),
-                                     $titleMatch($key), 
-                                     $monthMatch($key), 
-                                     $dayNameMatch($key)];
-
-            $tokenDataSelects["tag$token"] = 
-                    $tagGeneralMatch($key) . "AS 'tag" . trim($key, ':') . "'";
-            $tokenDataSelects["cw$token"] = 
-                    $cwGeneralMatch($key) . "AS 'cw" . trim($key, ':') . "'";
-            $tokenDataSelects['title'][] = $titleMatch($key);
-            $tokenDataSelects['month'][] = $monthMatch($key);
-            $tokenDataSelects['dayName'][] = $dayNameMatch($key);
-            
-            if ($searchImgDesc) {
-                $tokenClauses[$token][] = $descMatch($key);
-                $tokenDataSelects["desc$token"] = $descMatch($key);
-            }
-
-            $joinTokens[$key] = $token;
+    $loopTokens = function($tokenList, $callback) use (&$keyIdx, &$execList) {
+        foreach ($tokenList as $token) {
+            $execList[$key = ':t' . $keyIdx++] = $token;
+            $callback($token, $key);
         }
-        // If a token isn't numeric and is of length 2 or less, ignore it
+    };
+
+    $loopTokens($includeTokensByField['tag'], 
+                function($token, $key) use (&$tokenClauses, &$joinTokens, $tagMatch) {
+                    $tokenClauses[$token] = [$tagMatch($key)];
+                    // Don't need match selects since those are done by tag name, not token
+                    $joinTokens[$key] = $token;
+                });
+    // foreach ($includeTokensByField['tag'] as $token) {
+    //     $execList[$key = ':t' . $keyIdx++] = $token;
+    //     $tokenClauses[$token] = [$tagMatch($key)];
+    //     $joinTokens[$key] = $token;
+    // }
+
+    $loopTokens($includeTokensByField['cw'], 
+                function($token, $key) use (&$tokenClauses, &$joinTokens, $cwMatch) {
+                    $tokenClauses[$token] = [$cwMatch($key)];
+                    // Don't need match selects since those are done by cw name, not token
+                    $joinTokens[$key] = $token;
+                });
+
+    $loopTokens($includeTokensByField['title'], 
+                fn($token, $key) => 
+                    $tokenClauses[$token] = [$tokenDataSelects['title'][] = $titleMatch($key)]
+                );
+    // foreach ($includeTokensByField['title'] as $token) {
+    //     $execList[$key = ':t' . $keyIdx++] = $token;
+    //     $tokenClauses[$token] = [$titleMatch($key)];
+    //     $tokenDataSelects['title'][] = $titleMatch($key);
+    // }
+
+    $loopTokens($includeTokensByField['day'], 
+                function($token, $key) use (&$tokenClauses, 
+                                            &$tokenDataSelects, 
+                                            $dayOfMonthMatch, 
+                                            $dayNameMatch) {
+                    $tokenClauses[$token] = [$dayOfMonthMatch($key), 
+                                                $dayNameMatch($key)];
+                    $tokenDataSelects['dayOfMonth'][] = $dayOfMonthMatch($key);
+                    $tokenDataSelects['dayName'][] = $dayNameMatch($key);
+                });
+    // foreach ($includeTokensByField['day'] as $token) {
+    //     $execList[$key = ':t' . $keyIdx++] = $token;
+    //     $tokenClauses[$token] = [$dayOfMonthMatch($key), 
+    //                                 $dayNameMatch($key)];
+    //     $tokenDataSelects['dayOfMonth'][] = $dayOfMonthMatch($key);
+    //     $tokenDataSelects['dayName'][] = $dayNameMatch($key);
+    // }
+
+    $loopTokens($includeTokensByField['month'],
+                fn($token, $key) => 
+                    $tokenClauses[$token] = [$tokenDataSelects['month'][] = $monthMatch($key)]
+                );
+    // foreach ($includeTokensByField['month'] as $token) {
+    //     $execList[$key = ':t' . $keyIdx++] = $token;
+    //     $tokenClauses[$token] = [$monthMatch($key)];
+    //     $tokenDataSelects['month'][] = $monthMatch($key);
+    // }
+
+    $loopTokens($includeTokensByField['year'],
+                fn($token, $key) =>
+                    $tokenClauses[$token] = [$tokenDataSelects['year'][] = $yearMatch($key)]
+                );
+    // foreach ($includeTokensByField['year'] as $token) {
+    //     $execList[$key = ':t' . $keyIdx++] = $token;
+    //     $tokenClauses[$token] = [$yearMatch($key)];
+    //     $tokenDataSelects['year'][] = $yearMatch($key);
+    // }
+
+    $loopTokens($includeTokensByField['description'],
+                fn($token, $key) =>
+                    $tokenClauses[$token] = [$tokenDataSelects["desc$token"][] = $descMatch($key)]
+                );
+    // foreach ($includeTokensByField['description'] as $token) {
+    //     $execList[$key = ':t' . $keyIdx++] = $token;
+    //     $tokenClauses[$token] = [$descMatch($key)];
+    //     $tokenDataSelects["desc$token"][] = $descMatch($key);
+    // }
+
+    // foreach ($includeTokensNoField as $token) {
+    //     $execList[$key = ':t' . $keyIdx++] = $token;
+
+    //     if (preg_match('/^\d{1,2}$/', $token)) { 
+    //         $tokenClauses[$token] = [$titleExactMatch($key), 
+    //                                  $dayOfMonthMatch($key)];
+
+    //         $tokenDataSelects['title'] += $titleExactMatch($key);
+    //         $tokenDataSelects['dayOfMonth'] += $dayOfMonthMatch($key);
+
+    //         if ($searchImgDesc) {
+    //             $tokenClauses[$token][] = $descMatch($key);
+    //             $tokenDataSelects["desc$token"] = $descMatch($key);
+    //         }
+
+    //     } else if (preg_match('/^(19|20|21)\d{2}$/', $token)) {
+    //         $tokenClauses[$token] = [$titleExactMatch($key), 
+    //                                  $yearMatch($key)];
+
+    //         $tokenDataSelects['title'] += $titleExactMatch($key);
+    //         $tokenDataSelects['year'] += $yearMatch($key);
+            
+    //         if ($searchImgDesc) {
+    //             $tokenClauses[$token][] = $descMatch($key);
+    //             $tokenDataSelects["desc$token"] = $descMatch($key);
+    //         }
+
+    //     } else if (\strlen($token) > 2) { 
+    //         $tokenClauses[$token] = [$tagMatch($key), 
+    //                                  $cwMatch($key),
+    //                                  $titleMatch($key), 
+    //                                  $monthMatch($key), 
+    //                                  $dayNameMatch($key)];
+
+    //         // tag and cw match columns are based on tag name, not tokens
+    //         // $tokenDataSelects["tag$token"] = 
+    //         //         $tagGeneralMatch($key) . "AS 'tag" . trim($key, ':') . "'";
+    //         // $tokenDataSelects["cw$token"] = 
+    //         //         $cwGeneralMatch($key) . "AS 'cw" . trim($key, ':') . "'";
+    //         $tokenDataSelects['title'][] = $titleMatch($key);
+    //         $tokenDataSelects['month'][] = $monthMatch($key);
+    //         $tokenDataSelects['dayName'][] = $dayNameMatch($key);
+            
+    //         if ($searchImgDesc) {
+    //             $tokenClauses[$token][] = $descMatch($key);
+    //             $tokenDataSelects["desc$token"] = $descMatch($key);
+    //         }
+
+    //         $joinTokens[$key] = $token;
+    //     }
+    //     // If a token isn't numeric and is of length 2 or less, ignore it
+    // }
+
+    $loopTokens($includeTokensNoField, 
+                function($token, $key) use (&$tokenClauses, 
+                                            &$tokenDataSelects, 
+                                            &$joinTokens, 
+                                            $searchImgDesc, 
+                                            $titleMatch, 
+                                            $titleExactMatch,
+                                            $descMatch, 
+                                            $dayNameMatch, 
+                                            $dayOfMonthMatch, 
+                                            $monthMatch, 
+                                            $yearMatch, 
+                                            $tagMatch, 
+                                            $cwMatch) {
+                    if (preg_match('/^\d{1,2}$/', $token)) { 
+                        $tokenClauses[$token] = [$titleExactMatch($key), 
+                                                $dayOfMonthMatch($key)];
+
+                        $tokenDataSelects['title'] += $titleExactMatch($key);
+                        $tokenDataSelects['dayOfMonth'] += $dayOfMonthMatch($key);
+
+                        if ($searchImgDesc) {
+                            $tokenClauses[$token][] = $descMatch($key);
+                            $tokenDataSelects["desc$token"] = $descMatch($key);
+                        }
+
+                    } else if (preg_match('/^(19|20|21)\d{2}$/', $token)) {
+                        $tokenClauses[$token] = [$titleExactMatch($key), 
+                                                $yearMatch($key)];
+
+                        $tokenDataSelects['title'] += $titleExactMatch($key);
+                        $tokenDataSelects['year'] += $yearMatch($key);
+                        
+                        if ($searchImgDesc) {
+                            $tokenClauses[$token][] = $descMatch($key);
+                            $tokenDataSelects["desc$token"] = $descMatch($key);
+                        }
+
+                    } else if (\strlen($token) > 2) { 
+                        $tokenClauses[$token] = [$tagMatch($key), 
+                                                $cwMatch($key),
+                                                $titleMatch($key), 
+                                                $monthMatch($key), 
+                                                $dayNameMatch($key)];
+                                                
+                        $tokenDataSelects['title'][] = $titleMatch($key);
+                        $tokenDataSelects['month'][] = $monthMatch($key);
+                        $tokenDataSelects['dayName'][] = $dayNameMatch($key);
+                        
+                        if ($searchImgDesc) {
+                            $tokenClauses[$token][] = $descMatch($key);
+                            $tokenDataSelects["desc$token"] = $descMatch($key);
+                        }
+
+                        $joinTokens[$key] = $token;
+                    }
+                    // If a token isn't numeric and is of length 2 or less, ignore it
+                }
+                );
+
+    $loopTokens($excludeTokensByField['tag'], 
+                fn($token, $key) => $joinExcludeTokens[$key] = $token);
+
+    $loopTokens($excludeTokensByField['cw'],
+                fn($token, $key) => $joinExcludeTokens[$key] = $token);
+
+    $loopTokens($excludeTokensByField['title'],   
+                fn($token, $key) => $tokenExcludeClauses[$token] = [$titleMatch($key)]);
+
+    $loopTokens($excludeTokensByField['day'],
+                fn($token, $key) => $tokenExcludeClauses[$token] = [$dayOfMonthMatch($key), 
+                                                                    $dayNameMatch($key)]);
+
+    $loopTokens($excludeTokensByField['month'],
+                fn($token, $key) => $tokenExcludeClauses[$token] = [$monthMatch($key)]);
+
+    $loopTokens($excludeTokensByField['year'],
+                fn($token, $key) => $tokenExcludeClauses[$token] = [$yearMatch($key)]);
+
+    $loopTokens($excludeTokensByField['description'],
+                fn($token, $key) => $tokenExcludeClauses[$token] = [$descExactMatch($key)]);
+    
+    $loopTokens($excludeTokensNoField, 
+                function($token, $key) use (&$tokenExcludeClauses, 
+                                            &$joinExcludeTokens, 
+                                            $searchImgDesc, 
+                                            $titleMatch, 
+                                            $titleExactMatch,
+                                            $descExactMatch, 
+                                            $dayNameMatch, 
+                                            $dayOfMonthMatch, 
+                                            $monthMatch, 
+                                            $yearMatch) {
+                    if (preg_match('/^\d{1,2}$/', $token)) { 
+                        $tokenExcludeClauses[$token] = [$titleExactMatch($key), 
+                                                        $dayOfMonthMatch($key)];
+                        if ($searchImgDesc) $tokenExcludeClauses[$token][] = $descExactMatch($key);
+
+                    } else if (preg_match('/^(19|20|21)\d{2}$/', $token)) {
+                        $tokenExcludeClauses[$token] = [$titleExactMatch($key), 
+                                                        $yearMatch($key)];
+                        if ($searchImgDesc) $tokenExcludeClauses[$token][] = $descExactMatch($key);
+
+                    } else if (\strlen($token) > 2) { 
+                        $tokenExcludeClauses[$token] = [$titleMatch($key), 
+                                                        $monthMatch($key), 
+                                                        $dayNameMatch($key)];
+                        if ($searchImgDesc) $tokenExcludeClauses[$token][] = $descExactMatch($key);
+                        $joinExcludeTokens[$key] = $token;
+                    }
+                    // If a token isn't numeric and is of length 2 or less, ignore it
+                
+                });
+    // foreach ($excludeTokensNoField as $token) {
+    //     $execList[$key = ':t' . $keyIdx++] = $token;
+
+    //     if (preg_match('/^\d{1,2}$/', $token)) { 
+    //         $tokenExcludeClauses[$token] = [$titleExactMatch($key), 
+    //                                         $dayOfMonthMatch($key)];
+    //         if ($searchImgDesc) {
+    //             $tokenExcludeClauses[$token][] = $descMatch($key);
+    //         }
+
+    //     } else if (preg_match('/^(19|20|21)\d{2}$/', $token)) {
+    //         $tokenExcludeClauses[$token] = [$titleExactMatch($key), 
+    //                                         $yearMatch($key)];
+    //         if ($searchImgDesc) {
+    //             $tokenExcludeClauses[$token][] = $descMatch($key);
+    //         }
+
+    //     } else if (\strlen($token) > 2) { 
+    //         $tokenExcludeClauses[$token] = [$titleMatch($key), 
+    //                                         $monthMatch($key), 
+    //                                         $dayNameMatch($key)];
+    //         if ($searchImgDesc) {
+    //             $tokenExcludeClauses[$token][] = $descMatch($key);
+    //         }
+
+    //         $joinExcludeTokens[$key] = $token;
+    //     }
+    //     // If a token isn't numeric and is of length 2 or less, ignore it
+    // }
+    
+
+    $joinSearch = $pdoConn->prepare("CREATE TEMPORARY TABLE joinsearch 
+                                        AS SELECT column_0 AS token FROM (
+                                            VALUES "
+                                            . \implode(', ', 
+                                                        \array_map(fn($k) => "ROW($k)", 
+                                                                    \array_keys($joinTokens))
+                                            )
+                                        . ');'
+                                    );
+    $joinSearch->execute($joinTokens);
+
+    $tagSearch = $pdoConn->query("CREATE TEMPORARY TABLE tagsearch 
+                                    AS SELECT token, tagid, name FROM 
+                                        joinsearch INNER JOIN tag 
+                                        ON name $matchOp token;");
+    $possibleTagNames = $tagSearch->fetchAll(\PDO::FETCH_COLUMN, 3);
+
+    $cwSearch = $pdoConn->query("CREATE TEMPORARY TABLE cwsearch 
+                                    AS SELECT token, contwarningid, name FROM 
+                                        joinsearch INNER JOIN contwarning 
+                                        ON name $matchOp token;");
+    $possibleCWNames = $cwSearch->fetchAll(\PDO::FETCH_COLUMN, 3);
+
+    $possibleTagMatches = $pdoConn->query("SELECT name, tagid FROM tagsearch;");
+                                        // ->fetchAll(\PDO::FETCH_COLUMN); 
+
+    $possibleCWMatches = $pdoConn->query("SELECT name, contwarningid FROM cwsearch;");
+                                    // ->fetchAll(\PDO::FETCH_COLUMN); 
+
+    $tagSelectClause = [];
+    for ($i = 0; ($tagMatch = $possibleTagMatches->fetch(\PDO::FETCH_ASSOC)) !== false; $i++) {
+        $tagSelectClause[] = "EXISTS(SELECT tagpage.tagid FROM tagpage 
+                                    WHERE tagpage.pageid = page.pageid 
+                                        AND tagpage.tagid = :tagid$i
+                                ) AS :tagalias$i"; 
+        $execList[":tagid$i"] = $tagMatch['tagid'];
+        $execList[":tagalias$i"] = 'tag' . $tagMatch['name'];
     }
+    $tagSelectClause = implode(', ', $tagSelectClause);
 
-    foreach ($excludeTokensByField['tag'] as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-
-        $joinExcludeTokens[$key] = $token;
+    $cwSelectClause = [];
+    for ($i = 0; ($cwMatch = $possibleCWMatches->fetch(\PDO::FETCH_ASSOC)) !== false; $i++) {
+        $cwSelectClause[] = "EXISTS(SELECT contwarningpage.contwarningid FROM contwarningpage 
+                                    WHERE contwarningpage.pageid = page.pageid 
+                                        AND contwarningpage.contwarningid = :cwid$i
+                                ) AS :cwalias$i"; 
+        $execList[":cwid$i"] = $cwMatch['contwarningid'];
+        $execList[":cwalias$i"] = 'cw' . $cwMatch['name'];
     }
-
-    foreach ($excludeTokensByField['cw'] as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-
-        $joinExcludeTokens[$key] = $token;
-    }
-
-    foreach ($excludeTokensByField['title'] as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-        
-        $tokenExcludeClauses[$token] = [$titleMatch($key)];
-    }
-
-    foreach ($excludeTokensByField['day'] as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-        
-        $tokenExcludeClauses[$token] = [$dayOfMonthMatch($key), 
-                                        $dayNameMatch($key)];
-    }
-
-    foreach ($excludeTokensByField['month'] as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-        
-        $tokenExcludeClauses[$token] = [$monthMatch($key)];
-    }
-
-    foreach ($excludeTokensByField['year'] as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-        
-        $tokenExcludeClauses[$token] = [$yearMatch($key)];
-    }
-
-    foreach ($excludeTokensByField['description'] as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-        
-        $tokenExcludeClauses[$token] = [$descMatch($key)];
-    }
-
-    foreach ($excludeTokensNoField as $token) {
-        $tokenExecList[$key = ':t' . $keyIdx++] = $token;
-
-        if (preg_match('/^\d{1,2}$/', $token)) { 
-            $tokenExcludeClauses[$token] = [$titleExactMatch($key), 
-                                            $dayOfMonthMatch($key)];
-            if ($searchImgDesc) {
-                $tokenExcludeClauses[$token][] = $descMatch($key);
-            }
-
-        } else if (preg_match('/^(19|20|21)\d{2}$/', $token)) {
-            $tokenExcludeClauses[$token] = [$titleExactMatch($key), 
-                                            $yearMatch($key)];
-            if ($searchImgDesc) {
-                $tokenExcludeClauses[$token][] = $descMatch($key);
-            }
-
-        } else if (\strlen($token) > 2) { 
-            $tokenExcludeClauses[$token] = [$titleMatch($key), 
-                                            $monthMatch($key), 
-                                            $dayNameMatch($key)];
-            if ($searchImgDesc) {
-                $tokenExcludeClauses[$token][] = $descMatch($key);
-            }
-
-            $joinExcludeTokens[$key] = $token;
-        }
-        // If a token isn't numeric and is of length 2 or less, ignore it
-    }
-
-    $joinSearch = $pdoConn->exec("CREATE TEMPORARY TABLE joinsearch;
-                                    INSERT INTO joinsearch VALUES "
-                                    . \implode(', ', 
-                                                \array_map(fn($k) => "('$k')", 
-                                                            )))
+    $cwSelectClause = implode(', ', $cwSelectClause);
 
     $joinWithClause = 'joinsearch (token) AS (VALUES '
                         . \implode(', ', 
@@ -1186,15 +1334,15 @@ function searchComics($searchStr,
                                     )
                         . ')';
 
-    $tagWithClause = 'tagsearch (token, tagid) AS (
-                        SELECT token, tagid FROM 
-                        joinsearch INNER JOIN tag '  
-                        . "ON tag.name $matchOp joinsearch.token)";
+    // $tagWithClause = 'tagsearch (token, tagid) AS (
+    //                     SELECT token, tagid FROM 
+    //                     joinsearch INNER JOIN tag '  
+    //                     . "ON tag.name $matchOp joinsearch.token)";
     
-    $cwWithClause = 'cwsearch (token) AS (
-                        SELECT token, contwarningid FROM 
-                        joinsearch INNER JOIN contwarning '  
-                        . "ON contwarning.name $matchOp joinsearch.token)";
+    // $cwWithClause = 'cwsearch (token, contwarningid) AS (
+    //                     SELECT token, contwarningid FROM 
+    //                     joinsearch INNER JOIN contwarning '  
+    //                     . "ON contwarning.name $matchOp joinsearch.token)";
 
     // Must place in a WITH statement *after* a page has been selected
     $tagWithPageClause = 'tokentagpage (token) AS (
@@ -1271,20 +1419,19 @@ function searchComics($searchStr,
                             . ') AS daynamematch, '
                         . \implode(', ', 
                                     \array_filter($tokenDataSelects, 
-                                                    fn($key) => str_starts_with($key, 'tag')
-                                                                or str_starts_with($key, 'cw')
-                                                                or str_starts_with($key, 'desc'), 
+                                                    fn($key) => str_starts_with($key, 'desc'), 
                                                     ARRAY_FILTER_USE_KEY)
                                     )
+                        . $tagSelectClause 
+                        . $cwSelectClause
                         ;
 
     $pages = $pdoConn->prepare("WITH $joinWithClause, 
-                                     $tagWithClause, 
-                                     $cwWithClause, 
                                      $joinExcludeWithClause, 
                                      $tagExcludeWithClause, 
                                      $cwExcludeWithClause 
-                                SELECT pageid, $selectMatchClause FROM page
+                                SELECT page.pageid, page.title, page.postdate, page.location, 
+                                    page.imagedesc, $selectMatchClause FROM page
                                 WHERE (
                                     WITH $tagWithPageClause, 
                                         $cwWithPageClause
@@ -1293,12 +1440,12 @@ function searchComics($searchStr,
                                 );"
                                 );
 
-    $pages->execute($tokenExecList);
+    $pages->execute($execList);
 
     $results = $pages->fetchAll(\PDO::FETCH_ASSOC);
 
     return [$results, 
-            $tokenExecList, 
+            $execList, 
             $includeTokensNoField, 
             $includeTokensByField];
 }

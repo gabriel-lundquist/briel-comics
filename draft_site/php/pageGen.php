@@ -70,32 +70,23 @@ class searchResultInfo {
     public $thumbnailRecord;
     public $isExact;
 
-    public function __construct($pageRecord, 
-                                $searchRecord, 
+    public function __construct($searchRecord, 
                                 $tokenExecList, 
                                 $bareTokens, 
                                 $prefixTokens, 
-                                $date, 
                                 $pageTags, 
                                 // $matchTags, 
                                 $pageContWarns, 
                                 // $matchContWarns, 
                                 $thumbnailRecord, 
                                 $isExact) {
-    $this->pageRecord = $pageRecord;
     $this->searchRecord = $searchRecord;
     $this->bareTokens = $bareTokens;
     $this->prefixTokens = $prefixTokens;
-    $this->date = $date;
+    $this->date = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', 
+                                                        $searchRecord['postdate']);
     $this->pageTags = $pageTags;
-    $this->matchTags = [];
-    foreach (array_keys($searchRecord) as $searchKey) {
-        if (preg_match('/^tagt\d+/', $searchKey)) {
-            $this->matchTags[] = ;    //... I think actually I'm just going to create some temporary tables.
-        }
-    }
     $this->pageContWarns = $pageContWarns;
-    $this->matchContWarns = ;
     $this->thumbnailRecord = $thumbnailRecord;
     $this->isExact = $isExact;
 }
@@ -917,21 +908,14 @@ function generateSearchpage($searchStr,
             $hilite = false;
             $searchTokens = $result->bareTokens + $result->prefixTokens['title'];
             while ($titleToken !== false) {
-                foreach ($searchTokens as $searchToken) {
-                    if ($result->isExact ? $titleToken == $searchToken
-                                        : str_contains(strtolower($titleToken), 
-                                                        strtolower($searchToken))) {
-                        $titleText[] = "<em>$titleToken</em>";
-                        $hilite = true;
-                        break;
-                    }
-                }
-                if (!$hilite) $titleText[] = $titleToken;
+                $titleText[] = $emphasize($result->isExact ? $titleToken == $searchToken
+                                                            : str_contains(strtolower($titleToken), 
+                                                                            strtolower($searchToken)), 
+                                            $titleToken);
                 $titleToken = strtok($whitespaces);
             }
             echo implode(' ', $titleText);
         } else echo $result->pageRecord['title'];
-
                     ?></a></h3>
                     <p><h4>Date:</h4>
                         <time date="<?= $result->date->format('Y-m-d') ?>"><?php
@@ -952,7 +936,7 @@ function generateSearchpage($searchStr,
 ?>
                     <p><h4>Tags:</h4>
 <?php
-        foreach ($update->tags as $tag) {
+        foreach ($result->tags as $tag) {
 ?>
                         <a href="search_result.php?tag=<?= $tag ?>"><?= $tag ?></a>
 <?php
