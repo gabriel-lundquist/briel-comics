@@ -58,15 +58,19 @@ class resultInfo {
 }
 
 class searchResultInfo {
-    public $pageRecord;
     public $searchRecord; 
+    public $tokenExecList;
     public $bareTokens;
     public $prefixTokens;
     public $date;
+    private $matchtextTokens = null;
+    private $matchDescTokens = null;
     public $pageTags;
-    public $matchTags;
+    private $matchTags = null;
+    private $nonMatchTags = null;
     public $pageContWarns;
-    public $matchContWarns;
+    private $matchContWarns = null;
+    private $nonMatchContWarns = null;
     public $thumbnailRecord;
     public $isExact;
 
@@ -75,20 +79,137 @@ class searchResultInfo {
                                 $bareTokens, 
                                 $prefixTokens, 
                                 $pageTags, 
-                                // $matchTags, 
                                 $pageContWarns, 
-                                // $matchContWarns, 
                                 $thumbnailRecord, 
                                 $isExact) {
-    $this->searchRecord = $searchRecord;
-    $this->bareTokens = $bareTokens;
-    $this->prefixTokens = $prefixTokens;
-    $this->date = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', 
-                                                        $searchRecord['postdate']);
-    $this->pageTags = $pageTags;
-    $this->pageContWarns = $pageContWarns;
-    $this->thumbnailRecord = $thumbnailRecord;
-    $this->isExact = $isExact;
+        $this->searchRecord = $searchRecord;
+        $this->tokenExecList = $tokenExecList;
+        $this->bareTokens = $bareTokens;
+        $this->prefixTokens = $prefixTokens;
+        $this->pageTags = $pageTags;
+        $this->pageContWarns = $pageContWarns;
+        $this->thumbnailRecord = $thumbnailRecord;
+        $this->isExact = $isExact;
+        
+        $this->date = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', 
+                                                            $searchRecord['postdate']);
+        $this->matchTags = $this->getMatchTags();
+
+        $this->nonMatchTags = array_diff($this->pageTags, $this->matchTags);
+
+        $this->matchContWarns = $this->getMatchCWs();
+        
+        $this->nonMatchContWarns = array_diff($this->pageContWarns, $this->matchContWarns);
+
+    }
+
+    public function getMatchTags() {
+        if ($this->matchTags === null) {
+            $this->matchTags = [];
+            foreach (array_filter($this->searchRecord, 
+                                    fn($k) => substr($k, 0, 3) == 'tag', 
+                                    ARRAY_FILTER_USE_KEY)
+                    as $key => $match) {
+                if ($match) $this->matchTags[] = substr($key, 3);
+            }
+        }
+
+        return $this->matchTags;
+    }
+
+    public function getNonMatchTags() {
+        if ($this->nonMatchTags === null) {
+            $this->nonMatchTags = array_diff($this->pageTags, $this->getMatchTags());
+        }
+
+        return $this->nonMatchTags;
+    }
+
+    public function getMatchCWs() {
+        if ($this->matchContWarns === null) {
+            $this->matchContWarns = [];
+            foreach (array_filter($this->searchRecord, 
+                                    fn($k) => substr($k, 0, 2) == 'cw', 
+                                    ARRAY_FILTER_USE_KEY)
+                    as $key => $match) {
+                if ($match) $this->matchContWarns[] = substr($key, 2);
+            }
+        }
+
+        return $this->matchContWarns;
+    }
+
+    public function getNonMatchCWs() {
+        if ($this->nonMatchContWarns === null) {
+            $this->nonMatchContWarns = array_diff($this->pageContWarns, $this->getMatchCWs());
+        }
+
+        return $this->nonMatchContWarns;
+    }
+
+    public function isTitleMatched() {
+        return $this->searchRecord['titlematch'];
+    }
+
+    private function getMatchesInText($recordColumnKey, $prefixKey) {
+        $matchTokens = [];
+        $whitespaces = " \n\t\r";
+        $textToken = strtok($this->searchRecord[$recordColumnKey], $whitespaces);
+        $searchTokens = array_map(fn($s) => strtolower($s), 
+                                    $this->bareTokens + $this->prefixTokens[$prefixKey]);
+        while ($textToken !== false) {
+            $isMatch = $this->isExact ? \in_array(strtolower($textToken), $searchTokens) 
+                                        : array_any($searchTokens, 
+                                                    fn($tok, $key) => 
+                                                        str_contains(strtolower($textToken), 
+                                                                        $tok)
+                                                        // $key does nothing
+                                                    ); 
+            $this->matchTokens[] = ['token' => $textToken, 
+                                    'match' => $isMatch];
+        }
+
+        return $matchTokens;
+    }
+
+    public function getTitleMatches() {
+        if ($this->matchtextTokens === null) {
+            $this->matchtextTokens = $this->getMatchesInText('title', 'title');
+        }
+
+        return $this->matchtextTokens;
+    }
+
+    public function getDescMatches() {
+        if ($this->matchDescTokens === null) {
+            $this->matchDescTokens = [];
+            $whitespaces = " \n\t\r";
+            $descToken = strtok($this->searchRecord['imagedesc'], $whitespaces);
+            if ($this->isExact) {
+                $tokensMatchDesc = [];
+                foreach (array_filter($this->searchRecord, 
+                                        fn($k) => substr($k, 0, 4) == 'desc', 
+                                        ARRAY_FILTER_USE_KEY)
+                        as $key => $match) {
+                    if ($match) $tokensMatchDesc[] = strtolower(substr($key, 4));
+                }
+                while ($descToken !== false) { 
+                    $this->matchDescTokens[] = ['token' => $descToken, 
+                                                'match' => \in_array(strtolower($descToken),
+                                                                        $tokensMatchDesc)];
+                    $descToken = strtok($whitespaces);
+                }
+            } else {
+                while ($descToken !== false) {
+                    $this->matchDescTokens[] = ['token' => $descToken, 
+                                                'match' => false];
+                    $descToken = strtok($whitespaces);
+                }
+            }
+        }
+
+        return $this->matchDescTokens;
+    }
 }
 
 class updateInfo {
@@ -812,8 +933,59 @@ function generateHomepage($filePath,
     return file_put_contents($filePath, ob_get_flush());
 }
 
-function generateSearchpage($searchStr, 
-                            $resultInfos) {
+function generateSearchFooterNav($totalResultPageCount, 
+                                    $resultPagePosition, 
+                                    $mostRecentPage, 
+                                    $earliestPage, 
+                                    $pageOffsets) {
+    if ($totalResultPageCount > 1) {
+?>
+<h3>Archive navigation</h3>
+<?php
+        if ($resultPagePosition > 3) {
+            echo '<a href="' . $mostRecentPage . '">Latest</a> ... ';
+        }
+
+        if ($resultPagePosition > 5) {
+            echo '<a href="' . $recentArchiveLink5 . '" class="later5">' 
+                    . ($resultPagePosition - 5) . '</a> ... ';
+        }
+
+        if ($resultPagePosition > 2) {
+            echo '<a href="' . $recentArchiveLink2 . '">' . ($resultPagePosition - 2) . '</a> ';
+        }
+
+        if ($resultPagePosition > 1) {
+            echo '<a href="' . $recentArchiveLink1 . '" class="later1>' 
+                . ($resultPagePosition - 1) . '</a> ';
+        }
+
+        echo $resultPagePosition;
+
+        if ($archiveresultCount - $resultPagePosition >= 1) {
+            echo ' <a href="' . $recentArchiveLink1 . '" class="earlier1">' 
+                . ($resultPagePosition + 1) . '</a>';
+        }
+
+        if ($archiveresultCount - $resultPagePosition >= 2) {
+            echo ' <a href="' . $recentArchiveLink2 . '">' . ($resultPagePosition + 2) . '</a>';
+        }
+
+        if ($archiveresultCount - $resultPagePosition >= 5) {
+            echo ' ... <a href="' . $recentArchiveLink5 . '" class="earlier5">' 
+                . ($resultPagePosition + 5) . '</a>';
+        }
+
+        if ($archiveresultCount - $resultPagePosition >= 3) {
+            echo ' ... <a href="' . $earliestArchiveLink . '">Earliest</a>';
+        }
+    }
+}
+
+
+
+function generateSearchPage($searchStr, 
+                            $searchResultInfos) {
 ?>
 <!doctype html>
 <html lang="en-US">
@@ -856,9 +1028,6 @@ function generateSearchpage($searchStr,
                 <label for="search">
                     Searches tags, dates, titles, and result numbers by default
                 </label>
-                <!-- <input type="checkbox" name="title" id="title">
-                <label for="title">Search result titles too</label>
-                <br /> -->
                 <p>
                     <div class="search-check">
                         <input type="checkbox" name="desc" id="desc">
@@ -880,7 +1049,7 @@ function generateSearchpage($searchStr,
     $emphasize = fn($test, $str) => ($test ? '<em>' : '') 
                                     . $str
                                     . ($test ? '</em>' : '');
-    foreach ($resultInfos as $result) {
+    foreach ($searchResultInfos as $result) {
             ?>
             <article class="search-entry">
                 <div class="thumbnails-div">
@@ -902,20 +1071,11 @@ function generateSearchpage($searchStr,
                     <h3><a href="<?= $result->pageRecord['location'] ?>" 
                            class="result-link"><?php
         if ($result->searchRecord['titlematch']) {
-            $titleText = [];
-            $whitespaces = " \n\t\r";
-            $titleToken = strtok($result->pageRecord['title'], $whitespaces);
-            $hilite = false;
-            $searchTokens = $result->bareTokens + $result->prefixTokens['title'];
-            while ($titleToken !== false) {
-                $titleText[] = $emphasize($result->isExact ? $titleToken == $searchToken
-                                                            : str_contains(strtolower($titleToken), 
-                                                                            strtolower($searchToken)), 
-                                            $titleToken);
-                $titleToken = strtok($whitespaces);
-            }
+            $titleText = array_map(fn($tok) => $tok['match'] ? "<em>{$tok['token']}</em>"
+                                                                : $tok['token'], 
+                                    $result->getTitleMatches());
             echo implode(' ', $titleText);
-        } else echo $result->pageRecord['title'];
+        } else echo $result->searchRecord['title'];
                     ?></a></h3>
                     <p><h4>Date:</h4>
                         <time date="<?= $result->date->format('Y-m-d') ?>"><?php
@@ -932,48 +1092,72 @@ function generateSearchpage($searchStr,
                         ?></time>
                     </p>
 <?php
-    if (\count($result->tags) != 0) {
+        if (\count($result->pageTags) != 0) {
 ?>
                     <p><h4>Tags:</h4>
 <?php
-        foreach ($result->tags as $tag) {
-?>
-                        <a href="search_result.php?tag=<?= $tag ?>"><?= $tag ?></a>
-<?php
-        }
+            $matchTagEls = implode(', ', 
+                                    array_map(fn($tag) => 
+                                                    '<a href="search_result.php?tag='
+                                                    . $tag 
+                                                    . "\"><em>$tag</em></a>",
+                                                $result->getMatchTags()));
+            
+            $nonMatchTagEls = implode(', ', 
+                                        array_map(fn($tag) => 
+                                                        '<a href="search_result.php?tag='
+                                                        . $tag 
+                                                        . "\">$tag</a>",
+                                                    $result->getNonMatchTags()));
+            echo implode(', ', [$matchTagEls, $nonMatchTagEls]);
+            
 ?>                  </p>
 <?php
-    }
-?>
-                    <p><h4>Description:</h4> <?= $update->updateRecord['desc'] ?></p>
+        }
 
-<?php
-    if (\count($update->contWarns) != 0) {
+        if (\count($result->pageContWarns) != 0) {
 ?>
-                    <p><h4>Content Warnings:</h4>
+                    <p><h4>Content warnings:</h4>
 <?php
-        foreach ($update->contWarns as $contWarn) {
-?>
-                        <a href="search_result.php?tag=<?= $contWarn ?>"><?= $contWarn ?></a>
-<?php
-        }
+            $matchCWEls = implode(', ', 
+                                    array_map(fn($cw) => 
+                                                    '<a href="search_result.php?cw='
+                                                    . $cw 
+                                                    . "\"><em>$cw</em></a>",
+                                                $result->getMatchContWarns()));
+            
+            $nonMatchCWEls = implode(', ', 
+                                        array_map(fn($cw) => 
+                                                        '<a href="search_result.php?cw='
+                                                        . $cw 
+                                                        . "\">$cw</a>",
+                                                    $result->getNonMatchContWarns()));
+            echo implode(', ', [$matchCWEls, $nonMatchCWEls]);
+        
 ?>                  </p>
 <?php
-    }
+        }
 ?>
+                    <p><h4>Description:</h4> <?php  
+        if ($result->isExact) {
+            foreach ($result->getDescMatches() as $descTok) {
+                echo ' ' . $emphasize($descTok['match'], $descTok['token']);
+            }
+        } else {
+            echo $result->searchRecord['imagedesc'];
+        }
+                    ?></p>
+
                 </div>
                 <div class="thumbnails-div">
-<?php 
-    foreach (array_map(null, $update->resultRecordsOrdered, $update->thumbnailRecordsOrdered) as [$result, $nail]) {
-?>
-                    <a href="<?= $result['location'] ?>" class="result-link">
+                    <a href="<?= $result->searchRecord['location'] ?>" class="result-link">
                         <img
                             class="thumbnail"
-                            attr-src="<?= $nail['location'] ?>"
-                            src="<?= $nail['location'] ?>"
-                            alt="<?= $nail['alttext'] ?>"
-                            width="<?= $nail['width'] ?>px"
-                            height="<?= $nail['height'] ?>px"
+                            attr-src="<?= $result->thumbnailRecord['location'] ?>"
+                            src="<?= $result->thumbnailRecord['location'] ?>"
+                            alt="<?= $result->thumbnailRecord['alttext'] ?>"
+                            width="<?= $result->thumbnailRecord['width'] ?>px"
+                            height="<?= $result->thumbnailRecord['height'] ?>px"
                             loading="lazy"
                         >
                     </a> 
@@ -990,19 +1174,6 @@ if ($archiveresultCount > 1) {
             <nav class='archive-pos'>
                 <h3>Archive navigation</h3>
 <?php
-    // $archiveMoreRecentLink = function($pos, $link) use ($archiveresultPos) {
-    //     if ($archiveresultPos > $pos) {
-    //         echo '<a href="' . $link . '>' . ($archiveresultPos - $pos) . '</a> ';
-    //         return true;
-    //     } else return false;
-    // };
-
-    // $archiveEarlierLink = function($pos, $link) use ($archiveresultCount, $archiveresultPos) {
-    //     if ($archiveresultCount - $archiveresultPos >= $pos) {
-    //         echo ' <a href="' . $link . '>' . ($archiveresultPos + $pos) . '</a>';
-    //         return true;
-    //     } else return false;
-    // };
 
     if ($archiveresultPos > 3) {
         echo '<a href="' . $recentestArchiveLink . '">Latest</a> ... ';
