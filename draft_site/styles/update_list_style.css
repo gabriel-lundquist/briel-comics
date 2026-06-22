@@ -19,7 +19,8 @@ html {
     color: var(--text-color);
     background-color: var(--bg-color);
     background: var(--bg-gradient);
-    background-size: cover;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     height: 100%;
 }
 

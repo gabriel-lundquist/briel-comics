@@ -1,6 +1,62 @@
 {
     "configurations": [
         {
+            "name": "Launch built-in server",
+            "type": "php", 
+            "env": { "XDEBUG_TRIGGER": "1" },
+            "request": "launch",
+            "runtimeArgs": [
+                "-S",
+                "localhost:8000",
+                "-t",
+                "."
+            ],
+            "port": 9003,
+            "serverReadyAction": {
+                "action": "openExternally"
+            }
+        },
+        {
+            "name": "Launch & Profile built-in server",
+            "type": "php", 
+            "env": { "XDEBUG_TRIGGER": "1" },
+            "request": "launch",
+            "noDebug": true,
+            "profile": true,
+            "runtimeArgs": [
+                "-S",
+                "localhost:8000",
+                "-t",
+                "."
+            ],
+            "port": 9003,
+            "serverReadyAction": {
+                "action": "openExternally"
+            }
+        },
+        {
+            "name": "Launch current script in console",
+            "type": "php", 
+            "env": { "XDEBUG_TRIGGER": "1" },
+            "request": "launch",
+            "program": "${file}",
+            "cwd": "${fileDirname}",
+            "externalConsole": false,
+            "port": 9003
+        },
+
+        {
+            "name": "Listen for Xdebug",
+            "type": "php",
+            "env": { "XDEBUG_TRIGGER": "1" },
+            "request": "launch",
+            "port": [
+                9003,
+                9000
+            ]
+        },
+
+        {
             "type": "chrome",
             "name": "http://127.0.0.1:5500/HTML%20tutorial/draft_site/archive_page.html",
             "request": "launch",

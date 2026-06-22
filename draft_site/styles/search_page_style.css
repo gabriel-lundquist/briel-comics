@@ -3,3 +3,15 @@
     --nails-hide-display: none;
     display: var(--nails-hide-display); /* Thumbnails start as hidden */
 }
+
+aside {
+    font-family: "Briel Nib", Courier, monospace;
+    font-size: smaller;
+    text-align: left;
+}
+
+kbd {
+    font-family: Courier, monospace;
+    font-size: smaller;
+    font-weight: bolder;
+}

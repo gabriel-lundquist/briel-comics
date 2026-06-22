@@ -1,6 +1,8 @@
 <?php
 namespace Briel;
 
+require 'brielConstants.php';
+
 const DEBUG = true;
 
 const SQLLOADFILENULL = '\N';
@@ -33,14 +35,6 @@ const PAGEINSERTCOLUMNS = [ "title",
                             "imagedesc",
                             "spreadid",
                             "stylelocation" ];
-
-const SEARCHFIELDSPECS = [  'tag', 
-                            'cw', 
-                            'title', 
-                            'day', 
-                            'month', 
-                            'year', 
-                            'description'   ];
 
 const TEXTMATCHTHRESHOLD = 0.1;
 
@@ -165,6 +159,13 @@ function rowPlaceholder($n) {
     return '(' . implode(',', array_fill(0, $n, '?')) . ')';
 }
 
+function searchcacheKeyFromSearchString($searchStr) {
+    $termArr = array_filter(explode(' ', $searchStr), 
+                            fn($el) => \strlen($el) > 0);
+    sort($termArr, SORT_STRING);
+    return implode('', $termArr);
+}
+
 function recordsToAttrRowStrs($records, 
                                 $attrIDKey, 
                                 $attrNameKey, 
@@ -180,12 +181,12 @@ function valueRows($arr) {
     return 'VALUES ' . \implode(', ', \array_map(fn($a) => "ROW($a)", $arr));
 }
 
-function attributeTableStr($records, 
+function attributeTableStr( $records, 
                             $tableTitle, 
                             $attrIDKey, 
                             $attrNameKey, 
                             $rowPadLen = 8, 
-                            $tableSpacerLen = 42) {
+                            $tableSpacerLen = 42    ) {
 
     return "\n" . str_repeat('-', $tableSpacerLen) 
             . "\n" . $tableTitle 
@@ -445,22 +446,23 @@ function insertNewTags($tags, $pdoConn) {
                                 . ";");
     $matchExistingTags->execute($tags);
     $existingTags = $matchExistingTags->fetchAll(\PDO::FETCH_ASSOC);
-    echo attributeTableStr($existingTags, 
+    echo attributeTableStr( $existingTags, 
                             "These tags are already present:", 
                             'tagid', 
-                            'name');
+                            'name'  );
     if (!(promptInput("Add repeat tags anyway? (y/n) > ") == 'y')) {
-        $tags = array_diff($tags, 
-                            array_column($existingTags, 'name'));
+        $tags = array_diff( $tags, 
+                            array_column($existingTags, 'name') );
     }
 
     echo "Inserting new tags:\n" . implode(', ', $tags) . "\n";
 
-    $queryResult = queryInsertRecords($pdoConn,
+    $queryResult = queryInsertRecords(  $pdoConn,
                                         'tag', 
                                         'name', 
-                                        array_map(fn($tag) => [$tag], 
-                                                    $tags));
+                                        array_map(  fn($tag) => [$tag], 
+                                                    $tags)
+                                        );
     // queryResult() already checks for commit.
     return $queryResult;
 }
@@ -472,12 +474,12 @@ function insertNewTags($tags, $pdoConn) {
  */
 function getFileWidthLocations($pageid, $pdoConn) {
     
-    if ($selectFile = $pdoConn->prepare('SELECT width, location FROM file 
-                                         WHERE pageid = ?;')
-            AND $selectFile->execute([$pageid])) {
+    if (    $selectFile = $pdoConn->prepare('SELECT width, location FROM file 
+                                            WHERE pageid = ?;')
+            AND $selectFile->execute([$pageid]) ) {
 
         return $selectFile->fetchAll(\PDO::FETCH_KEY_PAIR);
-        // FETCH_KEY_PAIR writes location values into an array indexed by width
+        // FETCH_KEY_PAIR writes `location` values into an array indexed by `width`
     } else {
         return false;
     }
@@ -1207,10 +1209,9 @@ function generateSearchClauses( $searchStr,
 
     $imgDescMatchPhrase = [];
 
-    $whitespaces = " \n\t\r";
-    $token = strtok($searchStr, $whitespaces);
+    $token = strtok($searchStr, WHITESPACES);
     $allTokens = [];
-    for ($keyIdx = 0; $token !== false; $token = strtok($whitespaces)) {
+    for ($keyIdx = 0; $token !== false; $token = strtok(WHITESPACES)) {
         if (\in_array($token, $allTokens)) continue;
         $allTokens[] = $origToken = $token;
         $key = ':t' . $keyIdx++;
@@ -1250,8 +1251,9 @@ function generateSearchClauses( $searchStr,
                         $tokenDataSelects['dayName'][] = $dayNameMatch($key);
                         if (!\array_key_exists($token, $tokenClauses)) 
                             $tokenClauses[$origToken] = [];
-                        $tokenClauses[$origToken] += [$dayOfMonthMatch($key), 
-                                                        $dayNameMatch($key)];
+                        array_push( $tokenClauses[$origToken], 
+                                    $dayOfMonthMatch($key), 
+                                    $dayNameMatch($key) );
                         break;
                     case 'month':
                         $tokenDataSelects['month'][] = $monthMatch($key);
@@ -1281,8 +1283,9 @@ function generateSearchClauses( $searchStr,
                     case 'day':
                         if (\array_key_exists($token, $tokenExcludeClauses)) 
                             $tokenExcludeClauses[$token] = [];
-                        $tokenExcludeClauses[$token] += [$dayOfMonthMatch($key), 
-                                                            $dayNameMatch($key)];
+                        array_push( $tokenExcludeClauses[$token], 
+                                    $dayOfMonthMatch($key), 
+                                    $dayNameMatch($key) );
                         break;
                     case 'month':
                         $tokenExcludeClauses[$token][] = $monthMatch($key);
@@ -1303,10 +1306,13 @@ function generateSearchClauses( $searchStr,
                 if (preg_match('/^\d{1,2}$/', $token)) { 
                     $tokenDataSelects['title'][] = $titleExactMatch($key);
                     $tokenDataSelects['dayOfMonth'][] = $dayOfMonthMatch($key);
+
                     if (!\array_key_exists($token, $tokenClauses)) 
                         $tokenClauses[$origToken] = [];
-                    $tokenClauses[$origToken] += [  $titleExactMatch($key), 
-                                                    $dayOfMonthMatch($key)  ];
+                    array_push( $tokenClauses[$origToken], 
+                                $titleExactMatch($key), 
+                                $dayOfMonthMatch($key)  );
+
                     if ($searchImgDesc) {
                         if ($matchExactly) {
                             $tokenDataSelects["desc$token"] = $descMatch($key);
@@ -1317,10 +1323,13 @@ function generateSearchClauses( $searchStr,
                 } else if (preg_match('/^(19|20|21)\d{2}$/', $token)) {
                     $tokenDataSelects['title'][] = $titleExactMatch($key);
                     $tokenDataSelects['year'][] = $yearMatch($key);
+
                     if (!\array_key_exists($token, $tokenClauses)) 
                         $tokenClauses[$origToken] = [];
-                    $tokenClauses[$origToken] += [  $titleExactMatch($key), 
-                                                    $yearMatch($key)        ]; 
+                    array_push( $tokenClauses[$origToken], 
+                                $titleExactMatch($key), 
+                                $yearMatch($key)    );
+
                     if ($searchImgDesc) {
                         if ($matchExactly){
                             $tokenDataSelects["desc$token"] = $descMatch($key);
@@ -1332,19 +1341,23 @@ function generateSearchClauses( $searchStr,
                     $tokenDataSelects['title'][] = $titleMatch($key);
                     $tokenDataSelects['month'][] = $monthMatch($key);
                     $tokenDataSelects['dayName'][] = $dayNameMatch($key);
+
                     if (!\array_key_exists($token, $tokenClauses)) 
                         $tokenClauses[$origToken] = [];
-                    $tokenClauses[$origToken] += [  $tagMatch($key), 
-                                                    $cwMatch($key),
-                                                    $titleMatch($key), 
-                                                    $monthMatch($key), 
-                                                    $dayNameMatch($key) ];                
+                    array_push( $tokenClauses[$origToken], 
+                                $tagMatch($key), 
+                                $cwMatch($key),
+                                $titleMatch($key), 
+                                $monthMatch($key), 
+                                $dayNameMatch($key) );
+
                     if ($searchImgDesc) {
                         if ($matchExactly) {
                             $tokenDataSelects["desc$token"] = $descMatch($key);
                             $tokenClauses[$origToken][] = $descMatch($key);
                         } else $imgDescMatchPhrase[] = $token;
                     }
+
                     $joinTokens[$key] = $token;
                 }
                 //non-numeric tokens of length 2 or less are discarded
@@ -1353,25 +1366,31 @@ function generateSearchClauses( $searchStr,
                 if (preg_match('/^\d{1,2}$/', $token)) { 
                     if (!\array_key_exists($token, $tokenExcludeClauses)) 
                         $tokenExcludeClauses[$token] = [];
-                    $tokenExcludeClauses[$token] += [$titleExactMatch($key), 
-                                                    $dayOfMonthMatch($key)];
+                    array_push( $tokenExcludeClauses[$token], 
+                                $titleExactMatch($key), 
+                                $dayOfMonthMatch($key)  );
+
                     if ($searchImgDesc) 
                         $tokenExcludeClauses[$token][] = $descExactMatch($key);
 
                 } else if (preg_match('/^(19|20|21)\d{2}$/', $token)) {
                     if (!\array_key_exists($token, $tokenExcludeClauses)) 
                         $tokenExcludeClauses[$token] = [];
-                    $tokenExcludeClauses[$token] += [$titleExactMatch($key), 
-                                                    $yearMatch($key)];
+                    array_push( $tokenExcludeClauses[$token], 
+                                $titleExactMatch($key), 
+                                $yearMatch($key)    );
+
                     if ($searchImgDesc) 
                         $tokenExcludeClauses[$token][] = $descExactMatch($key);
 
                 } else if (\strlen($token) > 2) { 
                     if (!\array_key_exists($token, $tokenExcludeClauses)) 
                         $tokenExcludeClauses[$token] = [];
-                    $tokenExcludeClauses[$token] += [$titleMatch($key), 
-                                                    $monthMatch($key), 
-                                                    $dayNameMatch($key)];
+                    array_push( $tokenExcludeClauses[$token], 
+                                $titleMatch($key), 
+                                $monthMatch($key), 
+                                $dayNameMatch($key));
+
                     if ($searchImgDesc) 
                         $tokenExcludeClauses[$token][] = $descExactMatch($key);
                     $joinExcludeTokens[$key] = $token;
@@ -1413,14 +1432,14 @@ function createTempTables(  $joinTokens,
     if ($tagTokens OR $joinTokens) {
         $tagSearchDefinition = 
                 'WITH joinsearch AS (SELECT * FROM ('
-                . valueRows(\array_keys($joinTokens) + \array_keys($tagTokens))
+                . valueRows([...\array_keys($joinTokens), ...\array_keys($tagTokens)])
                 . ') AS joinsearch (token))'
                 . "SELECT token, tagid, name 
                     FROM joinsearch INNER JOIN tag
                         ON name $matchOp token";
         $tagSearch = $pdoConn->prepare("CREATE TEMPORARY TABLE tagsearch
                                         AS ($tagSearchDefinition);");
-        $tagSearch->execute($joinTokens + $tagTokens);
+        $tagSearch->execute([...$joinTokens, ...$tagTokens]);
         
         $possibleTagMatches = $pdoConn->query("SELECT name, tagid FROM tagsearch;");
     }
@@ -1428,14 +1447,14 @@ function createTempTables(  $joinTokens,
     if ($cwTokens OR $joinTokens) {
         $cwSearchDefinition = 
                 'WITH joinsearch AS (SELECT * FROM ('
-                . valueRows(\array_keys($joinTokens) + \array_keys($cwTokens))
+                . valueRows([...\array_keys($joinTokens), ...\array_keys($cwTokens)])
                 . ') AS joinsearch (token))'
                 . "SELECT token, contwarningid, name 
                     FROM joinsearch INNER JOIN contwarning 
                         ON name $matchOp token";
         $cwSearch = $pdoConn->prepare("CREATE TEMPORARY TABLE cwsearch
                                         AS ($cwSearchDefinition);");
-        $cwSearch->execute($joinTokens + $cwTokens);
+        $cwSearch->execute([...$joinTokens, ...$cwTokens]);
 
         $possibleCWMatches = $pdoConn->query("SELECT name, contwarningid 
                                                 FROM cwsearch;");
@@ -1506,8 +1525,8 @@ function assembleSearchClauses( &$execList,
     $tagExcludeWithClause = ($joinExcludeTokens OR $tagExcludeTokens) ? 
                                 "tagsearchexclude (token, tagid) AS (
                                     SELECT token, tagid FROM ("
-                                    . valueRows(\array_keys($joinExcludeTokens) 
-                                                + \array_keys($tagExcludeTokens))
+                                    . valueRows([...\array_keys($joinExcludeTokens),  
+                                                 ...\array_keys($tagExcludeTokens)])
                                     . ") AS excluded (token) INNER JOIN tag  
                                         ON tag.name $matchOp excluded.token)"
                                 : '';
@@ -1515,8 +1534,8 @@ function assembleSearchClauses( &$execList,
     $cwExcludeWithClause = ($joinExcludeTokens OR $cwExcludeTokens) ? 
                                 "cwsearchexclude (token, contwarningid) AS (
                                     SELECT token, contwarningid FROM ("
-                                    . valueRows(\array_keys($joinExcludeTokens) 
-                                                + \array_keys($cwExcludeTokens))
+                                    . valueRows([...\array_keys($joinExcludeTokens), 
+                                                 ...\array_keys($cwExcludeTokens)])
                                     . ") AS excluded (token) INNER JOIN contwarning   
                                         ON contwarning.name $matchOp excluded.token)"
                                 : '';
@@ -1528,14 +1547,14 @@ function assembleSearchClauses( &$execList,
                                     : '');
     $selectMatchClause = 
         \implode(', ', 
-                \array_filter(  [$singleMatchClause('title', 'titlematch'), 
+                \array_filter(  [   $singleMatchClause('title', 'titlematch'), 
                                     $singleMatchClause('dayOfMonth', 'dayofmonthmatch'), 
                                     $singleMatchClause('year', 'yearmatch'), 
                                     $singleMatchClause('month', 'monthmatch'), 
                                     $singleMatchClause('dayName', 'daynamematch'), 
                                     $tagSelectClause,
                                     $cwSelectClause, 
-                                    $descSelectClause], 
+                                    $descSelectClause   ], 
                                 fn($el) => $el !== '')
                 );
 
@@ -1706,7 +1725,6 @@ function searchComics($searchStr,
                                                     $cwExcludeTokens, 
                                                     $tokenClauses, 
                                                     $tokenExcludeClauses, 
-                                                    //$joinSearchDefinition, 
                                                     $tagSearchDefinition, 
                                                     $cwSearchDefinition, 
                                                     $matchExactly, 
@@ -1726,7 +1744,7 @@ function searchComics($searchStr,
                                 . ($whereClause ? 
                                         " WHERE $whereClause"
                                         : '') 
-                                . ";"
+                                . " ORDER BY page.postdate;"
                                 );
 
     $pages->execute($execList);

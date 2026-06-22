@@ -1,3 +1,38 @@
+
+class ImageSize {
+    constructor(width, height, maxWindowWidth) {
+        this.width = width;
+        this.height = height;
+        this.maxWindowWidth = maxWindowWidth;
+    }
+}
+
+class ImageSizeInfo {
+    constructor(imgElement) {
+        this.ratio = imgElement.clientHeight / imgElement.clientWidth;
+        this.srcsetStr = imgElement.getAttribute("srcset");
+        this.sizesStr = imgElement.getAttribute("sizes");
+
+        const srcsets = this.srcsetStr.split(",");
+        const sizes = this.sizesStr.split(",");
+
+        this.info = new Array(srcsets.length);
+
+        for (let i = 0; i < srcsets.length - 1; i++) {
+            const fileWidth = parseInt(srcsets[i].match(/\d+/g)
+                                                 .pop());
+            this.info[i] = new ImageSize(fileWidth, 
+                                         fileWidth * this.ratio, 
+                                         parseInt(sizes[i+1].match(/\d+/g)[0]));
+        }
+        
+        if (!sizes[sizes.length - 1].includes("(max-width:")) {
+            this.info[this.info.length - 1].maxWindowWidth = Infinity;
+        }
+    }
+}
+
+
 /**
  * Intended use is to toggle the visibility of a class of divs which contain images.
  * Expects a custom attribute on the image elements that stores a path to their 
@@ -143,39 +178,6 @@ export function getLink(document, linkClass) {
     return document.querySelector(linkClass).href;
 }
 
-class ImageSize {
-    constructor(width, height, maxWindowWidth) {
-        this.width = width;
-        this.height = height;
-        this.maxWindowWidth = maxWindowWidth;
-    }
-}
-
-class ImageSizeInfo {
-    constructor(imgElement) {
-        this.ratio = imgElement.clientHeight / imgElement.clientWidth;
-        this.srcsetStr = imgElement.getAttribute("srcset");
-        this.sizesStr = imgElement.getAttribute("sizes");
-
-        const srcsets = this.srcsetStr.split(",");
-        const sizes = this.sizesStr.split(",");
-
-        this.info = new Array(srcsets.length);
-
-        for (let i = 0; i < srcsets.length - 1; i++) {
-            const fileWidth = parseInt(srcsets[i].match(/\d+/g)
-                                                 .pop());
-            this.info[i] = new ImageSize(fileWidth, 
-                                         fileWidth * this.ratio, 
-                                         parseInt(sizes[i+1].match(/\d+/g)[0]));
-        }
-        
-        if (!sizes[sizes.length - 1].includes("(max-width:")) {
-            this.info[this.info.length - 1].maxWindowWidth = Infinity;
-        }
-    }
-}
-
 export function resizeNavImageMaps(imgElement, 
                                 areaPrevElement, 
                                 areaNextElement) {
@@ -186,3 +188,5 @@ export function resizeNavImageMaps(imgElement,
     areaNextElement.setAttribute("coords", 
                         `${Math.ceil(0.75 * imgWidth)},0,${imgWidth},${imgHeight}`);
 }
+
+// export function toggleCollapsible()
