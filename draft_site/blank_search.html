@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8">
+        <!-- Good to include charset just to prevent weird errors later on. -->
+        <meta name="viewport" content="width=device-width"/>
+        <meta name="author" content="Breel">
+        <meta name="description" content="Breel comics search page.">
+        
+        <title>Search | Breel Comix</title>
+        <link rel="icon" href="images/smileicon.ico" type="image/x-icon" />
+
+        <link href="styles/defaults.css" rel="stylesheet" />
+        <link href="styles/briel_font-faces.css" rel="stylesheet" />
+        <link href="styles/update_list_style.css" rel="stylesheet" />
+        <link href="styles/search_page_style.css" rel="stylesheet" />
+        
+        <script type="module" src="js/search_page_script.js"></script>
+    </head>
+
+    <body>
+        <header>
+            <h1>Search</h1>
+            <form role="search" action="search.php" method="get">
+    <p>
+        <input 
+            type="search" 
+            name="search" 
+            id="search-header"
+            placeholder="Search comic pages..."
+            minlength="2"
+            maxlength="256"
+            size="34"
+            pattern="[\w ,.?!();:-&quot;&#039;]{2,256}"
+            aria-label="Search comic pages"
+            value=""
+            class="search-comics"
+        /> 
+        <button type="submit">Search</button>
+    </p>
+    <label for="search-header">
+        Searches tags, dates, titles, and page numbers by default. 
+            See <a href="#search_options">search options</a>.
+        </label>
+    <p>
+        <div class="search-check">
+            <input type="checkbox" name="desc" id="desc-header">
+            <label for="desc-header">Search image descriptions too</label>
+        </div>
+        <div class="search-check">
+            <input type="checkbox" name="exact" id="exact-header">
+            <label for="exact-header">Match terms exactly</label>
+        </div>
+    </p>
+</form>
+        </header>
+
+        <main>
+            <h2>Results</h2>
+            None!
+        </main>
+
+        <footer>
+            <aside>
+                <h3 id="search_options">Search options</h3>
+                <ul>
+                    <li>Enter <kbd>-blegh</kbd> to exclude any page that contains "blegh"</li>
+                    <li>Enter <kbd>title:tuesday</kbd> to get pages with "tuesday" in their 
+                        titles, as opposed to just searching <kbd>tuesday</kbd> which gets you 
+                        any page with a "tuesday" tag or posted on a tuesday or whatever. 
+                        Valid prefixes are:
+                        <ul>
+                            <li><kbd>tag:</kbd></li><li><kbd>cw:</kbd> (as in Content Warning)</li><li><kbd>title:</kbd></li><li><kbd>day:</kbd> (searches both day of the month and day of the week)</li><li><kbd>month:</kbd></li><li><kbd>year:</kbd></li><li><kbd>description:</kbd></li>              
+                        </ul>
+                    </li>
+                    <li>You can use both at once, like <kbd>-cw:gore</kbd>
+                        if you're okay with the word "gore" but you don't want to see 
+                        any comics with guts.</li>
+                    <li>Check "Search image descriptions too" and <strong>uncheck</strong>
+                        "Match terms exactly" if you're looking for a specific comic but 
+                        you can't remember exact dialogue. The machine will attempt to 
+                        find image descriptions that have similar words (no AI, just 
+                        MySQL's fulltext search algorithm).</li>
+                </ul>
+            </aside>
+            <form role="search" action="search.php" method="get">
+    <p>
+        <input 
+            type="search" 
+            name="search" 
+            id="search-footer"
+            placeholder="Search comic pages..."
+            minlength="2"
+            maxlength="256"
+            size="34"
+            pattern="[\w ,.?!();:-&quot;&#039;]{2,256}"
+            aria-label="Search comic pages"
+            value=""
+            class="search-comics"
+        /> 
+        <button type="submit">Search</button>
+    </p>
+    <label for="search-footer">
+        Searches tags, dates, titles, and page numbers by default. 
+        </label>
+    <p>
+        <div class="search-check">
+            <input type="checkbox" name="desc" id="desc-footer">
+            <label for="desc-footer">Search image descriptions too</label>
+        </div>
+        <div class="search-check">
+            <input type="checkbox" name="exact" id="exact-footer">
+            <label for="exact-footer">Match terms exactly</label>
+        </div>
+    </p>
+</form>
+<p class="copyright">
+    ©Copyright 2025-2026 by Briel Comics.
+    All rights reserved.
+</p>        </footer>
+    </body>
+
+</html>

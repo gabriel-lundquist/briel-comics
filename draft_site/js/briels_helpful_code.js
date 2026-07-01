@@ -32,7 +32,6 @@ class ImageSizeInfo {
     }
 }
 
-
 /**
  * Intended use is to toggle the visibility of a class of divs which contain images.
  * Expects a custom attribute on the image elements that stores a path to their 
@@ -49,15 +48,15 @@ class ImageSizeInfo {
  * @param hideButtonText 
  * @param showButtonText 
  */ 
-export function toggleImageDiv(imgState, 
-                               toggleButtons, 
-                               imageDivs, 
-                               images, 
-                               imgSrcAttrName, 
-                               dispPropertyName, 
-                               dispHidePropertyName, 
-                               hideButtonText, 
-                               showButtonText) {
+export function toggleImageDiv( imgState, 
+                                toggleButtons, 
+                                imageDivs, 
+                                images, 
+                                imgSrcAttrName, 
+                                dispPropertyName, 
+                                dispHidePropertyName, 
+                                hideButtonText, 
+                                showButtonText  ) {
 
     if (imgState.hidden) {
 
@@ -88,16 +87,16 @@ export function toggleImageDiv(imgState,
     imgState.hidden = !imgState.hidden;
 }
 
-export function addImageDivToggleListeners(document, 
-                                           thumbnailState, 
-                                           toggleBtnClass,
-                                           imageDivClass,
-                                           imageClass,
-                                           imgSrcAttrName, 
-                                           dispPropertyName, 
-                                           dispHidePropertyName, 
-                                           hideButtonText, 
-                                           showButtonText) {
+export function addImageDivToggleListeners( document, 
+                                            thumbnailState, 
+                                            toggleBtnClass,
+                                            imageDivClass,
+                                            imageClass,
+                                            imgSrcAttrName, 
+                                            dispPropertyName, 
+                                            dispHidePropertyName, 
+                                            hideButtonText, 
+                                            showButtonText  ) {
     const toggleButtons = document.querySelectorAll(toggleBtnClass);
     const imageDivs = document.querySelectorAll(imageDivClass);
     const images = document.querySelectorAll(imageClass);
@@ -178,9 +177,9 @@ export function getLink(document, linkClass) {
     return document.querySelector(linkClass).href;
 }
 
-export function resizeNavImageMaps(imgElement, 
-                                areaPrevElement, 
-                                areaNextElement) {
+export function resizeNavImageMaps( imgElement, 
+                                    areaPrevElement, 
+                                    areaNextElement) {
     const imgWidth = imgElement.clientWidth;
     const imgHeight = imgElement.clientHeight;
     areaPrevElement.setAttribute("coords", 

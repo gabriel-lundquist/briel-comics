@@ -1,9 +1,7 @@
 <?php
 namespace Briel;
 
-require 'brielConstants.php';
-
-const DEBUG = true;
+require_once 'brielConstants.php';
 
 const SQLLOADFILENULL = '\N';
 const SQLNULL = 'NULL';
@@ -98,7 +96,7 @@ function pdoConnect($dbhost = 'localhost',
 }
 
 function dumpQuery($query, $pdoConn) {
-    var_dump($pdoConn->query($query)->fetchAll(PDO::FETCH_ASSOC));
+    var_dump($pdoConn->query($query)->fetchAll(\PDO::FETCH_ASSOC));
 }
 
 function tryBeginTransaction($pdoConn) {
@@ -163,7 +161,7 @@ function searchcacheKeyFromSearchString($searchStr) {
     $termArr = array_filter(explode(' ', $searchStr), 
                             fn($el) => \strlen($el) > 0);
     sort($termArr, SORT_STRING);
-    return implode('', $termArr);
+    return implode(' ', $termArr);  // delimit with spaces so we can pass this to searchComics
 }
 
 function recordsToAttrRowStrs($records, 
@@ -231,20 +229,23 @@ function generateFileRecordInteractive($filePath,
     // since Windows defines 1 KB = 1024 B, not 1 KB = 1000 B like usual.
     $fileSizeKB = (int) (filesize($filePath) / 1000);
 
-    $ratioStatement = $pdoConn->prepare("SELECT ratioid FROM aspectratio 
-                                            WHERE ratio = ?;");
+    $ratioStatement = $pdoConn->prepare(<<<STMT
+                                    SELECT ratioid FROM aspectratio 
+                                        WHERE ratio = ?;
+                                    STMT);
     $fetchedRow = NULL;
     if (!$ratioStr) {
-        $ratioStr = promptInput("Enter aspect ratio (format width:height)\n"
-                                . "> ");
+        $ratioStr = promptInput("Enter aspect ratio (format width:height)\n> ");
     }
     // if execution is unsuccessful or there is no row in the selection
     if (!($ratioStatement->execute([$ratioStr]))
             or !($fetchedRow = $ratioStatement->fetch())) {
         do {
-            $ratioStr = promptInput("$ratioStr not a valid ratio.\n"
-                                    . "Enter aspect ratio (format width:height)\n"
-                                    . "> ");
+            $ratioStr = promptInput(<<<STR
+                                    $ratioStr not a valid ratio.
+                                    Enter aspect ratio (format width:height)
+                                    > 
+                                    STR);
         } while (!$ratioStatement->execute([$ratioStr])
                  or !($fetchedRow = $ratioStatement->fetch()));
     }
@@ -474,8 +475,10 @@ function insertNewTags($tags, $pdoConn) {
  */
 function getFileWidthLocations($pageid, $pdoConn) {
     
-    if (    $selectFile = $pdoConn->prepare('SELECT width, location FROM file 
-                                            WHERE pageid = ?;')
+    if (    $selectFile = $pdoConn->prepare(<<<STMT
+                                        SELECT width, location FROM file 
+                                            WHERE pageid = ?;
+                                        STMT)
             AND $selectFile->execute([$pageid]) ) {
 
         return $selectFile->fetchAll(\PDO::FETCH_KEY_PAIR);
@@ -507,11 +510,16 @@ function generatePageRecordInteractive($pdoConn) {
     
     // Set title
     $title = promptInput("Enter title: > ");
-    $findFileFromTitle = $pdoConn->prepare("SELECT location FROM page 
-                                            WHERE title = ?;");
-    $existingTitle = $pdoConn->prepare("SELECT EXISTS(
-                                            SELECT title FROM page
-                                            WHERE title = ?);");                                 
+    $findFileFromTitle = $pdoConn->prepare(<<<STMT
+                                        SELECT location FROM page 
+                                            WHERE title = ?;
+                                        STMT);
+    $existingTitle = $pdoConn->prepare(<<<STMT
+                                    SELECT EXISTS(
+                                        SELECT title FROM page
+                                            WHERE title = ?
+                                    );
+                                    STMT);                                 
     $useAnyway = false;
     while (execAndFetchScalar($existingTitle, $title) AND !$useAnyway) {
         echo "Warning: `$title` already exists in page at "
@@ -532,22 +540,24 @@ function generatePageRecordInteractive($pdoConn) {
             $location = promptPathHTML();
         } else if (file_exists($location)) {
             if (promptInput("Warning: `$location` already exists.\n"
-                            . "Use it anyway? (y/n) > ") == "y") {
+                            . 'Use it anyway? (y/n) > ') == "y") {
                 $useAnyway = true;
             } else $location = promptPathHTML();
         }
     }
 
     // Get image description
-    $imageDesc = promptInput("Enter comic page description "
+    $imageDesc = promptInput('Enter comic page description '
                                 . "(or a path to it):\n> ");
     if (is_readable($imageDesc)) {
         $imageDesc = file_get_contents($imageDesc);
     }
 
     // Get spread ID
-    $getSpreadID = $pdoConn->prepare("SELECT spreadid FROM spread
-                                        WHERE spreadtype = ?;");
+    $getSpreadID = $pdoConn->prepare(<<<STMT
+                                SELECT spreadid FROM spread
+                                    WHERE spreadtype = ?;
+                                STMT);
     $spreadID = execAndFetchScalar($getSpreadID, 
                                    (promptInput("Double spread? (y/n) > ") == "y")
                                     ? "double" : "normal");
@@ -611,14 +621,16 @@ function insertAssociationsInteractive($pageRecord, $table, $pdoConn) {
     $getIDFromName = $pdoConn->prepare("SELECT {$table}id FROM $table WHERE name = ?;");
 
     $listStr = promptInput("Adding $table associations with {$pageRecord['title']}...\n"
-                                . "Type in comma-separated {$table}s. Existing {$table}s:\n"
-                                . implode(",\t", $existing)
-                                . "\n> ");
+                            . "Type in comma-separated {$table}s. Existing {$table}s:\n"
+                            . implode(",\t", $existing)
+                            . "\n> ");
     
-    $exists = $pdoConn->prepare("SELECT EXISTS(
-                                    SELECT name FROM $table 
+    $exists = $pdoConn->prepare(<<<STMT
+                            SELECT EXISTS(
+                                SELECT name FROM $table 
                                     WHERE name = ?
-                                 );");
+                            );
+                            STMT);
     $assocRecords = [];
     $finalList = [];
     $tieList = array_map('trim', explode(",", $listStr));
@@ -725,19 +737,25 @@ function downList($pageID, $getTarget, $delRowBySource) {
  * @return array[]
  */
 function getPageOrderLists($pdoConn) {
-    $pdoConn->exec("CREATE TEMPORARY TABLE temppageorder 
-                    AS SELECT * FROM pageorder;");
+    $pdoConn->exec(<<<STMT
+                CREATE TEMPORARY TABLE temppageorder 
+                    AS SELECT * FROM pageorder;
+                STMT);
 
-    $rowExists = $pdoConn->prepare("SELECT sourceid, targetid FROM temppageorder 
-                                    LIMIT 1;");
-    $getTarget = $pdoConn->prepare("SELECT targetid FROM temppageorder 
-                                    WHERE sourceid = ?;");
-    $getSource = $pdoConn->prepare("SELECT sourceid FROM temppageorder
-                                    WHERE targetid = ?;");
-    $delRowByTarget = $pdoConn->prepare("DELETE FROM temppageorder
-                                            WHERE targetid = ?;");
-    $delRowBySource = $pdoConn->prepare("DELETE FROM temppageorder
-                                            WHERE sourceid = ?;");
+    $rowExists = $pdoConn->prepare(
+            "SELECT sourceid, targetid FROM temppageorder LIMIT 1;");
+
+    $getTarget = $pdoConn->prepare(
+            "SELECT targetid FROM temppageorder WHERE sourceid = ?;");
+
+    $getSource = $pdoConn->prepare(
+            "SELECT sourceid FROM temppageorder WHERE targetid = ?;");
+
+    $delRowByTarget = $pdoConn->prepare(
+            "DELETE FROM temppageorder WHERE targetid = ?;");
+
+    $delRowBySource = $pdoConn->prepare(
+            "DELETE FROM temppageorder WHERE sourceid = ?;");
     
     // May have multiple separate path graphs (chains of pages)
     // so we have lists rather than a single list
@@ -760,8 +778,10 @@ function getPageOrderLists($pdoConn) {
 }
 
 function getEndOfPageOrderID($pageID, $pdoConn) {
-    $getTarget = $pdoConn->prepare('SELECT targetid FROM pageorder
-                                    WHERE sourceid = ?;');
+    $getTarget = $pdoConn->prepare(<<<STMT
+                                SELECT targetid FROM pageorder
+                                    WHERE sourceid = ?;
+                                STMT);
     $getTarget->execute($pageID);
     $lastTargetID = $pageID;
     while (($lastTarget = $getTarget->fetch()) !== false) {
@@ -779,14 +799,18 @@ function getEndOfPageOrderID($pageID, $pdoConn) {
  * @param mixed $pdoConn
  */
 function insertPageAfter($prevPageID, $newPageID, $pdoConn) {
-    $getNext = $pdoConn->prepare("SELECT targetid FROM pageorder
-                                    WHERE sourceid = ?;");
+    $getNext = $pdoConn->prepare(<<<STMT
+                            SELECT targetid FROM pageorder
+                                    WHERE sourceid = ?;
+                            STMT);
     $nextPageID = execAndFetchScalar($getNext, $prevPageID);
     
-    $insert = $pdoConn->prepare("UPDATE pageorder SET targetid = :newPageID 
-                                    WHERE sourceid = :prevPageID;
-                                 INSERT INTO pageorder 
-                                    VALUE (:pageID, :nextPageID);");
+    $insert = $pdoConn->prepare(<<<STMT
+                            UPDATE pageorder SET targetid = :newPageID 
+                                WHERE sourceid = :prevPageID;
+                            INSERT INTO pageorder 
+                                VALUE (:pageID, :nextPageID);
+                            STMT);
     return $insert->execute([":newPageID"  => $newPageID, 
                              ":prevPageID" => $prevPageID, 
                              ":nextPageID" => $nextPageID]);
@@ -799,14 +823,18 @@ function insertPageAfter($prevPageID, $newPageID, $pdoConn) {
  * @param mixed $pdoConn
  */
 function insertPageBefore($nextPageID, $newPageID, $pdoConn) {
-    $getPrev = $pdoConn->prepare("SELECT sourceid FROM pageorder
-                                    WHERE targetid = ?;");
+    $getPrev = $pdoConn->prepare(<<<STMT
+                            SELECT sourceid FROM pageorder
+                                WHERE targetid = ?;
+                            STMT);
     $prevPageID = execAndFetchScalar($getPrev, $nextPageID);
 
-    $insert = $pdoConn->prepare("UPDATE pageorder SET sourceid = :newpageID 
-                                    WHERE targetid = :nextPageID;
-                                 INSERT INTO pageorder 
-                                    VALUE (:prevPageID, :newPageID);");
+    $insert = $pdoConn->prepare(<<<STMT
+                            UPDATE pageorder SET sourceid = :newpageID 
+                                WHERE targetid = :nextPageID;
+                            INSERT INTO pageorder 
+                                VALUE (:prevPageID, :newPageID);
+                            STMT);
     return $insert->execute([":newpageID"  => $newPageID, 
                              ":prevPageID" => $prevPageID, 
                              ":nextPageID" => $nextPageID]);
@@ -819,18 +847,18 @@ function insertPageBefore($nextPageID, $newPageID, $pdoConn) {
  * @param mixed $prevPageID
  */
 function deletePageAfter($pdoConn, $pageID, $prevPageID) {
-    $getNext = $pdoConn->prepare("SELECT targetid FROM pageorder
-                                    WHERE sourceid = ?;");
+    $getNext = $pdoConn->prepare(
+                "SELECT targetid FROM pageorder WHERE sourceid = ?;");
 
-    $delPage = $pdoConn->prepare("SET @nextID = (
-                                    SELECT targetid FROM pageorder
-                                        WHERE sourceid = :pageID
-                                  );   
-                                  DELETE FROM pageorder 
-                                    WHERE sourceID = :pageID;
-                                  UPDATE pageorder SET targetID = @nextID
-                                    WHERE sourceID = :prevID;
-                                  ;");
+    $delPage = $pdoConn->prepare(<<<STMT
+                SET @nextID = (
+                    SELECT targetid FROM pageorder
+                        WHERE sourceid = :pageID
+                );
+                DELETE FROM pageorder WHERE sourceID = :pageID;
+                UPDATE pageorder SET targetID = @nextID
+                    WHERE sourceID = :prevID;
+                STMT);
     
     return $delPage->execute([":pageID" => $pageID, 
                               ":prevID" => $prevPageID]);
@@ -920,9 +948,10 @@ function associateInteractive($record,
                             $leafIDName, 
                             $leafName);
     
-    $pdoConn->exec("CREATE TEMPORARY TABLE associd 
-                    ($leafIDName int unsigned);");
-    $inputStr = promptInput("Enter {$leafTableType} IDs separated by commas, "
+    $pdoConn->exec(
+        "CREATE TEMPORARY TABLE associd ($leafIDName int unsigned);"
+    );
+    $inputStr = promptInput("Enter $leafTableType IDs separated by commas, "
                             . "or a ? followed by a regular expression for "
                             . "$leafTableType names/titles.\n> ");
     if (preg_match("/^(\d+,\s*)*\d+$/", $inputStr)) {
@@ -932,10 +961,11 @@ function associateInteractive($record,
                            array_map('trim', explode(",", $inputStr)));
 
         if (!empty($notRealIDs = 
-                        $pdoConn->query("TABLE associd 
-                                            EXCEPT
-                                            SELECT $leafIDName
-                                                FROM $leafTableType;")
+                        $pdoConn->query(<<<STMT
+                                    TABLE associd 
+                                        EXCEPT 
+                                    SELECT $leafIDName FROM $leafTableType;
+                                    STMT)
                                 ->fetchALL(\PDO::FETCH_COLUMN))) {
             echo "Error: page IDs [" 
                  . implode(', ', $notRealIDs)
@@ -946,12 +976,12 @@ function associateInteractive($record,
         }
 
     } else if (\strlen($inputStr) > 0 AND $inputStr[0] == "?") {
-        $regExp = $pdoConn->prepare("INSERT INTO associd ($leafIDName)
-                                        SELECT $leafIDName 
-                                        FROM $leafTableType
-                                        WHERE REGEXP_LIKE($leafName, ?, 'c')
-                                        ;");
-                                    // 'c' enforces case-sensitivity
+        $regExp = $pdoConn->prepare(<<<STMT
+                        INSERT INTO associd ($leafIDName)
+                            SELECT $leafIDName FROM $leafTableType
+                                WHERE REGEXP_LIKE($leafName, ?, 'c'); 
+                        STMT); // 'c' enforces case-sensitivity
+                                    
         $regExp->execute([substr($inputStr,1)]);
 
     } else {
@@ -964,32 +994,28 @@ function associateInteractive($record,
         return false;
     }
     
-    $assocSelect = 
-            $pdoConn->prepare("SELECT $leafIDName, $leafName 
-                                FROM (
-                                    SELECT $leafIDName
-                                    FROM associd INNER JOIN $leafTableType
-                                        USING ($leafIDName)
-                                    EXCEPT 
-                                    SELECT $leafIDName
-                                    FROM $leafTableAssocName
-                                        WHERE $rootIDName = ?
-                                ) AS t INNER JOIN $leafTableType
-                                    USING ($leafIDName);");
+    $assocSelect = $pdoConn->prepare(<<<STMT
+            SELECT $leafIDName, $leafName 
+            FROM (
+                SELECT $leafIDName FROM 
+                    associd INNER JOIN $leafTableType USING ($leafIDName)
+                EXCEPT 
+                SELECT $leafIDName FROM $leafTableAssocName
+                    WHERE $rootIDName = ?
+            ) AS t INNER JOIN $leafTableType USING ($leafIDName);
+            STMT);
     $assocSelect->execute([$record[$rootIDName]]);
 
-    $alreadyAssocSelect = 
-            $pdoConn->prepare("SELECT $leafIDName, $leafName 
-                                FROM (
-                                    SELECT $leafIDName
-                                    FROM associd INNER JOIN $leafTableType
-                                        USING ($leafIDName)
-                                    INTERSECT 
-                                    SELECT $leafIDName
-                                    FROM $leafTableAssocName
-                                        WHERE $rootIDName = ?
-                                ) AS t INNER JOIN $leafTableType
-                                    USING ($leafIDName);");
+    $alreadyAssocSelect = $pdoConn->prepare(<<<STMT
+            SELECT $leafIDName, $leafName 
+            FROM (
+                SELECT $leafIDName FROM 
+                    associd INNER JOIN $leafTableType USING ($leafIDName)
+                INTERSECT 
+                SELECT $leafIDName FROM $leafTableAssocName
+                    WHERE $rootIDName = ?
+            ) AS t INNER JOIN $leafTableType USING ($leafIDName);
+            STMT);
     $alreadyAssocSelect->execute([$record[$rootIDName]]);
 
     echo "\n-----------------------------------------\n"
@@ -1004,27 +1030,29 @@ function associateInteractive($record,
                     $recsToStrs($alreadyAssocSelect->fetchAll(\PDO::FETCH_ASSOC)))
          . "\n_________________________________________\n";
 
-    $trimExistingLinks = $pdoConn->prepare("DELETE FROM associd 
-                                            WHERE $leafIDName IN( 
-                                                SELECT $leafIDName
-                                                FROM $leafTableAssocName
-                                                WHERE $rootIDName = ?
-                                            );");
+    $trimExistingLinks = $pdoConn->prepare(<<<STMT
+            DELETE FROM associd 
+                WHERE $leafIDName IN( 
+                    SELECT $leafIDName FROM $leafTableAssocName 
+                        WHERE $rootIDName = ?
+                )
+            ;
+            STMT);
     $trimExistingLinks->execute([$record[$rootIDName]]);
 
     if (promptInput("Okay to associate? (y/n) > ") == "y") {
         if ($leafTableType == 'file') {
-            $assoc = $pdoConn->prepare("UPDATE $leafTableAssocName
-                                        SET $rootIDName = ?
-                                        WHERE $leafIDName IN(
-                                            TABLE associd
-                                        );");
+            $assoc = $pdoConn->prepare(<<<STMT
+                        UPDATE $leafTableAssocName SET $rootIDName = ?
+                            WHERE $leafIDName IN(TABLE associd);
+                        STMT);
             
         } else {
-            $assoc = $pdoConn->prepare("INSERT INTO $leafTableAssocName 
-                                            ($rootIDName, $leafIDName)
-                                        SELECT ?, $leafIDName
-                                            FROM associd;");
+            $assoc = $pdoConn->prepare(<<<STMT
+                        INSERT INTO $leafTableAssocName 
+                            ($rootIDName, $leafIDName)
+                        SELECT ?, $leafIDName FROM associd;
+                        STMT);
         }
         $assoc->execute([$record[$rootIDName]]);
         echo "Files associated.\n";
@@ -1094,9 +1122,8 @@ function associateFilesInteractive($pageRecord, $pdoConn) {
 function appendGeneratePages($pdoConn, 
                                 $existingPageID = NULL) {
     if ($existingPageID === NULL) {
-        $existingPageID = execAndFetchScalar('SELECT targetid 
-                                                FROM pageorder 
-                                                LIMIT 1;');
+        $existingPageID = execAndFetchScalar(
+                            'SELECT targetid FROM pageorder LIMIT 1;');
     }
 
     $lastPageID = getEndOfPageOrderID($existingPageID, $pdoConn);
@@ -1108,11 +1135,12 @@ function appendGeneratePages($pdoConn,
     do {
         $record = generatePageRecordInteractive($pdoConn);
         queryInsertRecords($pdoConn, 'page', PAGEINSERTCOLUMNS, [$record]);
-        $record = execAndFetch('SELECT * FROM page WHERE pageid = (
-                                    SELECT MAX(pageid) FROM page 
-                                    WHERE title = ?
-                                );', 
-                                [$record['title']]);
+        $record = execAndFetch(<<<STMT
+                        SELECT * FROM page WHERE pageid = (
+                            SELECT MAX(pageid) FROM page WHERE title = ?
+                        );
+                    STMT, 
+                    [$record['title']]);
 
         if (promptInput("Associate files? (y/n) > " == 'y'))
             associateFilesInteractive($record, $pdoConn);
@@ -1136,33 +1164,56 @@ function appendGeneratePages($pdoConn,
 
 function defineSearchMatches($matchExactly, $matchOp) {
     $coalesceNulls = fn($field, $str) => "COALESCE($str, $field IS NOT NULL)";
-    $tagMatch = fn($key) => "$key IN(SELECT DISTINCT token FROM 
-                                        tagsearch INNER JOIN tagpage USING (tagid)
-                                        WHERE tagpage.pageid = page.pageid)"; 
-    $cwMatch = fn($key) => "$key IN(SELECT DISTINCT token FROM 
-                                        cwsearch INNER JOIN contwarningpage 
-                                            USING (contwarningid)
-                                        WHERE contwarningpage.pageid = page.pageid)"; 
+    $tagMatch = fn($key) => <<<CLAUSE
+                    $key IN(
+                        SELECT DISTINCT token FROM 
+                            tagsearch INNER JOIN tagpage USING (tagid)
+                                WHERE tagpage.pageid = page.pageid
+                    )
+                    CLAUSE; 
+    $cwMatch = fn($key) => <<<CLAUSE
+                    $key IN(
+                        SELECT DISTINCT token FROM 
+                            cwsearch INNER JOIN contwarningpage 
+                                USING (contwarningid)
+                                WHERE contwarningpage.pageid = page.pageid
+                    )
+                    CLAUSE; 
     // SQL requires \\s to output \s, PHP requires \\\s to output \\s.
-    $titleExactMatch = fn($key) => $coalesceNulls('title', 
-                                    "title REGEXP CONCAT('(^|[-\"\\'*(\\\[\\\s])', 
-                                                        $key, 
-                                                        '([-\"\\'*)\\\]\\\s!:;,.?]|$)')");
+    $titleExactMatch = fn($key) => 
+            $coalesceNulls( 'title', 
+                            <<<CLAUSE
+                                title REGEXP CONCAT('(^|[-\"\\'*(\\\[\\\s])', 
+                                                    $key, 
+                                                    '([-\"\\'*)\\\]\\\s!:;,.?]|$)')
+                                CLAUSE
+                        );
     $titleMatch = $matchExactly ? $titleExactMatch
-                                : fn($key) => $coalesceNulls('title', "title $matchOp $key");
-    $dayNameMatch = fn($key) => $coalesceNulls('postdate', "DAYNAME(postdate) = $key");
-    $dayOfMonthMatch = fn($key) => $coalesceNulls('postdate', "DAYOFMONTH(postdate) = $key");
-    $monthMatch = fn($key) => $coalesceNulls('postdate', "MONTHNAME(postdate) = $key");
+                                : fn($key) => $coalesceNulls(   'title', 
+                                                                "title $matchOp $key"   );
+    $dayNameMatch = fn($key) => $coalesceNulls( 'postdate', 
+                                                "DAYNAME(postdate) = $key"  );
+    $dayOfMonthMatch = fn($key) => $coalesceNulls(  'postdate', 
+                                                    "DAYOFMONTH(postdate) = $key"   );
+    $monthMatch = fn($key) => $coalesceNulls(   'postdate', 
+                                                "MONTHNAME(postdate) = $key"    );
     $yearMatch = fn($key) => $coalesceNulls('postdate', "YEAR(postdate) = $key");
-    $descExactMatch = fn($key) => $coalesceNulls('imagedesc', 
-                        "imagedesc REGEXP CONCAT('(^|[-\"\\'*(\\\[\\\s])', 
-                                                $key, 
-                                                '([-\"\\'*)\\\]\\\s!:;,.?]|$)')");
-    $descMatch = $matchExactly ? $descExactMatch
-                                : fn($key) => 
-                                    $coalesceNulls( 'imagedesc', 
-                                                    "MATCH (imagedesc) AGAINST ($key) > " 
-                                                        . TEXTMATCHTHRESHOLD);
+    $descExactMatch = fn($key) => 
+            $coalesceNulls( 'imagedesc', 
+                            <<<CLAUSE
+                                imagedesc REGEXP CONCAT(
+                                    '(^|[-\"\\'*(\\\[\\\s])', 
+                                    $key, 
+                                    '([-\"\\'*)\\\]\\\s!:;,.?]|$)'
+                                )
+                                CLAUSE
+                            );
+    $descMatch = $matchExactly 
+                    ? $descExactMatch
+                    : fn($key) => 
+                        $coalesceNulls( 'imagedesc', 
+                                        "MATCH (imagedesc) AGAINST ($key) > " 
+                                            . TEXTMATCHTHRESHOLD);
     
     return [$tagMatch, 
             $cwMatch, 
@@ -1209,9 +1260,10 @@ function generateSearchClauses( $searchStr,
 
     $imgDescMatchPhrase = [];
 
-    $token = strtok($searchStr, WHITESPACES);
     $allTokens = [];
-    for ($keyIdx = 0; $token !== false; $token = strtok(WHITESPACES)) {
+    for (   $keyIdx = 0, $token = strtok($searchStr, WHITESPACES); 
+            $token !== false; 
+            $token = strtok(WHITESPACES)    ) {
         if (\in_array($token, $allTokens)) continue;
         $allTokens[] = $origToken = $token;
         $key = ':t' . $keyIdx++;
@@ -1281,13 +1333,13 @@ function generateSearchClauses( $searchStr,
                         $tokenExcludeClauses[$token][] = $titleMatch($key);
                         break;
                     case 'day':
-                        if (\array_key_exists($token, $tokenExcludeClauses)) 
+                        if (!\array_key_exists($token, $tokenExcludeClauses)) 
                             $tokenExcludeClauses[$token] = [];
                         array_push( $tokenExcludeClauses[$token], 
                                     $dayOfMonthMatch($key), 
                                     $dayNameMatch($key) );
                         break;
-                    case 'month':
+                    case 'month': 
                         $tokenExcludeClauses[$token][] = $monthMatch($key);
                         break;
                     case 'year':
@@ -1301,9 +1353,10 @@ function generateSearchClauses( $searchStr,
             }
             
         } else {
-            $execList[$key] = $token;
             if ($include) {
+                // 1- or 2-digit number
                 if (preg_match('/^\d{1,2}$/', $token)) { 
+                    $execList[$key] = $token;
                     $tokenDataSelects['title'][] = $titleExactMatch($key);
                     $tokenDataSelects['dayOfMonth'][] = $dayOfMonthMatch($key);
 
@@ -1320,7 +1373,9 @@ function generateSearchClauses( $searchStr,
                         } else $imgDescMatchPhrase[] = $token;
                     }
 
+                // year
                 } else if (preg_match('/^(19|20|21)\d{2}$/', $token)) {
+                    $execList[$key] = $token;
                     $tokenDataSelects['title'][] = $titleExactMatch($key);
                     $tokenDataSelects['year'][] = $yearMatch($key);
 
@@ -1337,7 +1392,9 @@ function generateSearchClauses( $searchStr,
                         } else $imgDescMatchPhrase[] = $token;                        
                     }
 
+                // string of length over 2
                 } else if (\strlen($token) > 2) { 
+                    $execList[$key] = $token;
                     $tokenDataSelects['title'][] = $titleMatch($key);
                     $tokenDataSelects['month'][] = $monthMatch($key);
                     $tokenDataSelects['dayName'][] = $dayNameMatch($key);
@@ -1363,7 +1420,9 @@ function generateSearchClauses( $searchStr,
                 //non-numeric tokens of length 2 or less are discarded
 
             } else {
+                // 1- or 2-digit number
                 if (preg_match('/^\d{1,2}$/', $token)) { 
+                    $execList[$key] = $token;
                     if (!\array_key_exists($token, $tokenExcludeClauses)) 
                         $tokenExcludeClauses[$token] = [];
                     array_push( $tokenExcludeClauses[$token], 
@@ -1373,7 +1432,9 @@ function generateSearchClauses( $searchStr,
                     if ($searchImgDesc) 
                         $tokenExcludeClauses[$token][] = $descExactMatch($key);
 
+                // year
                 } else if (preg_match('/^(19|20|21)\d{2}$/', $token)) {
+                    $execList[$key] = $token;
                     if (!\array_key_exists($token, $tokenExcludeClauses)) 
                         $tokenExcludeClauses[$token] = [];
                     array_push( $tokenExcludeClauses[$token], 
@@ -1383,7 +1444,9 @@ function generateSearchClauses( $searchStr,
                     if ($searchImgDesc) 
                         $tokenExcludeClauses[$token][] = $descExactMatch($key);
 
+                // string of length over 2
                 } else if (\strlen($token) > 2) { 
+                    $execList[$key] = $token;
                     if (!\array_key_exists($token, $tokenExcludeClauses)) 
                         $tokenExcludeClauses[$token] = [];
                     array_push( $tokenExcludeClauses[$token], 
@@ -1433,12 +1496,13 @@ function createTempTables(  $joinTokens,
         $tagSearchDefinition = 
                 'WITH joinsearch AS (SELECT * FROM ('
                 . valueRows([...\array_keys($joinTokens), ...\array_keys($tagTokens)])
-                . ') AS joinsearch (token))'
-                . "SELECT token, tagid, name 
-                    FROM joinsearch INNER JOIN tag
-                        ON name $matchOp token";
-        $tagSearch = $pdoConn->prepare("CREATE TEMPORARY TABLE tagsearch
-                                        AS ($tagSearchDefinition);");
+                . <<<CLAUSE
+                    ) AS joinsearch (token))
+                    SELECT token, tagid, name FROM joinsearch INNER JOIN tag
+                        ON name $matchOp token
+                CLAUSE;
+        $tagSearch = $pdoConn->prepare(
+                        "CREATE TEMPORARY TABLE tagsearch AS ($tagSearchDefinition);");
         $tagSearch->execute([...$joinTokens, ...$tagTokens]);
         
         $possibleTagMatches = $pdoConn->query("SELECT name, tagid FROM tagsearch;");
@@ -1448,12 +1512,11 @@ function createTempTables(  $joinTokens,
         $cwSearchDefinition = 
                 'WITH joinsearch AS (SELECT * FROM ('
                 . valueRows([...\array_keys($joinTokens), ...\array_keys($cwTokens)])
-                . ') AS joinsearch (token))'
-                . "SELECT token, contwarningid, name 
-                    FROM joinsearch INNER JOIN contwarning 
-                        ON name $matchOp token";
-        $cwSearch = $pdoConn->prepare("CREATE TEMPORARY TABLE cwsearch
-                                        AS ($cwSearchDefinition);");
+                . ') AS joinsearch (token)) '
+                . "SELECT token, contwarningid, name FROM "
+                . "joinsearch INNER JOIN contwarning ON name $matchOp token";
+        $cwSearch = $pdoConn->prepare(
+                "CREATE TEMPORARY TABLE cwsearch AS ($cwSearchDefinition);");
         $cwSearch->execute([...$joinTokens, ...$cwTokens]);
 
         $possibleCWMatches = $pdoConn->query("SELECT name, contwarningid 
@@ -1485,7 +1548,7 @@ function assembleSearchClauses( &$execList,
     foreach ($tokenDataSelects as $key => $select) {
         if (str_starts_with($key, 'desc')) {
             $descSelectClause[] = "($select) AS :descalias$descSelectIdx";
-            $execList[":descalias$descSelectIdx"] = substr($key, \strlen('desc'));
+            $execList[":descalias$descSelectIdx"] = $key; 
             $descSelectIdx++;
         }
     }
@@ -1496,10 +1559,12 @@ function assembleSearchClauses( &$execList,
         for (   $i = 0; 
                 ($tagMatch = $possibleTagMatches->fetch(\PDO::FETCH_ASSOC)) !== false; 
                 $i++    ) {
-            $tagSelectClause[] = "EXISTS(SELECT tagpage.tagid FROM tagpage 
-                                        WHERE tagpage.pageid = page.pageid 
-                                            AND tagpage.tagid = :tagid$i
-                                    ) AS :tagalias$i"; 
+            $tagSelectClause[] = <<<CLAUSE
+                    EXISTS( SELECT tagpage.tagid FROM tagpage 
+                            WHERE tagpage.pageid = page.pageid 
+                                AND tagpage.tagid = :tagid$i
+                    ) AS :tagalias$i
+                    CLAUSE; 
             $execList[":tagid$i"] = $tagMatch['tagid'];
             $execList[":tagalias$i"] = 'tag' . $tagMatch['name'];
         }
@@ -1508,14 +1573,16 @@ function assembleSearchClauses( &$execList,
 
     $cwSelectClause = [];
     if ($possibleCWMatches) {
-        for (   $i = 0; 
-                ($cwMatch = $possibleCWMatches->fetch(\PDO::FETCH_ASSOC)) !== false; 
-                $i++    ) {
-            $cwSelectClause[] = "EXISTS(SELECT contwarningpage.contwarningid 
-                                        FROM contwarningpage 
-                                        WHERE contwarningpage.pageid = page.pageid 
-                                            AND contwarningpage.contwarningid = :cwid$i
-                                    ) AS :cwalias$i"; 
+        for (   $i = 0, $cwMatch = $possibleCWMatches->fetch(\PDO::FETCH_ASSOC); 
+                $cwMatch !== false; 
+                $i++, $cwMatch = $possibleCWMatches->fetch(\PDO::FETCH_ASSOC)   ) {
+            $cwSelectClause[] = <<<CLAUSE
+                    EXISTS( SELECT contwarningpage.contwarningid 
+                            FROM contwarningpage 
+                            WHERE contwarningpage.pageid = page.pageid 
+                                AND contwarningpage.contwarningid = :cwid$i
+                    ) AS :cwalias$i
+                    CLAUSE; 
             $execList[":cwid$i"] = $cwMatch['contwarningid'];
             $execList[":cwalias$i"] = 'cw' . $cwMatch['name'];
         }
@@ -1523,49 +1590,49 @@ function assembleSearchClauses( &$execList,
     $cwSelectClause = implode(', ', $cwSelectClause);
 
     $tagExcludeWithClause = ($joinExcludeTokens OR $tagExcludeTokens) ? 
-                                "tagsearchexclude (token, tagid) AS (
-                                    SELECT token, tagid FROM ("
-                                    . valueRows([...\array_keys($joinExcludeTokens),  
-                                                 ...\array_keys($tagExcludeTokens)])
-                                    . ") AS excluded (token) INNER JOIN tag  
-                                        ON tag.name $matchOp excluded.token)"
-                                : '';
+            'tagsearchexclude (token, tagid) AS ('
+                    . "SELECT token, tagid FROM (\n"
+                    . valueRows([...\array_keys($joinExcludeTokens),  
+                                    ...\array_keys($tagExcludeTokens)])
+                    . "\n) AS excluded (token) INNER JOIN tag " 
+                    . "ON tag.name $matchOp excluded.token)"
+            : '';
     
     $cwExcludeWithClause = ($joinExcludeTokens OR $cwExcludeTokens) ? 
-                                "cwsearchexclude (token, contwarningid) AS (
-                                    SELECT token, contwarningid FROM ("
-                                    . valueRows([...\array_keys($joinExcludeTokens), 
-                                                 ...\array_keys($cwExcludeTokens)])
-                                    . ") AS excluded (token) INNER JOIN contwarning   
-                                        ON contwarning.name $matchOp excluded.token)"
-                                : '';
+            "cwsearchexclude (token, contwarningid) AS ("
+                    . "SELECT token, contwarningid FROM (\n"
+                    . valueRows([...\array_keys($joinExcludeTokens), 
+                                    ...\array_keys($cwExcludeTokens)])
+                    . "\n) AS excluded (token) INNER JOIN contwarning "  
+                    . "ON contwarning.name $matchOp excluded.token)"
+            : '';
     
     $singleMatchClause = fn($field, $alias) =>
                             ($tokenDataSelects[$field] ? 
-                                    '(' . \implode(' OR ', $tokenDataSelects[$field]) 
-                                            . ") AS $alias"
-                                    : '');
-    $selectMatchClause = 
-        \implode(', ', 
-                \array_filter(  [   $singleMatchClause('title', 'titlematch'), 
-                                    $singleMatchClause('dayOfMonth', 'dayofmonthmatch'), 
-                                    $singleMatchClause('year', 'yearmatch'), 
-                                    $singleMatchClause('month', 'monthmatch'), 
-                                    $singleMatchClause('dayName', 'daynamematch'), 
-                                    $tagSelectClause,
-                                    $cwSelectClause, 
-                                    $descSelectClause   ], 
-                                fn($el) => $el !== '')
-                );
+                                '(' . \implode(' OR ', $tokenDataSelects[$field]) 
+                                        . ") AS $alias"
+                                : "0 AS $alias");
+    $selectMatchClause = \implode(
+            ', ', 
+            \array_filter(  [   $singleMatchClause('title', 'titlematch'), 
+                                $singleMatchClause('dayOfMonth', 'dayofmonthmatch'), 
+                                $singleMatchClause('year', 'yearmatch'), 
+                                $singleMatchClause('month', 'monthmatch'), 
+                                $singleMatchClause('dayName', 'daynamematch'), 
+                                $tagSelectClause,
+                                $cwSelectClause, 
+                                $descSelectClause   ], 
+                            fn($el) => $el !== '')
+    );
 
     $withClause = [];
     if ($tagSearchDefinition) { 
-        $withClause[] = "tagsearch (token, tagid, name) 
-                            AS ($tagSearchDefinition)";
+        $withClause[] = 
+                "tagsearch (token, tagid, name) AS ($tagSearchDefinition)";
     }
     if ($cwSearchDefinition) {
-        $withClause[] = "cwsearch (token, contwarningid, name) 
-                            AS ($cwSearchDefinition)";
+        $withClause[] = 
+                "cwsearch (token, contwarningid, name) AS ($cwSearchDefinition)";
     }
     if ($tagExcludeWithClause) {
         $withClause[] = $tagExcludeWithClause;
@@ -1580,71 +1647,91 @@ function assembleSearchClauses( &$execList,
         $specTokenClauses = \array_filter(  
                 $tokenClauses, 
                 fn($k) => preg_match('/^(' . \implode('|', SEARCHFIELDSPECS) . '):/', $k), 
-                ARRAY_FILTER_USE_KEY);
+                ARRAY_FILTER_USE_KEY
+        );
         $nonspecTokenClauses = \array_filter(  
                 $tokenClauses, 
                 fn($k) => !preg_match('/^(' . \implode('|', SEARCHFIELDSPECS) . '):/', $k)
                             AND !str_starts_with($k, 'alldesc'), 
-                ARRAY_FILTER_USE_KEY);
-        $whereSelectClause = 
-            \implode(' AND ', array_map(fn($tarr) => 
-                                            '(' . \implode(' OR ', $tarr) . ')', 
-                                        $specTokenClauses)
-                    );
+                ARRAY_FILTER_USE_KEY
+        );
+        $whereSelectClause = \implode(
+                ' AND ', 
+                array_map(  fn($tarr) => '(' . \implode(' OR ', $tarr) . ')', 
+                            $specTokenClauses   )
+        );
         if ($specTokenClauses AND $nonspecTokenClauses) {
             $whereSelectClause .= ' AND ';
         }
         if ($nonspecTokenClauses) {
-            $whereSelectClause .= '(('
-                    . \implode(' AND ', array_map(fn($tarr) => 
-                                                '(' . \implode(' OR ', $tarr) . ')', 
-                                            $nonspecTokenClauses)
-                                )
-                    . ') OR '
-                    . array_find(   $tokenClauses, 
-                                    fn($val, $key) => str_starts_with($key, 'alldesc')  )[0]
-                    . ')';
+            $alldescClause = array_find(   
+                    $tokenClauses, 
+                    fn($val, $key) => str_starts_with($key, 'alldesc') 
+            );
+            $whereSelectClause .= 
+                '(('
+                . \implode(
+                        ' AND ', 
+                        array_map(  fn($tarr) => '(' . \implode(' OR ', $tarr) . ')', 
+                                    $nonspecTokenClauses)
+                    )
+                . ') OR '
+                . (isset($alldescClause) ? $alldescClause[0] : '')
+                . ')';
         }
     } else {
-        $whereSelectClause = 
-            \implode(' AND ', array_map(fn($tarr) => 
-                                            '(' . \implode(' OR ', $tarr) . ')', 
-                                        $tokenClauses)
+        $whereSelectClause = \implode(
+                ' AND ', 
+                array_map(  fn($tarr) => '(' . \implode(' OR ', $tarr) . ')', 
+                            $tokenClauses)
                     );
     }
     
     $whereNotSelectClause = [];
     if ($tokenExcludeClauses) {
-        $whereNotSelectClause[] = \implode( ' OR ', 
-                                            array_map(  fn($tarr) => \implode(' OR ', $tarr), 
-                                                        $tokenExcludeClauses)
-                                            );
+        $whereNotSelectClause[] = \implode( 
+                ' OR ', 
+                array_map(  fn($tarr) => \implode(' OR ', $tarr), 
+                            $tokenExcludeClauses    )
+        );
     }
     if ($joinExcludeTokens) {
-        $whereNotSelectClause[] = 'EXISTS(SELECT tagid FROM 
-                                    tagsearchexclude INNER JOIN tagpage USING (tagid)
-                                        WHERE tagpage.pageid = page.pageid
-                                ) OR EXISTS(SELECT contwarningid FROM 
-                                    cwsearchexclude INNER JOIN contwarningpage 
-                                            USING (contwarningid)
-                                        WHERE contwarningpage.pageid = page.pageid    
-                                )';
+        $whereNotSelectClause[] = <<<CLAUSE
+                EXISTS(
+                    SELECT tagid 
+                    FROM tagsearchexclude INNER JOIN tagpage USING (tagid)
+                        WHERE tagpage.pageid = page.pageid
+                ) OR EXISTS(
+                    SELECT contwarningid 
+                    FROM cwsearchexclude INNER JOIN contwarningpage 
+                            USING (contwarningid)
+                        WHERE contwarningpage.pageid = page.pageid    
+                )
+                CLAUSE;
     } else {
         if ($tagExcludeTokens) {
-            $whereNotSelectClause[] = 'EXISTS(SELECT tagid FROM 
-                                        tagsearchexclude INNER JOIN tagpage USING (tagid)
-                                            WHERE tagpage.pageid = page.pageid)';
+            $whereNotSelectClause[] = <<<CLAUSE
+                    EXISTS(
+                        SELECT tagid 
+                        FROM tagsearchexclude INNER JOIN tagpage USING (tagid)
+                            WHERE tagpage.pageid = page.pageid
+                    )
+                    CLAUSE;
         }
         if ($cwExcludeTokens) {
-            $whereNotSelectClause[] = 'EXISTS(SELECT contwarningid FROM 
-                                        cwsearchexclude INNER JOIN contwarningpage 
-                                                USING (contwarningid)
-                                            WHERE contwarningpage.pageid = page.pageid)';
+            $whereNotSelectClause[] = <<<CLAUSE
+                    EXISTS(
+                        SELECT contwarningid 
+                        FROM cwsearchexclude INNER JOIN contwarningpage 
+                                USING (contwarningid)
+                            WHERE contwarningpage.pageid = page.pageid
+                    )
+                    CLAUSE;
         }
     }
     $whereNotSelectClause = \implode(' OR ', $whereNotSelectClause);
 
-    $whereClause = (string) $whereSelectClause;
+    $whereClause = $whereSelectClause;
     if ($whereSelectClause AND $whereNotSelectClause) $whereClause .= ' AND ';
     if ($whereNotSelectClause) $whereClause .= "NOT ($whereNotSelectClause)";
     
@@ -1663,10 +1750,11 @@ function dropTempTables($joinTokens, $tagTokens, $cwTokens, $pdoConn) {
     }
 }
 
-function searchComics($searchStr, 
-                      $pdoConn, 
-                      $matchExactly = false, 
-                      $searchImgDesc = false) {
+function execSearchComicsStmt(  $searchStr, 
+                                $pdoConn, 
+                                $matchExactly = false, 
+                                $searchImgDesc = false  ) {
+    
     $matchOp = $matchExactly ? '=' : 'REGEXP';
 
     [   $tagMatch, 
@@ -1703,8 +1791,7 @@ function searchComics($searchStr,
                                                         $descExactMatch, 
                                                         $descMatch  );
 
-    [   //$joinSearchDefinition, 
-        $tagSearchDefinition, 
+    [   $tagSearchDefinition, 
         $cwSearchDefinition, 
         $possibleTagMatches, 
         $possibleCWMatches  ] = createTempTables(   $joinTokens,
@@ -1731,31 +1818,110 @@ function searchComics($searchStr,
                                                     $searchImgDesc, 
                                                     $matchOp            );
 
-    $pages = $pdoConn->prepare( ($withClause ? "WITH $withClause " : '')
-                                . 'SELECT page.pageid AS pageid, 
-                                        page.title AS title, 
-                                        page.postdate AS postdate, 
-                                        page.location AS location, 
-                                        page.imagedesc AS imagedesc'
-                                . ($selectMatchClause ? 
-                                        ", $selectMatchClause" 
-                                        : '')
-                                . ' FROM page' 
-                                . ($whereClause ? 
-                                        " WHERE $whereClause"
-                                        : '') 
-                                . " ORDER BY page.postdate;"
-                                );
-
-    $pages->execute($execList);
-
-    $results = $pages->fetchAll(\PDO::FETCH_ASSOC);
+    $getResults = $pdoConn->prepare( 
+        ($withClause ? "WITH $withClause " : '')
+        . "SELECT page.pageid AS pageid, page.title AS title, "
+            . "page.postdate AS postdate, page.location AS location, "
+            . "page.imagedesc AS imagedesc"
+        . ($selectMatchClause ? 
+                ", $selectMatchClause" 
+                : '')
+        . ' FROM page' 
+        . ' WHERE postdate IS NOT NULL AND location IS NOT NULL' 
+        . ($whereClause ? 
+                " AND $whereClause"
+                : '') 
+        . " ORDER BY page.postdate;"
+        );
+    
+    $getResults->execute($execList);
 
     dropTempTables($joinTokens, $tagTokens, $cwTokens, $pdoConn);
 
+    return [$getResults, $execList];
+}
+
+/**
+ * Summary of Briel\searchComics
+ * 
+ * Does return all pages with blank search, as you'd expect
+ * 
+ * @param mixed $searchStr
+ * @param mixed $pdoConn
+ * @param mixed $matchExactly
+ * @param mixed $searchImgDesc
+ * @return array<mixed|string>
+ */
+function searchComics(  $searchStr, 
+                        $pdoConn, 
+                        $matchExactly = false, 
+                        $searchImgDesc = false  ) {
+    [$getResults, $execList] = execSearchComicsStmt($searchStr, 
+                                                    $pdoConn, 
+                                                    $matchExactly, 
+                                                    $searchImgDesc);
+
+    for (   $result = $getResults->fetch(\PDO::FETCH_ASSOC); 
+            $result !== false; 
+            $result = $getResults->fetch(\PDO::FETCH_ASSOC) ) {
+        yield $result;
+    }
+
+}
+
+function allSearchComics(  $searchStr, 
+                            $pdoConn, 
+                            $matchExactly = false, 
+                            $searchImgDesc = false  ) {
+
+    [$getResults, $execList] = execSearchComicsStmt($searchStr, 
+                                                    $pdoConn, 
+                                                    $matchExactly, 
+                                                    $searchImgDesc);
+
+    $results = $getResults->fetchAll(\PDO::FETCH_ASSOC);
+
     return [$results, 
-            $pages, 
+            $getResults, 
             $execList];
+}
+
+function getTagsFromPageIDStmt($pdoConn) {
+    return $pdoConn->prepare(<<<STMT
+            SELECT tag.name FROM 
+                (SELECT pageid FROM page WHERE pageid = ?) AS t 
+                INNER JOIN tagpage USING (pageid) 
+                INNER JOIN tag USING (tagid);
+            STMT);
+}
+
+function getCWsFromPageIDStmt($pdoConn) {
+    return $pdoConn->prepare(<<<STMT
+            SELECT contwarning.name FROM 
+                (SELECT pageid FROM page WHERE pageid = ?) AS t 
+                INNER JOIN contwarningpage USING (pageid) 
+                INNER JOIN contwarning USING (contwarningid);
+            STMT);
+}
+
+function getThumbnailFromPageIDStmt($pdoConn) {
+    return $pdoConn->prepare(<<<STMT
+            SELECT * FROM file
+                WHERE pageid = ? AND location REGEXP '_nail\.[:alnum:]+'
+                ORDER BY filesize LIMIT 1;
+            STMT);
+}
+
+function getMinSizeFileFromPageIDStmt($pdoConn) {
+    return $pdoConn->prepare(
+            "SELECT * FROM file WHERE pageid = ? ORDER BY filesize LIMIT 1;");
+}
+
+function getNumServablePages($pdoConn) {
+    return $pdoConn->query(
+            'SELECT COUNT(*) FROM page 
+                WHERE postdate IS NOT NULL AND location IS NOT NULL;'
+            )->fetch(\PDO::FETCH_NUM)[0];
 }
 
 ?>

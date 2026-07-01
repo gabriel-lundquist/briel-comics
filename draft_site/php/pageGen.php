@@ -1,7 +1,7 @@
 <?php
 namespace Briel;
 
-require 'brielConstants.php';
+require_once 'brielConstants.php';
 
 const DISPLAYWIDTH1 = 1920;
 const DISPLAYWIDTH2 = 3000;
@@ -9,6 +9,9 @@ const DISPLAYWIDTH2 = 3000;
 const RESULTSPERPAGE = 17; //whimsy
 
 const SEARCHPAGEINDEXKEY = 'p';
+const SEARCHCOMICSINPUTID = 'search-comics';
+
+const CHECKBOXON = 'on';
 
 class resultInfo {
     public $resultRecord; 
@@ -49,56 +52,43 @@ class resultInfo {
     }
 }
 
-class searchResultInfo {
+class SearchResultInfo {
     public $searchRecord; 
     public $tokenExecList;
-    public $bareTokens;
-    public $prefixTokens;
     public $date;
-    private $matchtextTokens = null;
-    private $matchDescTokens = null;
     public $pageTags;
-    private $matchTags = null;
-    private $nonMatchTags = null;
     public $pageContWarns;
-    private $matchContWarns = null;
-    private $nonMatchContWarns = null;
     public $thumbnailRecord;
     public $isExact;
+    private $matchTags = null;
+    private $nonMatchTags = null;
+    private $matchContWarns = null;
+    private $nonMatchContWarns = null;
     private $descMatches = null;
 
     public function __construct($searchRecord, 
                                 $tokenExecList, 
-                                $bareTokens, 
-                                $prefixTokens, 
                                 $pageTags, 
                                 $pageContWarns, 
                                 $thumbnailRecord, 
                                 $isExact) {
         $this->searchRecord = $searchRecord;
         $this->tokenExecList = $tokenExecList;
-        $this->bareTokens = $bareTokens;
-        $this->prefixTokens = $prefixTokens;
         $this->pageTags = $pageTags;
         $this->pageContWarns = $pageContWarns;
         $this->thumbnailRecord = $thumbnailRecord;
         $this->isExact = $isExact;
         
         $this->date = \DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', 
-                                                            $searchRecord['postdate']);
-        // $this->getMatchTags();
-        // $this->getNonMatchTags();
-        // $this->getMatchCWs();
-        // $this->getNonMatchCWs();
-        // $this->getDescMatches();
+                                                            $searchRecord['postdate'] );
     }
 
     public function getMatchTags() {
         if ($this->matchTags === null) {
             $this->matchTags = [];
-            foreach (array_filter($this->searchRecord, 
+            foreach (array_filter(  $this->searchRecord, 
                                     fn($k) => str_starts_with($k, 'tag'), 
-                                    ARRAY_FILTER_USE_KEY)
+                                    ARRAY_FILTER_USE_KEY    )
                     as $key => $match) {
                 if ($match != 0) $this->matchTags[] = substr($key, 3);
             }
@@ -149,39 +139,15 @@ class searchResultInfo {
             // Not sure why VS Code is marking this as unreachable...
             $this->descMatches = array_map(  
                     fn($str) => strtolower(substr($str, \strlen('desc'))), 
-                    array_filter(   $this->searchRecord, 
-                                    fn($key) => str_starts_with($key, 'desc'), 
-                                    ARRAY_FILTER_USE_KEY    )
+                    array_filter(   
+                            array_keys($this->searchRecord), 
+                            fn($key) => str_starts_with($key, 'desc')   
+                    )
             );
         }
         
         return $this->descMatches;
     }
-
-    // private function getMatchesInText($recordColumnKey, $prefixKey) {
-    //     $matchTokens = [];
-    //     $textToken = strtok($this->searchRecord[$recordColumnKey], WHITESPACES);
-    //     $searchTokens = array_map(  fn($s) => strtolower($s), 
-    //                                 [   ...$this->bareTokens, 
-    //                                     ...$this->prefixTokens[$prefixKey]  ]
-    //                                 );
-    //     for (   $textToken = strtok($this->searchRecord[$recordColumnKey], 
-    //                                 WHITESPACES);
-    //             $textToken !== false; 
-    //             $textToken = strtok(WHITESPACES)   ) {
-    //         $isMatch = $this->isExact ? \in_array(strtolower($textToken), $searchTokens) 
-    //                                     : array_any($searchTokens, 
-    //                                                 fn($tok, $key) => 
-    //                                                     str_contains(strtolower($textToken), 
-    //                                                                  $tok)
-    //                                                     // $key does nothing
-    //                                                 ); 
-    //         $this->matchTokens[] = ['token' => $textToken, 
-    //                                 'match' => $isMatch];
-    //     }
-
-    //     return $matchTokens;
-    // }
 
 }
 
@@ -242,88 +208,6 @@ function assignNavLink($node,
     return false;
 }
 
-function generateComicpageDOMHTML($pageRecord, 
-                                  $prevLink, 
-                                  $nextLink, 
-                                  $prevUpd8Link, 
-                                  $nextUpd8Link,
-                                  $widthFileLocations, 
-                                      // values: locations, keys: widths
-                                  $alttext, 
-                                  $tags, // array of strings
-                                  $searchpageLocation, 
-                                  $templateFilepath = '../reading_page_template_draft.html'
-                                  ) { 
-    // Assumes page record has already been created
-    $doc = \DOM\HTMLDocument::createFromFile($templateFilepath);
-
-    // Set page title
-    $doc->getElementsByTagName("title")->item(0) //should only be one title
-        ->insertAdjacentText(\DOM\AdjacentPosition::AfterBegin, $pageRecord["title"]);
-
-    // Set stylesheet, if not the default
-    if ($pageRecord["stylelocation"] != "NULL") {
-        $doc->getElementById("reading_stylesheet")
-            ->setAttribute("href", $pageRecord["stylelocation"]);
-    }
-
-    // Set previous and next page links
-    foreach ($doc->getElementsByTagName("a") as $a) {
-        assignNavLink($a, $prevLink, $nextLink, $prevUpd8Link, $nextUpd8Link);
-    }
-
-    // Set previous and next page links in imagemap
-    foreach ($doc->getElementsByTagName("area") as $area) {
-        assignNavLink($area, $prevLink, $nextLink, $prevUpd8Link, $nextUpd8Link);
-    }
-    
-    // Set srcset on the comic display
-    $comicpage = $doc->getElementById("single_page");
-    $usualWidthFileLocations = [];
-    $srcsetStr = "";
-    foreach (["800", "1400", "2000"] as $width) {
-        if (array_key_exists($width, $widthFileLocations)) {
-            $usualWidthFileLocations[$width] = $widthFileLocations[$width];
-            $srcsetStr .= "{$widthFileLocations[$width]} {$width}w\n";
-        } else {
-            echo "Image of width $width isn't in database\n";
-        }
-    }
-    $comicpage->setAttribute("srcset", $srcsetStr);
-
-    // Set default src on the comic display
-    $srcStr = "";
-    //we try to make 1400px the default src, then 800px since it's smallest
-    foreach (["1400", "800", "2000"] as $width) {
-        if (array_key_exists($width, $usualWidthFileLocations)) {
-            $srcStr = $usualWidthFileLocations[$width];
-            break;
-        } else {
-            echo "Image of width $width doesn't exist, so can't be used for src\n";
-        }
-    }
-    $comicpage->setAttribute("src", $srcStr);
-
-    // Set the alt text
-    $comicpage->setAttribute("alt", 
-                             $alttext 
-                                . " Described under the heading Text Description.");
-
-    // Set the tag links
-    $tagPara = $doc->getElementById("tags-para");
-    foreach ($tags as $tag) {
-        $tagEl = $doc->createElement("a");
-        $tagEl->textContent = $tag;
-        $tagEl->setAttribute("href", $searchpageLocation . "?tag=" . $tag);
-        $tagPara->appendChild($tagEl);
-    }
-
-    // Set the description
-    $doc->getElementById("desc-para")->textContent = $pageRecord["imagedesc"];
-    
-    return $doc->saveHtmlFile($pageRecord['location']);
-}
-
 /**
  * Summary of Briel\generateComicpage
  * @param mixed $pageRecord
@@ -351,7 +235,7 @@ function generateComicpage( $pageRecord,
                             $windowWidthsOrder = [DISPLAYWIDTH1, DISPLAYWIDTH2], 
                             $searchpageLocation = './' . SEARCHFILENAME, 
                             $srcDefaultWidths = [1400, 800, 2000], 
-                            $defaultStyleURL = "../styles/reading_page_style.css"   ) {
+                            $defaultStyleURL = SITEROOT . "/styles/reading_page_style.css"   ) {
     ob_start(); 
 ?>
 <!doctype html>
@@ -367,9 +251,9 @@ function generateComicpage( $pageRecord,
         <meta name="description" content="A page displaying a comic.">
         
         <title><?= $pageRecord['title'] ?> | Breel Comix</title>
-        <link rel="icon" href="images/<?= SITEICONNAME ?>" type="image/x-icon">
+        <link rel="icon" href="<?= SITEROOT ?>/images/<?= SITEICONNAME ?>" type="image/x-icon">
 
-        <link href="../styles/briel_font-faces.css" rel="stylesheet">
+        <link href="<?= SITEROOT ?>/styles/briel_font-faces.css" rel="stylesheet">
         <link href="<?= $pageRecord['stylelocation'] == 'NULL' 
                             ? $defaultStyleURL
                             : $pageRecord['stylelocation'] ?>" 
@@ -402,13 +286,13 @@ function generateComicpage( $pageRecord,
                     <p class="nav-line">
                         <a href="<?= $prevUpd8Link ?>" 
                            class="nav-button prev-upd8-button">Skip back</a>
-                        <a href="home_page.html" 
+                        <a href="<?= SITEROOT ?>/home_page.html" 
                            class="nav-button home-button">Home</a>
                         <a href="<?= $nextUpd8Link ?>" 
                            class="nav-button next-upd8-button">Skip forth</a>
                     </p>
                     <p class="nav-line">
-                        <a href="archive_page.html" 
+                        <a href="<?= SITEROOT ?>/archive_page.html" 
                            class="nav-button archive-button">Archive</a>
                     </p>
                 </nav>
@@ -730,10 +614,12 @@ function generateComicDisplayElements($fileRecords,
     return ob_get_flush();
 }
 
-function generateReadingAccessoryElements($pageRecord, 
-                                            $tags, 
-                                            $contWarns, 
-                                            $searchpageLocation = './' . SEARCHFILENAME) {
+function generateReadingAccessoryElements(  
+        $pageRecord, 
+        $tags, 
+        $contWarns, 
+        $searchpageLocation = SITEROOT . '/' . SEARCHFILENAME
+) {
     ob_start();
 ?>
 <section id="tag_section">
@@ -741,7 +627,7 @@ function generateReadingAccessoryElements($pageRecord,
     <p id="tags-para">
     <?php
     foreach ($tags as $tag) {
-        echo "<a href=$searchpageLocation?tag=$tag>$tag</a>\n";
+        echo "<a href=$searchpageLocation?search=". urlencode("tag:$tag") . ">$tag</a>\n";
     }
     ?>
     </p>
@@ -752,7 +638,7 @@ function generateReadingAccessoryElements($pageRecord,
     <p id="cws-para">
     <?php
     foreach ($contWarns as $cw) {
-        echo "<a href=$searchpageLocation?cw=$cw>$cw</a>\n";
+        echo "<a href=$searchpageLocation?search=". urlencode("cw:$cw") . ">$cw</a>\n";
     }
     ?>
     </p>
@@ -780,7 +666,7 @@ function generateHomepage(  $blogText,
                             $searchpageLocation = './' . SEARCHFILENAME, 
                             $srcDefaultWidths = [1400, 800, 2000],
                             $windowWidthsOrder = [DISPLAYWIDTH1, DISPLAYWIDTH2], 
-                            $styleLocation = '/styles/reading_page_style.css',
+                            $styleLocation = SITEROOT . '/styles/reading_page_style.css',
                             $nextLink = null, 
                             $nextUpd8Link = null    ) {
     ob_start();
@@ -798,9 +684,9 @@ function generateHomepage(  $blogText,
         <meta name="description" content="A home page for a comics website.">
         
         <title>Breel Comix</title>
-        <link href="./images/<?= SITEICONNAME ?>" rel="icon" type="image/x-icon">
+        <link href="<?= SITEROOT ?>/images/<?= SITEICONNAME ?>" rel="icon" type="image/x-icon">
 
-        <link href="./styles/<?= FONTFACESCSSNAME ?>" rel="stylesheet">
+        <link href="<?= SITEROOT ?>/styles/<?= FONTFACESCSSNAME ?>" rel="stylesheet">
         <link href="<?= $styleLocation ?>" rel="stylesheet" id="home_stylesheet"> 
 
         <script type="module" src="./js/reading_page_script.js"></script>
@@ -869,18 +755,16 @@ function generateHomepage(  $blogText,
                         ?>
                     </p>
                     <p class="nav-line">
-                        <a href="archive_page.html" 
+                        <a href="<?= SITEROOT ?>archive_page.html" 
                            class="nav-button archive-button">Archive</a>
                     </p>
                 </nav>
 
                 <section id="blog_section">
                     <h2>Web log</h2>
-                    <br>
-                    <?= $blogText ?>
-                    <br>
-                    <?= $blogDateElement ?>
-                    <p><a href="./weblog_archive.html">Web log archive</a></p>
+                    <p><?= $blogText ?></p>
+                    <p><?= $blogDateElement ?></p>
+                    <p><a href="<?= SITEROOT ?>/weblog_archive.html">Web log archive</a></p>
                 </section>
                 <?php 
     generateReadingAccessoryElements($pageRecord, 
@@ -914,67 +798,74 @@ function generateHomepage(  $blogText,
 
 function formatSearchNavLink($navIndex) {
     return  '<a href="' 
-            // if `$_GET(SEARCHPAGEINDEXKEY)` exists, this will change its value to `$navIndex`
+            . SITEROOT . '/' . SEARCHFILENAME
+            // if `$_GET(SEARCHPAGEINDEXKEY)` exists, 
+            // this will change its value to `$navIndex`
             . formatGETParameters([...$_GET, SEARCHPAGEINDEXKEY => $navIndex]) 
-            . '">' 
-            . $navIndex 
-            . '</a> ... ';
+            . '">' . $navIndex . '</a> ... ';
 }
 
-// TODO: will need to rip out where I use `$_GET` to access the current page number.
-function generateSearchNav($resultPageCount, $currentIdx) {
-    if ($resultPageCount > 1) { //only even have nav bar if we have more than one page
-        ob_start();
+/**
+ * Summary of Briel\generateSearchNav
+ * @param mixed $resultPageCount
+ * @param mixed $resultPageIdx The 1-indexed page number of the results
+ * @return bool|string
+ */
+function generateSearchNav($resultPageCount, $resultPageIdx) {
+    if ($resultPageCount <= 1) { 
+        //only even have nav bar if we have more than one page
+        return '';
+    }
+
+    $currentIdx = $resultPageIdx - 1;
+    $linkPrefix = SITEROOT . '/' . SEARCHFILENAME;
+
+    ob_start();
 ?>
 <nav>
     <h3>Archive navigation</h3>
     <?php
-        // $currentIdx = \array_key_exists(SEARCHPAGEINDEXKEY, $_GET) 
-        //                         ? $_GET(SEARCHPAGEINDEXKEY) 
-        //                         : 0;
+    if ($currentIdx > 2) {
+        echo    '<a href="' 
+                . $linkPrefix
+                // if `$_GET(SEARCHPAGEINDEXKEY)` exists, this new array will have a 
+                // 0 there instead
+                . formatGETParameters([...$_GET, SEARCHPAGEINDEXKEY => 0]) 
+                . '">Latest</a> ... ';
+    }
 
-        if ($currentIdx > 2) {
-            echo    '<a href="' 
-                    // if `$_GET(SEARCHPAGEINDEXKEY)` exists, this new array will have a 
-                    // 0 there instead
-                    . formatGETParameters([...$_GET, SEARCHPAGEINDEXKEY => 0]) 
-                    . '">Latest</a> ... ';
-        }
+    if ($currentIdx > 5) {
+        echo formatSearchNavLink($currentIdx - 5) . ' ... ';
+    }
 
-        if ($currentIdx > 5) {
-            echo formatSearchNavLink($currentIdx - 5) . ' ... ';
+    foreach ([-2, -1] as $offset) {
+        if ($currentIdx > -$offset) {
+            echo formatSearchNavLink($currentIdx + $offset) . ' ';
         }
+    }
 
-        foreach ([-2, -1] as $offset) {
-            if ($currentIdx > -$offset) {
-                echo formatSearchNavLink($currentIdx + $offset) . ' ';
-            }
+    echo $currentIdx; // no link, since we're already here
+    
+    foreach ([1, 2] as $offset) {
+        if ($resultPageCount - $currentIdx > $offset) {
+            echo ' ' . formatSearchNavLink($currentIdx + $offset);
         }
+    }
 
-        echo $currentIdx; // no link, since we're already here
-        
-        foreach ([1, 2] as $offset) {
-            if ($resultPageCount - $currentIdx > $offset) {
-                echo ' ' . formatSearchNavLink($currentIdx + $offset);
-            }
-        }
+    if ($resultPageCount - $currentIdx > 5) {
+        echo ' ... ' . formatSearchNavLink($currentIdx + 5);
+    }
 
-        if ($resultPageCount - $currentIdx > 5) {
-            echo ' ... ' . formatSearchNavLink($currentIdx + 5);
-        }
-
-        if ($resultPageCount - $currentIdx > 2) {
-            echo    ' ... <a href="' 
-                    . formatGETParameters([...$_GET, SEARCHPAGEINDEXKEY => $resultPageCount]) 
-                    . '">Earliest</a>';
-        }
+    if ($resultPageCount - $currentIdx > 2) {
+        echo    ' ... <a href="' 
+                . $linkPrefix
+                . formatGETParameters([...$_GET, SEARCHPAGEINDEXKEY => $resultPageCount]) 
+                . '">Earliest</a>';
+    }
     ?>
 </nav>
 <?php
-        return ob_get_flush();
-    }
-
-    return '';
+    return ob_get_flush();
 }
 
 function generateSearchEntry($result) {
@@ -996,7 +887,7 @@ function generateSearchEntry($result) {
         </a> 
     </div>
     <div class="detail-div">
-        <h3><a href="<?= $result->pageRecord['location'] ?>" class="page-link"><?= 
+        <h3><a href="<?= $result->searchRecord['location'] ?>" class="page-link"><?= 
         emphasizeIf($result->searchRecord['titlematch'], 
                     $result->searchRecord['title']  ) 
         ?></a></h3>
@@ -1010,7 +901,7 @@ function generateSearchEntry($result) {
                                     $result->date->format('M.')), 
 
                         emphasizeIf($result->searchRecord['dayofmonthmatch'],
-                                    $result->date->format('js,')), 
+                                    $result->date->format('jS,')), 
 
                         emphasizeIf($result->searchRecord['daynamematch'],
                                     $result->date->format('l'))
@@ -1020,10 +911,12 @@ function generateSearchEntry($result) {
 <?php
     if ($result->pageTags) {
 ?>
-        <p><h4>Tags:</h4><?= 
+        <p><h4>Tags:</h4>
+            <?= 
         implode(', ', 
                 array_map(  fn($tag, $tagText) => 
-                                "<a href=\"" . SEARCHFILENAME . "?tag=$tag\">$tagText</a>", 
+                                '<a href="' . SITEROOT . '/' . SEARCHFILENAME 
+                                . "?search=" . urlencode("tag:$tag") . "\">$tagText</a>", 
 
                             [   ...$result->getMatchTags(), 
                                 ...$result->getNonMatchTags()], 
@@ -1033,16 +926,19 @@ function generateSearchEntry($result) {
                                 ...$result->getNonMatchTags()   ]
                 )
         );
-        ?></p>
+            ?>
+        </p>
 <?php
     }
 
     if ($result->pageContWarns) {
 ?>
-        <p><h4>Content warnings:</h4><?= 
+        <p><h4>Content warnings:</h4>
+            <?= 
         implode(', ', 
                 array_map(  fn($cw, $cwText) => 
-                                "<a href=\"" . SEARCHFILENAME . "?cw=$cw\">$cwText</a>", 
+                                '<a href="' . SITEROOT . '/' . SEARCHFILENAME 
+                                . "?search=" . urlencode("cw:$cw") . "\">$cwText</a>", 
 
                             [   ...$result->getMatchCWs(), 
                                 ...$result->getNonMatchCWs()    ], 
@@ -1052,26 +948,33 @@ function generateSearchEntry($result) {
                                 ...$result->getNonMatchCWs()    ]
                 )
         );
-        ?></p>
+            ?>
+        </p>
 <?php
     }
 ?>
-        <p><h4>Description:</h4><?php  
+        <p><h4>Description:</h4>
+            <?php  
     if ($result->isExact) {
-        $hilitedDesc = '';
-        for (   $token = strtok($result->searchRecord['imagedesc'], WHITESPACES); 
-                $token !== false; 
-                $token = strtok(WHITESPACES)    ) {
-            $hilitedDesc .= ' ' . emphasizeIf(  \in_array(  strtolower($token), 
-                                                            $result->getDescMatches() ), 
-                                                $token  
-                                    );
+        $hilitedDesc = $result->searchRecord['imagedesc'];
+        foreach ($result->getDescMatches() as $match) {
+            $hilitedDesc = str_replace( $match, 
+                                        "<strong>$match</strong>", 
+                                        $hilitedDesc);
+            $hilitedDesc = str_replace( ucfirst($match), 
+                                        '<strong>' . ucfirst($match) . '</strong>', 
+                                        $hilitedDesc    );
+            $hilitedDesc = str_replace( strtoupper($match), 
+                                        '<strong>' . strtoupper($match) . '</strong>', 
+                                        $hilitedDesc    );
         }
+        
         echo $hilitedDesc;
     } else {
         echo $result->searchRecord['imagedesc'];
     }
-        ?></p>
+            ?>
+        </p>
     </div> <!-- class detail-div -->
 </article>
 <?php
@@ -1079,25 +982,30 @@ function generateSearchEntry($result) {
 }
 
 function generateSearchForm($searchStr, 
+                            $isDescSearch, 
+                            $isExact, 
                             $idSuffix, 
                             $includeOptionsLink = false) {
+    $inputID = "search$idSuffix";
     ob_start(); ?>
-<form role="search" action="<?= SEARCHFILENAME ?>" method="get">
+<form role="search" action="<?= SITEROOT . '/' . SEARCHFILENAME ?>" method="get">
     <p>
         <input 
             type="search" 
-            name="search<?= $idSuffix ?>" 
-            id="search<?= $idSuffix ?>"
+            name="search" 
+            id="<?= $inputID ?>"
             placeholder="Search comic pages..."
             minlength="2"
             maxlength="256"
             size="34"
-            pattern="[\w<?= htmlentities(` ,.?!();:'"-`) ?>]{2,256}"
+            pattern="[\w<?= htmlentities(' ,.?!();:-"\'') ?>]{2,256}"
             aria-label="Search comic pages"
-            value="<?=  $searchStr ?>"/> 
+            value="<?= $searchStr ?>"
+            class="<?= SEARCHCOMICSINPUTID ?>"
+        /> 
         <button type="submit">Search</button>
     </p>
-    <label for="search<?= $idSuffix ?>">
+    <label for="<?= $inputID ?>">
         Searches tags, dates, titles, and page numbers by default. 
     <?php if ($includeOptionsLink) { ?>
         See <a href="#search_options">search options</a>.
@@ -1105,11 +1013,19 @@ function generateSearchForm($searchStr,
     </label>
     <p>
         <div class="search-check">
-            <input type="checkbox" name="desc<?= $idSuffix ?>" id="desc<?= $idSuffix ?>">
+            <input  type="checkbox" 
+                    name="desc" 
+                    id="desc<?= $idSuffix ?>"
+                    <?= $isDescSearch ? 'checked="CHECKED"' : '' ?>
+            >
             <label for="desc<?= $idSuffix ?>">Search image descriptions too</label>
         </div>
         <div class="search-check">
-            <input type="checkbox" name="exact<?= $idSuffix ?>" id="exact<?= $idSuffix ?>">
+            <input  type="checkbox" 
+                    name="exact" 
+                    id="exact<?= $idSuffix ?>"
+                    <?= $isExact ? 'checked="CHECKED"' : '' ?>
+                    >
             <label for="exact<?= $idSuffix ?>">Match terms exactly</label>
         </div>
     </p>
@@ -1119,8 +1035,10 @@ function generateSearchForm($searchStr,
 }
 
 function generateSearchPage($searchStr, 
+                            $isDescSearch, 
+                            $isExact, 
                             $searchResultInfos, 
-                            $pageIndex = 0,
+                            $pageIndex = 1,
                             $numPages = 1) {
     ob_start();
 ?>
@@ -1134,20 +1052,22 @@ function generateSearchPage($searchStr,
         <meta name="description" content="Breel comics search page.">
         
         <title>Search | Breel Comix</title>
-        <link rel="icon" href="images/<?= SITEICONNAME ?>" type="image/x-icon" />
+        <link rel="icon" href="<?= SITEROOT ?>/images/<?= SITEICONNAME ?>" type="image/x-icon" />
 
-        <link href="styles/defaults.css" rel="stylesheet" />
-        <link href="styles/<?= FONTFACESCSSNAME ?>" rel="stylesheet" />
-        <link href="styles/update_list_style.css" rel="stylesheet" />
-        <link href="styles/search_page_style.css" rel="stylesheet" />
+        <link href="<?= SITEROOT ?>/styles/defaults.css" rel="stylesheet" />
+        <link href="<?= SITEROOT ?>/styles/<?= FONTFACESCSSNAME ?>" rel="stylesheet" />
+        <link href="<?= SITEROOT ?>/styles/update_list_style.css" rel="stylesheet" />
+        <link href="<?= SITEROOT ?>/styles/search_page_style.css" rel="stylesheet" />
         
-        <script type="module" src="js/search_page_script.js"></script>
+        <script type="module" src="<?= SITEROOT ?>/js/search_page_script.js"></script>
     </head>
 
     <body>
         <header>
             <h1>Search</h1>
-            <?php generateSearchForm($searchStr, '-header', true); ?>
+            <?php 
+    generateSearchForm($searchStr, $isDescSearch, $isExact, '-header', true); 
+            ?>
         </header>
 
         <main>
@@ -1164,23 +1084,22 @@ function generateSearchPage($searchStr,
             <aside>
                 <h3 id="search_options">Search options</h3>
                 <ul>
-                    <li>Enter <kbd>-blegh</kbd> to exclude any page that contains 
-                        "blegh"</li>
-                    <li>Enter <kbd>title:tuesday</kbd> to get pages with "tuesday" in their titles, 
-                        as opposed to just searching <kbd>tuesday</kbd> which gets you any page 
-                        with a "tuesday" tag or posted on a tuesday or whatever. Valid prefixes are:
+                    <li>Enter <kbd>-blegh</kbd> to exclude any page that contains "blegh"</li>
+                    <li>Enter <kbd>title:tuesday</kbd> to get pages with "tuesday" in their 
+                        titles, as opposed to just searching <kbd>tuesday</kbd> which gets you 
+                        any page with a "tuesday" tag or posted on a tuesday or whatever. 
+                        Valid prefixes are:
                         <ul>
                             <?php 
     foreach (SEARCHFIELDSPECS as $field) {
-                            ?> 
-                            <li><kbd><?= $field ?>:</kbd><?php
+        echo "<li><kbd>$field:</kbd>";
         switch ($field) {
             case 'cw': echo ' (as in Content Warning)'; break;
             case 'day': echo ' (searches both day of the month and day of the week)'; break;
         }
-                            ?></li>
-                            <?php   
-    }   ?>              </ul>
+        echo '</li>';
+    }                       ?>              
+                        </ul>
                     </li>
                     <li>You can use both at once, like <kbd>-cw:gore</kbd>
                         if you're okay with the word "gore" but you don't want to see 
@@ -1193,7 +1112,7 @@ function generateSearchPage($searchStr,
                 </ul>
             </aside>
             <?php 
-    generateSearchForm($searchStr, '-footer');
+    generateSearchForm($searchStr, $isDescSearch, $isExact, '-footer');
 
     generateSearchNav($numPages, $pageIndex);
 
@@ -1207,18 +1126,24 @@ function generateSearchPage($searchStr,
     return ob_get_flush();
 }
 
-function generateAllSearchPages($searchStr, $searchResultInfos) {
+function generateAllSearchPages($searchStr, 
+                                $isDescSearch, 
+                                $isExact, 
+                                $searchResultInfos) {
+
     $infosPerPage = array_chunk($searchResultInfos, RESULTSPERPAGE);
     $pageStrs = [];
     for ($pageIdx = 0; $pageIdx < \count($infosPerPage); $pageIdx++) {
-        ob_start();
+        ob_start(); // generateSearchPage will try to flush to ouput
         $pageStrs[] = generateSearchPage(   $searchStr, 
+                                            $isDescSearch, 
+                                            $isExact, 
                                             $infosPerPage[$pageIdx], 
                                             $pageIdx, 
                                             \count($infosPerPage)   );
         ob_clean(); // Don't need to output the result in any way
     }
-    return $pageStrs; // TODO: add file creation
+    return $pageStrs; 
 }
 
 ?>

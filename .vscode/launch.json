@@ -37,7 +37,7 @@
         {
             "name": "Launch current script in console",
             "type": "php", 
-            "env": { "XDEBUG_TRIGGER": "1" },
+            "env": { "XDEBUG_TRIGGER": "1", "DEBUG_SEARCH": "1" },
             "request": "launch",
             "program": "${file}",
             "cwd": "${fileDirname}",

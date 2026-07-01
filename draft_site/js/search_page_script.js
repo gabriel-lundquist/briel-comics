@@ -18,3 +18,22 @@ addImageDivToggleListeners(document,
                            "--nails-hide-display", 
                            "Hide thumbnails", 
                            "Show thumbnails");
+
+document.querySelectorAll(".toggle-nails")
+        .forEach((btn) => btn.textContent = "Show thumbnails");
+
+const params = new URLSearchParams(document.location.search);
+const searchText = decodeURIComponent(params.get("search").replace(/\+/g, " "));
+document.querySelectorAll(".search-comics")
+        .forEach((field) => field.setAttribute("value", searchText));
+
+if (params.get("desc") == "on") {
+        document.querySelectorAll("input[name=\"desc\"]")
+                .forEach((checkbox) => checkbox.setAttribute("checked", "CHECKED"));
+}
+
+if (params.get("exact") == "on") {
+        document.querySelectorAll("input[name=\"exact\"]")
+                .forEach((checkbox) => checkbox.setAttribute("checked", "CHECKED"));
+}
+
