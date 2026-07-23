@@ -1,17 +1,14 @@
 <?php
 
-// A note: this will not return a page in a search until it has a location in the database!
+// A note: this will not return a page in a search until it has a path in the database!
 // DONE!!! A thing to consider: session storage for pdoConnection, limiting searches
 
-require './php/dbManip.php';
-require './php/pageGen.php';
-
-const BLANKSEARCHLOCATION = Briel\FILEROOT . '/blank_search.html';
-const SEARCHCACHEFOLDER = Briel\FILEROOT . '/searchcache';
+require_once './php/dbManip.php';
+require_once './php/pageGen.php';
 
 // first, do maintenance on the GET request information
 $getParams = $_GET; // copy $_GET
-if (getenv('DEBUG_SEARCH')) { // an environment variable injected in my debug launch.json
+if (getenv('DEBUG_SEARCH')) { // an environment variable injected in my VSCode debug launch.json
     $getParams['search'] = 'description:woman';
     // $getParams['desc'] = 'on';
     // $getParams['exact'] = 'on';
@@ -32,7 +29,7 @@ ob_start();
 $pdoConnection = Briel\pdoConnect(); // check for a cookie? session storage?
 ob_end_clean();
 if ($pdoConnection === false) {
-    readfile(BLANKSEARCHLOCATION);
+    readfile(BLANKSEARCHPATH);
     exit("Oh fuck! MySQL connection failed...");
 }
 
@@ -42,7 +39,7 @@ $prevInTransaction = $pdoConnection->inTransaction();
 // first, check if this exact search (with the terms potentially shuffled)
 // has been done before
 $prevSearch = $pdoConnection->prepare(<<<STMT
-    SELECT location FROM searchcache 
+    SELECT path FROM searchcache 
     WHERE search = :search AND matchexactly = :exact AND searchimgdesc = :desc
         AND resultpageindex = :pageindex
     STMT);
@@ -58,8 +55,7 @@ $isOutputYet = false;
 
 if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
     // this search *has* been done before.
-    readfile($prevExists['location']);
-
+    readfile($prevExists['path']);
     $isOutputYet = true;
 
     // update the database for logging purposes
@@ -91,7 +87,7 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
 
     if ($prevSearchOtherIndex->fetch()[0] != 0) {
         // the search does exist! just not this page. output blank search page
-        readfile(BLANKSEARCHLOCATION);
+        readfile(BLANKSEARCHPATH);
         $isOutputYet = true;
 
         // and update that ofc
@@ -114,8 +110,6 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
                 $searchDesc = ($getParams['desc'] == Briel\CHECKBOXON)
         );
 
-
-        
         if (count($results) >= Briel\getNumServablePages($pdoConnection)) { 
             // this search has returned all pages!
             $prevSearchOtherIndex->execute(
@@ -142,12 +136,12 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
 
                 // obligatory check for whether the index doesn't exist
                 if (($allSearch = $prevSearch->fetch(PDO::FETCH_ASSOC)) === false) {
-                    readfile(BLANKSEARCHLOCATION);
+                    readfile(BLANKSEARCHPATH);
                     $isOutputYet = true;
 
                 // but if it does, output the appropriate blank search
                 } else {
-                    readfile($allSearch['location']);
+                    readfile($allSearch['path']);
                     $isOutputYet = true;
 
                     $pdoConnection->exec(
@@ -161,28 +155,10 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
             // search has never been done. we make the pages here
 
             // first, prep the info we'll need
-            $getTags = $pdoConnection->prepare(<<<STMT
-                    SELECT tag.name FROM 
-                        (SELECT pageid FROM page WHERE pageid = ?) AS t 
-                        INNER JOIN tagpage USING (pageid) 
-                        INNER JOIN tag USING (tagid);
-                    STMT);
-            
-            $getCWs = $pdoConnection->prepare(<<<STMT
-                    SELECT contwarning.name FROM 
-                        (SELECT pageid FROM page WHERE pageid = ?) AS t 
-                        INNER JOIN contwarningpage USING (pageid) 
-                        INNER JOIN contwarning USING (contwarningid);
-                    STMT);
-
-            $getThumbnail = $pdoConnection->prepare(<<<STMT
-                    SELECT * FROM file
-                        WHERE pageid = ? AND location REGEXP '_nail\.[:alnum:]+'
-                        ORDER BY filesize LIMIT 1;
-                    STMT);
-
-            $getThumbnailContingency = $pdoConnection->prepare(
-                    "SELECT * FROM file WHERE pageid = ? ORDER BY filesize LIMIT 1;");
+            $getTags = Briel\getTagsFromPageIDStmt($pdoConnection);
+            $getCWs = Briel\getCWsFromPageIDStmt($pdoConnection);
+            $getThumbnail = Briel\getThumbnailFromPageIDStmt($pdoConnection);
+            $getThumbnailContingency = Briel\getMinSizeFileFromPageIDStmt($pdoConnection);
             
             // next, get the info for each page (lists of tags, cws, thumbnails)
             $resultInfos = array_fill(0, count($results), null);
@@ -208,12 +184,11 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
                 );
             }
 
-            // generateAllSearchPages on the original string and the info array
+            // generateAllSearchPages on the sorted string and the info array
             $pageStrs = Briel\generateAllSearchPages(   
-                    $getParams['search'], 
-                    $getParams['desc'] == Briel\CHECKBOXON, 
-                    $getParams['exact'] == Briel\CHECKBOXON, 
-                    $resultInfos
+                    $searchcacheKey, 
+                    $resultInfos, 
+                    $getParams
             );
 
             if ($pageStrs) {
@@ -225,7 +200,7 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
                 $execParams = [];
                 $insertStmt = '';
                 for ($i = 1; $i <= count($pageStrs); $i++) {
-                    $filePath = SEARCHCACHEFOLDER 
+                    $filePath = SEARCHCACHEDIRPATH 
                                 . implode('_', ['/search', 
                                                 urlencode($searchcacheKey), 
                                                 $getParams['desc'], 
@@ -239,13 +214,13 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
 
                     // assemble the statement...
                     $insertStmt .= 
-                            " ROW(:search$i, :desc$i, :exact$i, :index$i, :location$i)";
+                            " ROW(:search$i, :desc$i, :exact$i, :index$i, :path$i)";
                     $execParams = [ ...$execParams, 
                                     ":search$i" => $searchcacheKey, 
                                     ":desc$i" => $getParams['desc'], 
                                     ":exact$i" => $getParams['exact'], 
                                     ":index$i" => $i, 
-                                    ":location$i" => $filePath  ];
+                                    ":path$i" => $filePath  ];
                 }
 
                 if ($insertStmt != '') {
@@ -256,13 +231,13 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
                                                         searchimgdesc, 
                                                         matchexactly, 
                                                         resultpageindex, 
-                                                        location    )
+                                                        path    )
                             VALUES $insertStmt;
                             STMT);
                     $insert->execute($execParams);
                 }
             } else { // ...unless we have generated no pages, then output blank
-                readfile(BLANKSEARCHLOCATION);
+                readfile(BLANKSEARCHPATH);
                 $isOutputYet = true;
             }
         }

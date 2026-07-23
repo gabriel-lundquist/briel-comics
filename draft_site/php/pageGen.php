@@ -13,44 +13,20 @@ const SEARCHCOMICSINPUTID = 'search-comics';
 
 const CHECKBOXON = 'on';
 
-class resultInfo {
-    public $resultRecord; 
-    public $prevLink;
-    public $nextLink; 
-    public $prevUpd8Link; 
-    public $nextUpd8Link;
-    public $fileRecords; 
-    public $tags; 
-    public $contWarns; 
-    public $windowWidthsOrder;
-    public $srcDefaultWidths;
-    public $date;
+const THUMBNAILWIDTH = '100px';
 
-    public function __construct($resultRecord, 
-                                $prevLink, 
-                                $prevUpd8Link, 
-                                $fileRecords, 
-                                $tags = [], 
-                                $contWarns = [], 
-                                $nextLink = null, 
-                                $nextUpd8Link = null,
-                                $windowWidthsOrder = [DISPLAYWIDTH1, DISPLAYWIDTH2],  
-                                $srcDefaultWidths = [1400, 800, 2000]) {
-    
-        $this->resultRecord = $resultRecord;
-        $this->prevLink = $prevLink;
-        $this->prevUpd8Link = $prevUpd8Link; 
-        $this->fileRecords = $fileRecords; 
-        $this->tags = $tags;
-        $this->contWarns = $contWarns;
-        $this->nextLink = $nextLink;
-        $this->nextUpd8Link = $nextUpd8Link;
-        $this->windowWidthsOrder = $windowWidthsOrder;
-        $this->srcDefaultWidths = $srcDefaultWidths;
-        $this->date = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', 
-                                                           $resultRecord['postdate']);
-    }
-}
+const DEFAULTWINDOWWIDTHS = [DISPLAYWIDTH1, DISPLAYWIDTH2];
+const DEFAULTIMAGEWIDTHSORDERED = [1400, 800, 2000];
+
+const DEFAULTPREVLINK = HOMEPATH;
+const DEFAULTNEXTLINK = COMMENTPATH;
+const DEFAULTPREVUPDATELINK = HOMEPATH;
+const DEFAULTNEXTUPDATELINK = HOMEPATH;
+const DEFAULTNEXTLINKS = [DEFAULTNEXTLINK, DEFAULTNEXTUPDATELINK];
+const DEFAULTPREVLINKS = [DEFAULTPREVLINK, DEFAULTPREVUPDATELINK];
+
+const HTMLDATEFORMAT = 'Y-m-d';
+const BRIELDATEFORMAT = 'Y, M. jS, l';
 
 class SearchResultInfo {
     public $searchRecord; 
@@ -60,11 +36,11 @@ class SearchResultInfo {
     public $pageContWarns;
     public $thumbnailRecord;
     public $isExact;
-    private $matchTags = null;
-    private $nonMatchTags = null;
-    private $matchContWarns = null;
-    private $nonMatchContWarns = null;
-    private $descMatches = null;
+    private $matchTags = NULL;
+    private $nonMatchTags = NULL;
+    private $matchContWarns = NULL;
+    private $nonMatchContWarns = NULL;
+    private $descMatches = NULL;
 
     public function __construct($searchRecord, 
                                 $tokenExecList, 
@@ -79,12 +55,12 @@ class SearchResultInfo {
         $this->thumbnailRecord = $thumbnailRecord;
         $this->isExact = $isExact;
         
-        $this->date = \DateTimeImmutable::createFromFormat( 'Y-m-d H:i:s', 
+        $this->date = \DateTimeImmutable::createFromFormat( SQLDATETIMEFORMAT, 
                                                             $searchRecord['postdate'] );
     }
 
     public function getMatchTags() {
-        if ($this->matchTags === null) {
+        if ($this->matchTags === NULL) {
             $this->matchTags = [];
             foreach (array_filter(  $this->searchRecord, 
                                     fn($k) => str_starts_with($k, 'tag'), 
@@ -98,7 +74,7 @@ class SearchResultInfo {
     }
 
     public function getNonMatchTags() {
-        if ($this->nonMatchTags === null) {
+        if ($this->nonMatchTags === NULL) {
             // Not sure why VS Code is marking this as unreachable...
             $this->nonMatchTags = array_diff($this->pageTags, $this->getMatchTags());
         }
@@ -107,7 +83,7 @@ class SearchResultInfo {
     }
 
     public function getMatchCWs() {
-        if ($this->matchContWarns === null) {
+        if ($this->matchContWarns === NULL) {
             $this->matchContWarns = [];
             foreach (array_filter($this->searchRecord, 
                                     fn($k) => str_starts_with($k, 'cw'), 
@@ -121,7 +97,7 @@ class SearchResultInfo {
     }
 
     public function getNonMatchCWs() {
-        if ($this->nonMatchContWarns === null) {
+        if ($this->nonMatchContWarns === NULL) {
             // Not sure why VS Code is marking this as unreachable...
             $this->nonMatchContWarns = array_diff(  $this->pageContWarns, 
                                                     $this->getMatchCWs()    );
@@ -135,7 +111,7 @@ class SearchResultInfo {
     }
 
     public function getDescMatches() {
-        if ($this->descMatches === null) {
+        if ($this->descMatches === NULL) {
             // Not sure why VS Code is marking this as unreachable...
             $this->descMatches = array_map(  
                     fn($str) => strtolower(substr($str, \strlen('desc'))), 
@@ -151,26 +127,84 @@ class SearchResultInfo {
 
 }
 
-class updateInfo {
+class UpdateInfo {
     public $updateRecord;
     public $date;
     public $tags;
     public $contWarns;
-    public $resultRecordsOrdered;
+    public $pageRecordsOrdered;
     public $thumbnailRecordsOrdered;
 
     public function __construct($updateRecord,
-                                $resultRecordsOrdered,
+                                $pageRecordsOrdered,
                                 $thumbnailRecordsOrdered,
                                 $tags = [],
                                 $contWarns = []) {
         $this->$updateRecord = $updateRecord;
-        $this->$date = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', 
+        $this->$date = \DateTimeImmutable::createFromFormat(SQLDATETIMEFORMAT, 
                                                             $updateRecord['postdate']);
-        $this->$tags = $tags;
+        $this->tags = $tags;
         $this->contWarns = $contWarns;
-        $this->$resultRecordsOrdered = $resultRecordsOrdered;
-        $this->$thumbnailRecordsOrdered = $thumbnailRecordsOrdered;
+        $this->pageRecordsOrdered = $pageRecordsOrdered;
+        $this->thumbnailRecordsOrdered = $thumbnailRecordsOrdered;
+    }
+}
+
+class PageInfo {
+    public $record; 
+    public $prevLink;
+    public $nextLink; 
+    public $prevUpd8Link;
+    public $nextUpd8Link; 
+    public $pageImgRecords;
+    public $thumbnailRecords;
+    public $tags;
+    public $contWarns;
+    public $spreadType;
+    public $srcWidthsOrdered;
+    public $stylePath = SITEROOT . '/styles/reading_page_style.css';
+    public $windowWidthsOrdered = DEFAULTWINDOWWIDTHS;
+    public function __construct($record, 
+                                $prevLink, 
+                                $nextLink,
+                                $prevUpd8Link, 
+                                $nextUpd8Link, 
+                                $pageImgRecords, 
+                                $thumbnailRecords, 
+                                $tags, 
+                                $contWarns, 
+                                $spreadType, 
+                                $srcWidthsOrdered = NULL, 
+                                $stylePath = NULL, 
+                                $windowWidthsOrdered = NULL) {
+        $this->record       = $record;
+        $this->prevLink     = $prevLink;
+        $this->nextLink     = $nextLink;
+        $this->prevUpd8Link = $prevUpd8Link;
+        $this->nextUpd8Link = $nextUpd8Link;
+        $this->pageImgRecords  = $pageImgRecords;
+        $this->thumbnailRecords = $thumbnailRecords;
+        $this->tags         = $tags;
+        $this->contWarns    = $contWarns;
+        $this->spreadType   = $spreadType;
+        $this->srcWidthsOrdered = 
+            $srcWidthsOrdered ?: // if $srcWidthsOrdered is falsy, alter based on spread type
+            match($this->spreadType) {
+                'double' => array_map(fn($n) => 2 * $n, DEFAULTIMAGEWIDTHSORDERED),
+                default => DEFAULTIMAGEWIDTHSORDERED
+            }
+        ; // window widths stay the same
+        if ($stylePath) $this->stylePath = $stylePath;
+        if ($windowWidthsOrdered) $this->windowWidthsOrdered = $windowWidthsOrdered;
+    }
+}
+
+class BlogInfo {
+    public string $text;
+    public \DateTimeImmutable $date;
+    public function __construct(string $text, string $dateStr) {
+        $this->text = $text;
+        $this->date = \DateTimeImmutable::createFromFormat(SQLDATETIMEFORMAT, $dateStr);
     }
 }
 
@@ -208,34 +242,8 @@ function assignNavLink($node,
     return false;
 }
 
-/**
- * Summary of Briel\generateComicpage
- * @param mixed $pageRecord
- * @param mixed $prevLink
- * @param mixed $nextLink
- * @param mixed $prevUpd8Link
- * @param mixed $nextUpd8Link
- * @param mixed $fileRecords
- * @param mixed $tags
- * @param mixed $contWarns
- * @param mixed $windowWidthsOrder
- * @param mixed $searchpageLocation
- * @param mixed $srcDefaultWidths
- * @param mixed $defaultStyleURL
- * @return bool|int
- */
-function generateComicpage( $pageRecord, 
-                            $prevLink, 
-                            $nextLink, 
-                            $prevUpd8Link, 
-                            $nextUpd8Link,
-                            $fileRecords, 
-                            $tags, 
-                            $contWarns, 
-                            $windowWidthsOrder = [DISPLAYWIDTH1, DISPLAYWIDTH2], 
-                            $searchpageLocation = './' . SEARCHFILENAME, 
-                            $srcDefaultWidths = [1400, 800, 2000], 
-                            $defaultStyleURL = SITEROOT . "/styles/reading_page_style.css"   ) {
+function generateComicpage(PageInfo $page) {
+    $searchPath = SEARCHPATH;
     ob_start(); 
 ?>
 <!doctype html>
@@ -250,13 +258,13 @@ function generateComicpage( $pageRecord,
         <meta name="author" content="Breel">
         <meta name="description" content="A page displaying a comic.">
         
-        <title><?= $pageRecord['title'] ?> | Breel Comix</title>
+        <title><?= $page->record['title'] ?> | Breel Comix</title>
         <link rel="icon" href="<?= SITEROOT ?>/images/<?= SITEICONNAME ?>" type="image/x-icon">
 
         <link href="<?= SITEROOT ?>/styles/briel_font-faces.css" rel="stylesheet">
-        <link href="<?= $pageRecord['stylelocation'] == 'NULL' 
-                            ? $defaultStyleURL
-                            : $pageRecord['stylelocation'] ?>" 
+        <link href="<?= $page->record['stylepath'] === NULL 
+                            ? $page->stylePath
+                            : $page->record['stylepath'] ?>" 
               rel="stylesheet" 
               id="reading_stylesheet">
 
@@ -265,47 +273,49 @@ function generateComicpage( $pageRecord,
 
     <body>
 
-        <a href="<?= $prevLink ?>" class="nav-button prev-button" title="Previous"></a>
+        <a href="<?= $page->prevLink ?>" class="nav-button prev-button" title="Previous"></a>
 
         <div class="page-display">
             <main> 
                 <?php 
-    generateComicDisplayElements(   $fileRecords, 
-                                    $prevLink, 
-                                    $nextLink, 
-                                    $srcDefaultWidths, 
-                                    $windowWidthsOrder  ); 
+    generateComicDisplayElements(   $page->pageImgRecords, 
+                                    $page->prevLink, 
+                                    $page->nextLink, 
+                                    $page->srcWidthsOrdered, 
+                                    $page->windowWidthsOrdered  ); 
                 ?>
                 <nav>
                     <p class="nav-line">
-                        <a href="<?= $prevLink ?>" 
+                        <a href="<?= $page->prevLink ?>" 
                            class="nav-button prev-button">Previous</a>
-                        <a href="<?= $nextLink ?>" 
+                        <a href="<?= $page->nextLink ?>" 
                            class="nav-button next-button">Next</a>
                     </p>
                     <p class="nav-line">
-                        <a href="<?= $prevUpd8Link ?>" 
+                        <a href="<?= $page->prevUpd8Link ?>" 
                            class="nav-button prev-upd8-button">Skip back</a>
                         <a href="<?= SITEROOT ?>/home_page.html" 
                            class="nav-button home-button">Home</a>
-                        <a href="<?= $nextUpd8Link ?>" 
-                           class="nav-button next-upd8-button">Skip forth</a>
+                        <a href="<?= $page->nextUpd8Link ?>" 
+                           class="nav-button next-upd8-button"><?=
+    $page->nextUpd8Link AND !\in_array($page->nextUpd8Link, [COMMENTPATH, HOMEPATH]) ?
+            "Skip forth" : "More" ?></a>
                     </p>
                     <p class="nav-line">
-                        <a href="<?= SITEROOT ?>/archive_page.html" 
+                        <a href="<?= SITEROOT ?>/archive/archive_p1.html" 
                            class="nav-button archive-button">Archive</a>
                     </p>
                 </nav>
                 <?php 
-    generateReadingAccessoryElements(   $pageRecord, 
-                                        $tags, 
-                                        $contWarns, 
-                                        $searchpageLocation ); 
+    generateReadingAccessoryElements(   $page->record, 
+                                        $page->tags, 
+                                        $page->contWarns, 
+                                        $searchPath ); 
                 ?>
             </main>
 
             <footer>
-                <?php require 'copyrightElement.php'; ?>
+                <?php include 'copyrightElement.php'; ?>
             </footer>
 
         </div>  
@@ -316,37 +326,25 @@ function generateComicpage( $pageRecord,
 </html>
 
 <?php
-    return file_put_contents($pageRecord['location'], ob_get_flush());
+    return ob_get_flush();
 }
 
-/**
- * Summary of Briel\generateReadingStyle
- * @param mixed $bgColor
- * @param mixed $textColor
- * @param mixed $hiliteColor
- * @param mixed $visitedColor
- * @param mixed $comicDefaultWidth
- * @param mixed $pageSectionShrinkFactor
- * @param mixed $fileWidthsOrder
- * @param mixed $windowWidthsOrder
- * @param mixed $gradient
- * @param mixed $bgImageURL
- * @param mixed $stretchBGImg
- * @param mixed $comicTopMargin
- * @return bool|int
- */
 function generateReadingStyle(  $bgColor, 
                                 $textColor, 
                                 $hiliteColor, 
                                 $visitedColor,
                                 $comicDefaultWidth = 800,
-                                $fileWidthsOrder = [800, 1400, 2000], 
-                                $windowWidthsOrder = [DISPLAYWIDTH1, DISPLAYWIDTH2],
+                                $fileWidths = DEFAULTIMAGEWIDTHSORDERED, 
+                                $windowWidths = DEFAULTWINDOWWIDTHS,
                                 $pageSectionShrinkFactor = 0.95,
                                 $comicTopMargin = 8,
                                 $gradient = NULL, 
                                 $bgImageURL = NULL, 
                                 $stretchBGImg = false   ) {
+    sort($fileWidths);
+    $fileWidthsOrdered = $fileWidths;
+    sort($windowWidths);
+    $windowWidthsOrdered = $windowWidths;
     ob_start(); 
 ?>
 html {
@@ -377,15 +375,15 @@ body {
 /* These don't affect image sizes, 
     but they do affect the text section sizes */
 <?php
-    for ($i = 0; $i < \count($windowWidthsOrder); $i++) {
+    for ($i = 0; $i < \count($windowWidthsOrdered); $i++) {
 ?>
-@media screen and (min-width: <?= $windowWidthsOrder[$i] + 1 ?>px) {
+@media screen and (min-width: <?= $windowWidthsOrdered[$i] + 1 ?>px) {
     html {
         font-size: xx-large;
     }
 
     body {
-        --comic-page-width: <?= $fileWidthsOrder[$i + 1] ?>px;
+        --comic-page-width: <?= $fileWidthsOrdered[$i + 1] ?>px;
     }
 }
 <?php 
@@ -409,7 +407,7 @@ body > a.nav-button {
     max-height: 100%;
 }
 
-@media screen and (max-width: <?= $fileWidthsOrder[0] ?>px) {
+@media screen and (max-width: <?= $fileWidthsOrdered[0] ?>px) {
     body {
         --shrink-factor: 1;
     }
@@ -539,24 +537,28 @@ a.text_desc_heading {
     return ob_get_flush();
 }
 
-function generateComicDisplayElements($fileRecords, 
+function generateComicDisplayElements(  $pageImgRecords, 
                                         $prevLink, 
                                         $nextLink,
                                         $srcDefaultWidths = [1400, 800, 2000],
-                                        $windowWidthsOrder = [DISPLAYWIDTH1, 
-                                                              DISPLAYWIDTH2]) {
-    $filesWidthOrder = array_combine(array_column($fileRecords, 'width'), 
-                                 $fileRecords);
+                                        $windowWidthsOrder = [  DISPLAYWIDTH1, 
+                                                                DISPLAYWIDTH2   ]   ) {
+    // create an array of files ordered by width, keyed to width
+    $filesWidthOrder = array_combine(array_column($pageImgRecords, 'width'), 
+                                 $pageImgRecords);
     ksort($filesWidthOrder);
 
-    $srcWidth = null;
+    // attempts to find an image with a width matching the defaults above as the default
+    $srcWidth = NULL;
     foreach ($srcDefaultWidths as $width) {
         if (\array_key_exists($width, $filesWidthOrder)) {
             $srcWidth = $width;
             break;
         }
     }
-    if ($srcWidth === null) {
+    // if it can't find such an image, it just takes the smallest file provided
+    // TODO: restrict this array to only files with a 'page' purpose
+    if ($srcWidth === NULL) {
         $srcWidth = \array_key_first($filesWidthOrder);
     }
 
@@ -590,23 +592,20 @@ function generateComicDisplayElements($fileRecords,
     class="comic-page"
     srcset="<?php
     foreach ($filesWidthOrder as $file) {
-        echo $file['location'] . ' ' . $file['width'] . "w\n";
+        echo $file['path'] . ' ' . $file['width'] . "w\n";
     }
+        ?>"
+    sizes="(max-width: <?= array_first($filesWidthOrder)['width'] ?>px) 100vw, <?php 
     reset($filesWidthOrder);
-
-    ?>"
-    sizes="(max-width: <?= current($filesWidthOrder)['width'] ?>px) 100vw, 
-    <?php 
-    // Undefined behavior if `count(filesWidthOrder) != count($windowWidthsOrder) + 1`
+    // Undefined behavior if `count(filesWidthOrder) < count($windowWidthsOrder) + 1`
     foreach ($windowWidthsOrder as $maxWidth) {
         echo "(max-width: {$maxWidth}px) "
                 . next($filesWidthOrder)['width'] 
                 . "px,\n";
     }
-
-    ?>
-    <?= array_last($filesWidthOrder)['width'] ?>px"   
-    src="<?= $filesWidthOrder[$srcWidth]['location'] ?>"
+    echo array_last($filesWidthOrder)['width'];
+            ?>px"   
+    src="<?= $filesWidthOrder[$srcWidth]['path'] ?>"
     alt="<?= $filesWidthOrder[$srcWidth]['alttext'] ?>"
     usemap="#nav-on-comic"
     id="single_page"
@@ -614,11 +613,19 @@ function generateComicDisplayElements($fileRecords,
     return ob_get_flush();
 }
 
+function tagLink($tag, $searchPath = SEARCHPATH) {
+    return "<a href=\"$searchPath?search=" . urlencode("tag:$tag") . "\">$tag</a>";
+}
+
+function cwLink($cw, $searchPath = SEARCHPATH) {
+    return "<a href=\"$searchPath?search=" . urlencode("cw:$cw") . "\">$cw</a>";
+}
+
 function generateReadingAccessoryElements(  
         $pageRecord, 
         $tags, 
         $contWarns, 
-        $searchpageLocation = SITEROOT . '/' . SEARCHFILENAME
+        $searchPath = SEARCHPATH
 ) {
     ob_start();
 ?>
@@ -627,7 +634,7 @@ function generateReadingAccessoryElements(
     <p id="tags-para">
     <?php
     foreach ($tags as $tag) {
-        echo "<a href=$searchpageLocation?search=". urlencode("tag:$tag") . ">$tag</a>\n";
+        echo tagLink($tag) . "\n";
     }
     ?>
     </p>
@@ -638,7 +645,7 @@ function generateReadingAccessoryElements(
     <p id="cws-para">
     <?php
     foreach ($contWarns as $cw) {
-        echo "<a href=$searchpageLocation?search=". urlencode("cw:$cw") . ">$cw</a>\n";
+        echo cwLink($cw) . "\n";
     }
     ?>
     </p>
@@ -655,20 +662,21 @@ function generateReadingAccessoryElements(
     return ob_get_flush();
 }
 
-function generateHomepage(  $blogText, 
-                            $blogDateElement, 
-                            $pageRecord,        
-                            $fileRecords, 
-                            $prevLink, 
-                            $prevUpd8Link, 
-                            $tags, 
-                            $contWarns,
-                            $searchpageLocation = './' . SEARCHFILENAME, 
-                            $srcDefaultWidths = [1400, 800, 2000],
-                            $windowWidthsOrder = [DISPLAYWIDTH1, DISPLAYWIDTH2], 
-                            $styleLocation = SITEROOT . '/styles/reading_page_style.css',
-                            $nextLink = null, 
-                            $nextUpd8Link = null    ) {
+function generateBlogEntryElements(BlogInfo $blog) {
+    ob_start(); ?>
+    <p><?= $blog->text ?></p>
+    <p><time date="<?= $blog->date->format(HTMLDATEFORMAT) ?>">
+        <?= $blog->date->format(BRIELDATEFORMAT) ?></time>
+    </p>
+<?php
+    return ob_get_flush();
+}
+
+function generateHomepage(  BlogInfo $blogInfo, 
+                            PageInfo $pageInfo, 
+                            string $searchPath = SEARCHPATH, 
+                            ?string $stylePath = NULL, 
+                            string $scriptPath = SITEROOT . '/js/reading_page_script.js'   ) {
     ob_start();
 ?>
 <!doctype html>
@@ -683,17 +691,24 @@ function generateHomepage(  $blogText,
         <meta name="author" content="Breel">
         <meta name="description" content="A home page for a comics website.">
         
-        <title>Breel Comix</title>
+        <title><?= randomName() ?> web log</title>
         <link href="<?= SITEROOT ?>/images/<?= SITEICONNAME ?>" rel="icon" type="image/x-icon">
 
         <link href="<?= SITEROOT ?>/styles/<?= FONTFACESCSSNAME ?>" rel="stylesheet">
-        <link href="<?= $styleLocation ?>" rel="stylesheet" id="home_stylesheet"> 
+        <link href="<?= $pageInfo->stylePath ?>" rel="stylesheet" id="reading_stylesheet">
+        <?php // Tries to apply page's reading style, but the homepage's style takes priority
+        if ($stylePath) { ?>
+            <link   href="<?= $stylePath ?>" 
+                    rel="stylesheet" 
+                    id="home_stylesheet"> 
+        <?php
+        }   ?>
 
-        <script type="module" src="./js/reading_page_script.js"></script>
+        <script type="module" src="<?= $scriptPath ?>"></script>
     </head>
 
     <body>
-        <a href="<?= $prevLink ?>" class="nav-button prev-button" title="Previous"></a>
+        <a href="<?= $pageInfo->prevLink ?>" class="nav-button prev-button" title="Previous"></a>
 
         <div class="page-display">         
             <header>
@@ -711,9 +726,9 @@ function generateHomepage(  $blogText,
     }   
                 ?>
                 <img
-                    srcset="./images/<?= $bannerFileStem ?>_800w.png 800w, 
-                            ./images/<?= $bannerFileStem ?>_1400w.png 1400w"
-                    src="./images/<?= $bannerFileStem ?>_800w.png"
+                    srcset="<?= SITEROOT ?>/images/<?= $bannerFileStem ?>_800w.png 800w, 
+                            <?= SITEROOT ?>/images/<?= $bannerFileStem ?>_1400w.png 1400w"
+                    src="<?= SITEROOT ?>/images/<?= $bannerFileStem ?>_800w.png"
                     sizes="(max-width: 800px) 100vw, 
                            (max-width: 1920) 800px, 
                            1400px"
@@ -723,61 +738,58 @@ function generateHomepage(  $blogText,
 
             <main> 
                 <?php 
-    generateComicDisplayElements($fileRecords, 
-                                    $prevLink, 
-                                    $nextLink, 
-                                    $srcDefaultWidths, 
-                                    $windowWidthsOrder); 
+    generateComicDisplayElements(   $pageInfo->pageImgRecords, 
+                                    $pageInfo->prevLink, 
+                                    $pageInfo->nextLink, 
+                                    $pageInfo->srcWidthsOrdered, 
+                                    $pageInfo->windowWidthsOrdered  ); 
                 ?>
                 <nav>
                     <p class="nav-line">
-                        <a href="<?= $prevLink ?>" 
+                        <a href="<?= $pageInfo->prevLink ?>" 
                            class="nav-button prev-button">Previous</a>
                         <?php
-    if ($nextLink) {
+    if ($pageInfo->nextLink AND !\in_array($pageInfo->nextLink, DEFAULTNEXTLINKS)) {
                         ?>
-                        <a href="<?= $nextLink ?>" 
+                        <a href="<?= $pageInfo->nextLink ?>" 
                            class="nav-button next-button">Next</a>
                         <?php 
     }
                         ?>
                     </p>
                     <p class="nav-line">
-                        <a href="<?= $prevUpd8Link ?>" 
+                        <a href="<?= $pageInfo->prevUpd8Link ?>" 
                            class="nav-button prev-upd8-button">Skip back</a>
                         <?php
-    if ($nextUpd8Link) {
+    if ($pageInfo->nextUpd8Link AND !\in_array($pageInfo->nextUpd8Link, DEFAULTNEXTLINKS)) {
                         ?>
-                        <a href="<?= $nextUpd8Link ?>" 
+                        <a href="<?= $pageInfo->nextUpd8Link ?>" 
                            class="nav-button next-upd8-button">Next</a>
                         <?php 
     }
                         ?>
                     </p>
                     <p class="nav-line">
-                        <a href="<?= SITEROOT ?>archive_page.html" 
+                        <a href="<?= SITEROOT ?>/archive/archive_p1.html" 
                            class="nav-button archive-button">Archive</a>
                     </p>
                 </nav>
 
                 <section id="blog_section">
                     <h2>Web log</h2>
-                    <p><?= $blogText ?></p>
-                    <p><?= $blogDateElement ?></p>
-                    <p><a href="<?= SITEROOT ?>/weblog_archive.html">Web log archive</a></p>
+                    <?php generateBlogEntryElements($blogInfo); ?>
                 </section>
+
                 <?php 
-    generateReadingAccessoryElements($pageRecord, 
-                                        $tags, 
-                                        $contWarns, 
-                                        $searchpageLocation); 
+    generateReadingAccessoryElements(   $pageInfo->record, 
+                                        $pageInfo->tags, 
+                                        $pageInfo->contWarns, 
+                                        $searchPath ); 
                 ?>
             </main>
 
             <footer>
-                <?php
-    require 'copyrightElement.php';
-                ?>
+                <?php   include 'copyrightElement.php';     ?>
             </footer>
 
         </div>  
@@ -796,71 +808,92 @@ function generateHomepage(  $blogText,
     return ob_get_flush();
 }
 
-function formatSearchNavLink($navIndex) {
+/**
+ * Summary of Briel\formatSearchNavLink
+ * @param int $navIndex
+ * @param array $getParams
+ * @return string
+ */
+function formatSearchNavLink(int $navIndex, array $getParams) {
     return  '<a href="' 
-            . SITEROOT . '/' . SEARCHFILENAME
-            // if `$_GET(SEARCHPAGEINDEXKEY)` exists, 
+            . SEARCHPATH
+            // if `$getParams(SEARCHPAGEINDEXKEY)` exists, 
             // this will change its value to `$navIndex`
-            . formatGETParameters([...$_GET, SEARCHPAGEINDEXKEY => $navIndex]) 
+            . formatGETParameters([...$getParams, SEARCHPAGEINDEXKEY => $navIndex]) 
             . '">' . $navIndex . '</a> ... ';
 }
 
+function randomName() {
+    $name = match(rand(0,3)) { 
+        0 => 'Briel', 
+        1 => 'Breel', 
+        2 => ' b r i e l ', 
+        3 => 'BREEL'
+    };
+
+    $descriptor = match(rand(0,3)) { 
+        0 => 'Comics', 
+        1 => 'Comix', 
+        2 => ' c o m i c s ', 
+        3 => 'COMIX'
+    };
+
+    return "$name $descriptor";
+}
+
 /**
- * Summary of Briel\generateSearchNav
- * @param mixed $resultPageCount
- * @param mixed $resultPageIdx The 1-indexed page number of the results
+ * Summary of Briel\generateNav
+ * Does flush element to output. Start a buffer to prevent this.
+ * @param int $totalPageCount
+ * @param int $pageOneIndex 1-indexed page index
+ * @param array $allLinks
  * @return bool|string
  */
-function generateSearchNav($resultPageCount, $resultPageIdx) {
-    if ($resultPageCount <= 1) { 
-        //only even have nav bar if we have more than one page
-        return '';
-    }
-
-    $currentIdx = $resultPageIdx - 1;
-    $linkPrefix = SITEROOT . '/' . SEARCHFILENAME;
-
+function generateNav(   int $totalPageCount, 
+                        int $pageOneIndex, 
+                        array $allLinks   ) {
+    $pageZeroIndex = $pageOneIndex - 1;
     ob_start();
 ?>
 <nav>
     <h3>Archive navigation</h3>
     <?php
-    if ($currentIdx > 2) {
-        echo    '<a href="' 
-                . $linkPrefix
-                // if `$_GET(SEARCHPAGEINDEXKEY)` exists, this new array will have a 
-                // 0 there instead
-                . formatGETParameters([...$_GET, SEARCHPAGEINDEXKEY => 0]) 
-                . '">Latest</a> ... ';
+    if ($pageOneIndex > 2) {
+        echo "<a href=\"" . array_first($allLinks) . "\">Latest</a> ... ";
     }
 
-    if ($currentIdx > 5) {
-        echo formatSearchNavLink($currentIdx - 5) . ' ... ';
+    if ($pageOneIndex > 5 AND \array_key_exists($pageOneIndex - 5, $allLinks)) {
+        echo "<a href=\"{$allLinks[$pageOneIndex - 5]}\">" . ($pageOneIndex - 5) . "</a> ... ";
     }
 
     foreach ([-2, -1] as $offset) {
-        if ($currentIdx > -$offset) {
-            echo formatSearchNavLink($currentIdx + $offset) . ' ';
+        if ($pageOneIndex > -$offset AND \array_key_exists($pageOneIndex + $offset, $allLinks)) {
+            echo "<a href=\"{$allLinks[$pageOneIndex + $offset]}\">" 
+                . ($pageOneIndex + $offset) 
+                . "</a> ";
         }
     }
 
-    echo $currentIdx; // no link, since we're already here
+    echo $pageOneIndex; // no link, since we're already here
     
     foreach ([1, 2] as $offset) {
-        if ($resultPageCount - $currentIdx > $offset) {
-            echo ' ' . formatSearchNavLink($currentIdx + $offset);
+        if (    $totalPageCount - $pageOneIndex >= $offset 
+                AND \array_key_exists($pageOneIndex + $offset, $allLinks)   ) {
+            echo " <a href=\"{$allLinks[$pageOneIndex + $offset]}\">" 
+                . ($pageOneIndex + $offset) 
+                . "</a>";
         }
     }
 
-    if ($resultPageCount - $currentIdx > 5) {
-        echo ' ... ' . formatSearchNavLink($currentIdx + 5);
+    if (    $totalPageCount - $pageOneIndex >= 5 
+            AND \array_key_exists($pageOneIndex + 5, $allLinks) ) {
+        echo " ... <a href=\"{$allLinks[$pageOneIndex + 5]}\">" 
+            . ($pageOneIndex + 5) 
+            . "</a>";
     }
 
-    if ($resultPageCount - $currentIdx > 2) {
-        echo    ' ... <a href="' 
-                . $linkPrefix
-                . formatGETParameters([...$_GET, SEARCHPAGEINDEXKEY => $resultPageCount]) 
-                . '">Earliest</a>';
+    if ($totalPageCount - $pageOneIndex >= 2) {
+        echo " ... <a href=\"" . array_last($allLinks) . "\">Earliest</a>";
     }
     ?>
 </nav>
@@ -868,16 +901,72 @@ function generateSearchNav($resultPageCount, $resultPageIdx) {
     return ob_get_flush();
 }
 
-function generateSearchEntry($result) {
+/**
+ * Summary of Briel\generateSearchNav
+ * Does flush element to output. Start a buffer to prevent this.
+ * @param int $resultPageCount
+ * @param int $resultPageIdx
+ * @param array $getParams
+ * @param array $allResultFilePaths
+ * @return bool|string
+ */
+function generateSearchNav( int $resultPageCount, 
+                            int $resultPageIdx,
+                            array $getParams, 
+                            array $allResultFilePaths = []) {
+    if ($resultPageCount <= 1) { 
+        //only even have nav bar if we have more than one page
+        return '';
+    }
+
+    $links = $allResultFilePaths;
+    $currentIdx = $resultPageIdx - 1;
+
+    if (!$allResultFilePaths OR $resultPageCount != \count($allResultFilePaths)) {
+        $linkPrefix = SEARCHPATH;
+        $linkKeys = [   'latest', 
+                        ...array_map(   fn($s) => $resultPageIdx + $s, 
+                                        [-5, -2, -1, 1, 2, 5]   ), 
+                        'earliest'  ];
+        $links = array_fill_keys($linkKeys, '');
+
+        // if `$getParams(SEARCHPAGEINDEXKEY)` exists, this new array will have a 
+        // 1 there instead
+        // remember: 1-indexed
+        $links['latest'] = $linkPrefix . formatGETParameters(
+                [...$getParams, SEARCHPAGEINDEXKEY => 1]
+        );
+
+        foreach (array_diff($linkKeys, ['latest', 'earliest']) as $index) {
+            $links[$index] = $linkPrefix . formatGETParameters(
+                    [...$getParams, SEARCHPAGEINDEXKEY => $index]
+            );
+        }
+        // remember: 1-indexed
+        $links['earliest'] = $linkPrefix . formatGETParameters(
+                [...$getParams, SEARCHPAGEINDEXKEY => $resultPageCount]
+        );
+    }
+    
+    return generateNav($resultPageCount, $resultPageIdx, $links);
+}
+
+/**
+ * Summary of Briel\generateSearchEntry
+ * Does flush to output. Start a buffer to prevent this.
+ * @param SearchResultInfo $result
+ * @return bool|string
+ */
+function generateSearchEntry(SearchResultInfo $result) {
     ob_start();
 ?>
 <article class="search-entry">
     <div class="thumbnails-div">
-        <a href="<?= $result->searchRecord['location'] ?>" 
+        <a href="<?= $result->searchRecord['path'] ?>" 
            class="page-link">
             <img
                 class="thumbnail"
-                attr-src="<?= $result->thumbnailRecord['location'] ?>"
+                attr-src="<?= $result->thumbnailRecord['path'] ?>"
                 src=""
                 alt="<?= $result->thumbnailRecord['alttext'] ?>"
                 width="<?= $result->thumbnailRecord['width'] ?>px"
@@ -887,12 +976,12 @@ function generateSearchEntry($result) {
         </a> 
     </div>
     <div class="detail-div">
-        <h3><a href="<?= $result->searchRecord['location'] ?>" class="page-link"><?= 
+        <h3><a href="<?= $result->searchRecord['path'] ?>" class="page-link"><?= 
         emphasizeIf($result->searchRecord['titlematch'], 
                     $result->searchRecord['title']  ) 
         ?></a></h3>
         <p> <h4>Date:</h4>
-            <time date="<?= $result->date->format('Y-m-d') ?>"><?=
+            <time date="<?= $result->date->format(HTMLDATEFORMAT) ?>"><?=
             implode(' ', 
                     [   emphasizeIf($result->searchRecord['yearmatch'], 
                                     $result->date->format('Y,')), 
@@ -915,7 +1004,7 @@ function generateSearchEntry($result) {
             <?= 
         implode(', ', 
                 array_map(  fn($tag, $tagText) => 
-                                '<a href="' . SITEROOT . '/' . SEARCHFILENAME 
+                                '<a href="' . SEARCHPATH 
                                 . "?search=" . urlencode("tag:$tag") . "\">$tagText</a>", 
 
                             [   ...$result->getMatchTags(), 
@@ -937,7 +1026,7 @@ function generateSearchEntry($result) {
             <?= 
         implode(', ', 
                 array_map(  fn($cw, $cwText) => 
-                                '<a href="' . SITEROOT . '/' . SEARCHFILENAME 
+                                '<a href="' . SEARCHPATH 
                                 . "?search=" . urlencode("cw:$cw") . "\">$cwText</a>", 
 
                             [   ...$result->getMatchCWs(), 
@@ -981,14 +1070,24 @@ function generateSearchEntry($result) {
     return ob_get_flush();
 }
 
-function generateSearchForm($searchStr, 
-                            $isDescSearch, 
-                            $isExact, 
-                            $idSuffix, 
-                            $includeOptionsLink = false) {
+/**
+ * Summary of Briel\generateSearchForm
+ * Does flush page to output. Start a buffer to prevent this.
+ * @param string $idSuffix
+ * @param string $searchStr
+ * @param bool $isDescSearch
+ * @param bool $isExact
+ * @param bool $includeOptionsLink
+ * @return bool|string
+ */
+function generateSearchForm(string $idSuffix = '', 
+                            string $searchStr = '', 
+                            bool $isDescSearch = false, 
+                            bool $isExact = false, 
+                            bool $includeOptionsLink = false) {
     $inputID = "search$idSuffix";
     ob_start(); ?>
-<form role="search" action="<?= SITEROOT . '/' . SEARCHFILENAME ?>" method="get">
+<form role="search" action="<?= SEARCHPATH ?>" method="get">
     <p>
         <input 
             type="search" 
@@ -1005,7 +1104,7 @@ function generateSearchForm($searchStr,
         /> 
         <button type="submit">Search</button>
     </p>
-    <label for="<?= $inputID ?>">
+    <label for="<?= $inputID ?>" class="search-label">
         Searches tags, dates, titles, and page numbers by default. 
     <?php if ($includeOptionsLink) { ?>
         See <a href="#search_options">search options</a>.
@@ -1034,12 +1133,22 @@ function generateSearchForm($searchStr,
     return ob_get_flush();
 }
 
-function generateSearchPage($searchStr, 
-                            $isDescSearch, 
-                            $isExact, 
-                            $searchResultInfos, 
-                            $pageIndex = 1,
-                            $numPages = 1) {
+/**
+ * Summary of Briel\generateSearchPage
+ * Does flush page to output. Start a buffer to prevent this.
+ * @param string $searchStr
+ * @param array $searchResultInfos
+ * @param array $getParams
+ * @param int $pageIndex
+ * @param mixed $allFileNames
+ * @return bool|string
+ */
+function generateSearchPage(string $searchStr, 
+                            array $searchResultInfos, 
+                            array $getParams, 
+                            int $pageIndex = 1,
+                            ?array $allFileNames = NULL) {
+    
     ob_start();
 ?>
 <!doctype html>
@@ -1051,7 +1160,7 @@ function generateSearchPage($searchStr,
         <meta name="author" content="Breel">
         <meta name="description" content="Breel comics search page.">
         
-        <title>Search | Breel Comix</title>
+        <title>Search | <?= randomName() ?></title>
         <link rel="icon" href="<?= SITEROOT ?>/images/<?= SITEICONNAME ?>" type="image/x-icon" />
 
         <link href="<?= SITEROOT ?>/styles/defaults.css" rel="stylesheet" />
@@ -1066,7 +1175,11 @@ function generateSearchPage($searchStr,
         <header>
             <h1>Search</h1>
             <?php 
-    generateSearchForm($searchStr, $isDescSearch, $isExact, '-header', true); 
+    generateSearchForm( '-header', 
+                        $searchStr, 
+                        $getParams['desc'] == CHECKBOXON, 
+                        $getParams['exact'] == CHECKBOXON, 
+                        true); 
             ?>
         </header>
 
@@ -1112,11 +1225,14 @@ function generateSearchPage($searchStr,
                 </ul>
             </aside>
             <?php 
-    generateSearchForm($searchStr, $isDescSearch, $isExact, '-footer');
+    generateSearchForm( '-footer', 
+                        $searchStr, 
+                        $getParams['desc'] == CHECKBOXON, 
+                        $getParams['exact'] == CHECKBOXON   );
 
-    generateSearchNav($numPages, $pageIndex);
+    generateSearchNav(\count($allFileNames), $pageIndex, $getParams, $allFileNames);
 
-    require 'copyrightElement.php'; 
+    include 'copyrightElement.php'; 
             ?>
         </footer>
     </body>
@@ -1126,23 +1242,203 @@ function generateSearchPage($searchStr,
     return ob_get_flush();
 }
 
-function generateAllSearchPages($searchStr, 
-                                $isDescSearch, 
-                                $isExact, 
-                                $searchResultInfos) {
-
-    $infosPerPage = array_chunk($searchResultInfos, RESULTSPERPAGE);
-    $pageStrs = [];
-    for ($pageIdx = 0; $pageIdx < \count($infosPerPage); $pageIdx++) {
-        ob_start(); // generateSearchPage will try to flush to ouput
-        $pageStrs[] = generateSearchPage(   $searchStr, 
-                                            $isDescSearch, 
-                                            $isExact, 
-                                            $infosPerPage[$pageIdx], 
-                                            $pageIdx, 
-                                            \count($infosPerPage)   );
-        ob_clean(); // Don't need to output the result in any way
+/**
+ * Summary of Briel\generateAllSearchPages
+ * Does *not* output anything. Starts, cleans, and ends a buffer.
+ * @param string $searchStr
+ * @param array $searchResultInfos
+ * @param array $getParams
+ * @param mixed $fileNames
+ * @return array<bool|string>
+ */
+function generateAllSearchPages(string $searchStr, 
+                                array $searchResultInfos, 
+                                array $getParams, 
+                                &$fileNames = []) {
+    $infosOnPage = array_chunk($searchResultInfos, RESULTSPERPAGE);
+    $pageStrs = array_fill(0, \count($infosOnPage), '');
+    if ($fileNames == []) {
+        $fileNameStem = implode('_', [  'search', 
+                                        $getParams['search'], 
+                                        $getParams['desc'], 
+                                        $getParams['exact']   ]);
+        $fileNames = array_map( fn($i) => "{$fileNameStem}_p{$i}.html", 
+                                range(1, \count($infosOnPage) + 1) );
     }
+
+    ob_start(); // generateSearchPage will try to flush to output
+    for ($pageIdx = 0; $pageIdx < \count($infosOnPage); $pageIdx++) {
+        $pageStrs[$pageIdx] = generateSearchPage(   $searchStr, 
+                                                    $infosOnPage[$pageIdx], 
+                                                    $getParams, 
+                                                    $pageIdx, 
+                                                    $fileNames   );
+    }
+    ob_end_clean(); // Don't need to output the result in any way
+
+    return $pageStrs; 
+}
+
+function generateArchiveEntry($updateInfo) {
+    ob_start();
+?>
+<article class="archive-entry">
+    <div class="detail-div">
+        <h3><a href="<?= $updateInfo->pageRecordsOrdered[0]['path'] ?>" 
+            class="page-link"><?= $updateInfo->updateRecord['title'] ?></a></h3>
+        <p><?= $updateInfo->updateRecord['updatedesc'] ?></p>
+        <?php 
+    if (\count($updateInfo->pageRecordsOrdered) > 1) {
+        ?>
+        <p class="pages-list"><h4>Pages:</h4> 
+            <?php 
+        for (   $i = 0; 
+                $i < \count($updateInfo->pageRecordsOrdered);
+                $i++    ) {
+            echo '<a href="'
+                . $updateInfo->pageRecordsOrdered[$i]['path']
+                . '" class="page-link">'
+                . ($i + 1)
+                . "</a> ";
+        }   ?>
+        </p>
+        <?php
+    }   ?>
+        <p><h4>Date:</h4>
+            <time date="<?= $updateInfo->date->format(HTMLDATEFORMAT) ?>">
+                <?= $updateInfo->date->format(BRIELDATEFORMAT); ?>
+            </time>
+        </p>
+        <?php 
+    if ($updateInfo->tags) {    ?> 
+        <p><h4>Tags:</h4><?= 
+        implode(', ', 
+                array_map(  fn($tag) => tagLink($tag), 
+                            $updateInfo->tags   )) ?>
+        </p>
+        <?php
+    }
+
+    if ($updateInfo->contwarns) {    ?> 
+        <p><h4>Content Warnings:</h4><?= 
+        implode(', ', 
+                array_map(  fn($cw) => cwLink($cw), 
+                            $updateInfo->contwarns  )) ?>
+        </p>
+        <?php
+    }   ?>
+    </div>
+    <div class="thumbnails-div">
+        <?php 
+    foreach (   array_map(  NULL, 
+                            $updateInfo->thumbnailRecordsOrdered, 
+                            $updateInfo->pageRecordsOrdered ) 
+                as [$thumbnail, $page]  ) {     ?> 
+        <a href="<?= $page['path'] ?>" class="page-link">
+            <img
+                class="thumbnail"
+                attr-src="<?= $thumbnail['path'] ?>"
+                src="<?= $thumbnail['path'] ?>"
+                alt="<?= $thumbnail['alttext'] ?>"
+                width="<?= THUMBNAILWIDTH ?>"
+                height="<?= THUMBNAILWIDTH ?>"
+                loading="lazy"
+            >
+        </a>
+        <?php
+    }   ?>
+    </div>
+</article>
+<?php
+    return ob_get_flush();
+}
+
+/**
+ * Summary of Briel\generateArchivePage
+ * @param mixed $updateInfos
+ * @param mixed $pageIndex 1-indexed page index
+ * @param mixed $totalPageCount
+ * @param mixed $archivePagePaths
+ * @return bool|string
+ */
+function generateArchivePage(   $updateInfos, 
+                                $pageIndex, 
+                                $totalPageCount, 
+                                $archivePagePaths   ) {
+    ob_start();
+?>
+<!doctype html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8">
+        <!-- Good to include charset just to prevent weird errors later on. -->
+        <meta name="viewport" content="width=device-width"/>
+        <meta name="author" content="Breel">
+        <meta name="description" content="Breel comics archive.">
+        
+        <title>Search | <?= randomName() ?></title>
+        <link rel="icon" href="<?= SITEROOT ?>/images/<?= SITEICONNAME ?>" type="image/x-icon" />
+
+        <link href="<?= SITEROOT ?>/styles/defaults.css" rel="stylesheet" />
+        <link href="<?= SITEROOT ?>/styles/<?= FONTFACESCSSNAME ?>" rel="stylesheet" />
+        <link href="<?= SITEROOT ?>/styles/update_list_style.css" rel="stylesheet" />
+        <link href="<?= SITEROOT ?>/styles/archive_page_style.css" rel="stylesheet" />
+        
+        <script type="module" src="<?= SITEROOT ?>/js/archive_page_script.js"></script>
+    </head>
+
+    <body>
+        <header>
+            <h1>Archive</h1>
+        </header>
+
+        <main>
+            <button class="toggle-nails">Hide thumbnails</button>
+            <?php
+    foreach ($updateInfos as $update) {
+        generateArchiveEntry($update);
+    }
+            ?>
+        </main>
+
+        <footer>
+            <?php 
+            generateSearchForm(); 
+
+            generateNav($totalPageCount, $pageIndex, $archivePagePaths);
+
+            include 'copyrightElement.php';
+            ?>
+        </footer>
+    </body>
+</html>
+<?php
+    return ob_get_flush();
+}
+
+/**
+ * Summary of Briel\generateAllArchivePages
+ * @param array<UpdateInfo> $allUpdateInfos
+ * @param array $paths A reference, modified if an empty array
+ * @return array 1-indexed array of strings, each being a full HTML page
+ */
+function generateAllArchivePages(array $allUpdateInfos, array &$paths = []) {
+    $infosOnPage = array_chunk($allUpdateInfos, RESULTSPERPAGE);
+    $pageStrs = array_fill_keys(range(1, \count($infosOnPage) + 1), '');
+    if ($paths == []) {
+        $paths = array_map( fn($i) => ARCHIVEDIRPATH . "/archive_p{$i}.html", 
+                            range(1, \count($infosOnPage) + 1)  );
+    }
+
+    ob_start(); // generateArchivePage will try to flush to output
+    for ($pageIndex = 1; $pageIndex <= \count($infosOnPage); $pageIndex++) {
+        $pageStrs[$pageIndex] = generateArchivePage($infosOnPage[$pageIndex - 1], 
+                                                    $pageIndex,
+                                                    \count($infosOnPage), 
+                                                    $paths);
+    }
+    ob_clean(); // Don't need to output the result in any way
+
     return $pageStrs; 
 }
 

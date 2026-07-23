@@ -117,7 +117,7 @@ label {
     font-family: "Briel Fixed Width", Courier, monospace;
 }
 
-label[for="search"] {
+.search-label {
     display: block;
     margin: 0.3em 0.4em;
 }
@@ -224,4 +224,8 @@ a:visited {
     /* background-color: var(--bg-color); */
     text-align: center;
     font-family: "Briel Nib Bold", Courier, monospace;
+}
+
+.copyright {
+    padding: 0.5em;
 }
