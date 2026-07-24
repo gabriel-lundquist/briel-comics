@@ -53,10 +53,8 @@ class SearchResultInfo {
         $this->pageTags = $pageTags;
         $this->pageContWarns = $pageContWarns;
         $this->thumbnailRecord = $thumbnailRecord;
-        $this->isExact = $isExact;
-        
-        $this->date = \DateTimeImmutable::createFromFormat( SQLDATETIMEFORMAT, 
-                                                            $searchRecord['postdate'] );
+        $this->isExact = $isExact;        
+        $this->date = createDateFromSQLDateTime($searchRecord['postdate']);
     }
 
     public function getMatchTags() {
@@ -141,8 +139,7 @@ class UpdateInfo {
                                 $tags = [],
                                 $contWarns = []) {
         $this->$updateRecord = $updateRecord;
-        $this->$date = \DateTimeImmutable::createFromFormat(SQLDATETIMEFORMAT, 
-                                                            $updateRecord['postdate']);
+        $this->$date = createDateFromSQLDateTime($updateRecord['postdate']);
         $this->tags = $tags;
         $this->contWarns = $contWarns;
         $this->pageRecordsOrdered = $pageRecordsOrdered;
@@ -204,8 +201,12 @@ class BlogInfo {
     public \DateTimeImmutable $date;
     public function __construct(string $text, string $dateStr) {
         $this->text = $text;
-        $this->date = \DateTimeImmutable::createFromFormat(SQLDATETIMEFORMAT, $dateStr);
+        $this->date = createDateFromSQLDateTime($dateStr);
     }
+}
+
+function replacePathsForServerSite(string $str) {
+    return preg_replace(FILEFOLDERREGEXP, '', $str);
 }
 
 function classIs($node, $className) {
@@ -268,7 +269,7 @@ function generateComicpage(PageInfo $page) {
               rel="stylesheet" 
               id="reading_stylesheet">
 
-        <script type="module" src="js/reading_page_script.js"></script>
+        <script type="module" src="<?= SITEROOT ?>/js/reading_page_script.js"></script>
     </head>
 
     <body>
@@ -326,7 +327,14 @@ function generateComicpage(PageInfo $page) {
 </html>
 
 <?php
-    return ob_get_flush();
+    if (LOCALSITE) {
+        return ob_get_flush();
+    } else {
+        $pageStr = ob_get_clean();
+        $pageStr = replacePathsForServerSite($pageStr);
+        echo $pageStr;
+        return $pageStr;
+    }
 }
 
 function generateReadingStyle(  $bgColor, 
@@ -534,7 +542,14 @@ a.text_desc_heading {
 }
 
 <?php
-    return ob_get_flush();
+    if (LOCALSITE) {    
+        return ob_get_flush();
+    } else {    // temporary, until I get NGINX hooked up
+        $pageStr = ob_get_clean();
+        $pageStr = replacePathsForServerSite($pageStr);
+        echo $pageStr;
+        return $pageStr;
+    }
 }
 
 function generateComicDisplayElements(  $pageImgRecords, 
@@ -805,7 +820,14 @@ function generateHomepage(  BlogInfo $blogInfo,
 </html>
 
 <?php
-    return ob_get_flush();
+    if (LOCALSITE) {    
+        return ob_get_flush();
+    } else {    // temporary, until I get NGINX hooked up
+        $pageStr = ob_get_clean();
+        $pageStr = replacePathsForServerSite($pageStr);
+        echo $pageStr;
+        return $pageStr;
+    }
 }
 
 /**
@@ -1239,7 +1261,14 @@ function generateSearchPage(string $searchStr,
 
 </html>
 <?php
-    return ob_get_flush();
+    if (LOCALSITE) {    
+        return ob_get_flush();
+    } else {    // temporary, until I get NGINX hooked up
+        $pageStr = ob_get_clean();
+        $pageStr = replacePathsForServerSite($pageStr);
+        echo $pageStr;
+        return $pageStr;
+    }
 }
 
 /**
@@ -1413,7 +1442,14 @@ function generateArchivePage(   $updateInfos,
     </body>
 </html>
 <?php
-    return ob_get_flush();
+    if (LOCALSITE) {    
+        return ob_get_flush();
+    } else {    // temporary, until I get NGINX hooked up
+        $pageStr = ob_get_clean();
+        $pageStr = replacePathsForServerSite($pageStr);
+        echo $pageStr;
+        return $pageStr;
+    }
 }
 
 /**

@@ -9,9 +9,6 @@ require_once './php/pageGen.php';
 // first, do maintenance on the GET request information
 $getParams = $_GET; // copy $_GET
 if (getenv('DEBUG_SEARCH')) { // an environment variable injected in my VSCode debug launch.json
-    $getParams['search'] = 'description:woman';
-    // $getParams['desc'] = 'on';
-    // $getParams['exact'] = 'on';
 }
 
 if (!key_exists('search', $getParams)) $getParams['search'] = '';

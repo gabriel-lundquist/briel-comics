@@ -6,6 +6,25 @@ use DateTimeImmutable;
 require_once 'dbManip.php';
 require_once 'pageGen.php';
 
+/**
+ * Summary of Briel\getPageInfo
+ * Given the database as the source of truth, collects all necessary information to generate the
+ * HTML file.
+ * @param \PDO $pdoConn
+ * @param int $pageID
+ * @param mixed $getPageRecord
+ * @param mixed $getPrevPageID
+ * @param mixed $getNextPageID
+ * @param mixed $getPrevUpdateID
+ * @param mixed $getNextUpdateID
+ * @param mixed $getPageFromUpdateID
+ * @param mixed $getImgRecords
+ * @param mixed $getThumbnailRecords
+ * @param mixed $getTags
+ * @param mixed $getCWs
+ * @param mixed $getSpreadType
+ * @return PageInfo
+ */
 function getPageInfo(   \PDO $pdoConn, 
                         int $pageID, 
                         ?\PDOStatement $getPageRecord = NULL, 
@@ -47,33 +66,60 @@ function getPageInfo(   \PDO $pdoConn,
 
     $record = $getPageRecord->fetch(\PDO::FETCH_ASSOC);
 
+    $links = array_fill_keys(['prev', 'next', 'prevUpd8', 'nextUpd8'], '');
+    $links['prev'] = (($prev = $getPrevPageID->fetch(\PDO::FETCH_NUM)) AND $prev[0] !== null) ?
+            executeAndFetch($getPageRecord, [$prev[0]], \PDO::FETCH_ASSOC)['path']
+            : DEFAULTPREVLINK;
+    $links['next'] = (($next = $getNextPageID->fetch(\PDO::FETCH_NUM)) AND $next[0] !== null) ? 
+            executeAndFetch($getPageRecord, [$next[0]], \PDO::FETCH_ASSOC)['path']
+            : DEFAULTNEXTLINK;
+    $links['prevUpd8'] = 
+            (($prevUpd8 = $getPrevUpdateID->fetch(\PDO::FETCH_NUM)) AND $prevUpd8[0] !== null) ? 
+                    getFirstPageRecordOfUpdateFromID(   $pdoConn, 
+                                                        $prevUpd8[0], 
+                                                        $getPageFromUpdateID, 
+                                                        $getPrevPageID, 
+                                                        $getPageRecord  )['path']
+                    : DEFAULTPREVUPDATELINK;
+    $links['nextUpd8'] = 
+            (($nextUpd8 = $getNextUpdateID->fetch(\PDO::FETCH_NUM)) AND $nextUpd8[0] !== null) ? 
+                    getFirstPageRecordOfUpdateFromID(   $pdoConn, 
+                                                        $nextUpd8[0], 
+                                                        $getPageFromUpdateID, 
+                                                        $getPrevPageID, 
+                                                        $getPageRecord  )['path']
+                    : DEFAULTNEXTUPDATELINK;
+
+    $imgRecords = $getImgRecords->fetchAll(\PDO::FETCH_ASSOC);
+    $nailRecords = $getThumbnailRecords->fetchAll(\PDO::FETCH_ASSOC);
+
+    if (!LOCALSITE) {   // temporary measure until I get this hooked up to NGINX
+        $record['path'] = replacePathsForServerSite($record['path']);
+
+        foreach (array_keys($links) as $key) {
+            $links[$key] = replacePathsForServerSite($links[$key]);
+        }
+
+        foreach(array_keys($imgRecords) as $key) {
+            $imgRecords[$key]['path'] = replacePathsForServerSite($imgRecords[$key]['path']);
+        }
+
+        foreach(array_keys($nailRecords) as $key) {
+            $nailRecords[$key]['path'] = replacePathsForServerSite($nailRecords[$key]['path']);
+        }
+    }
+
     return new PageInfo(
             $record, 
-            ($prev = $getPrevPageID->fetch(\PDO::FETCH_ASSOC)) ?
-                    executeAndFetch($getPageRecord, [$prev['pageid']], \PDO::FETCH_ASSOC)['path']
-                    : DEFAULTPREVLINK, 
-            ($next = $getNextPageID->fetch(\PDO::FETCH_ASSOC)) ? 
-                    executeAndFetch($getPageRecord, [$next['pageid']], \PDO::FETCH_ASSOC)['path']
-                    : DEFAULTNEXTLINK, 
-            ($prevUpdate = $getPrevUpdateID->fetch(\PDO::FETCH_ASSOC)) ? 
-                    getFirstPageRecordOfUpdateFromID(   $pdoConn, 
-                                                        $prevUpdate['updateid'], 
-                                                        $getPageFromUpdateID, 
-                                                        $getPrevPageID, 
-                                                        $getPageRecord      )['path']
-                    : DEFAULTPREVUPDATELINK, 
-            ($nextUpdate = $getNextUpdateID->fetch(\PDO::FETCH_ASSOC)) ? 
-                    getFirstPageRecordOfUpdateFromID(   $pdoConn, 
-                                                        $nextUpdate['updateid'], 
-                                                        $getPageFromUpdateID, 
-                                                        $getPrevPageID, 
-                                                        $getPageRecord      )['path']
-                    : DEFAULTNEXTUPDATELINK, 
-            $getImgRecords->fetchAll(\PDO::FETCH_ASSOC), 
-            $getThumbnailRecords->fetchAll(\PDO::FETCH_ASSOC), 
+            $links['prev'], 
+            $links['next'], 
+            $links['prevUpd8'], 
+            $links['nextUpd8'], 
+            $imgRecords, 
+            $nailRecords, 
             $getTags->fetchAll(\PDO::FETCH_COLUMN),
             $getCWs->fetchAll(\PDO::FETCH_COLUMN),
-            executeAndFetchScalar($getSpreadType, [$record['spreadid']])
+            executeAndFetchScalar($getSpreadType, $record['spreadid'])
     );
 }
 
@@ -112,11 +158,11 @@ function getAllUpdateInfo(?\PDO $pdoConn = NULL) {
             }
         }
 
-        $getTags = getTagsFromMultiplePageIDsStmt(\count($pageIDs), $pdoConn);
+        $getTags = getTagsFromMultiplePageIDsStmt($pageIDs, $pdoConn);
         $getTags->execute($pageIDs);
         $tags = $getTags->fetchAll(\PDO::FETCH_COLUMN);
 
-        $getCWs = getCWsFromMultiplePageIDsStmt(\count($pageIDs), $pdoConn);
+        $getCWs = getCWsFromMultiplePageIDsStmt($pageIDs, $pdoConn);
         $getCWs->execute($pageIDs);
         $cws = $getCWs->fetchAll(\PDO::FETCH_COLUMN);
 

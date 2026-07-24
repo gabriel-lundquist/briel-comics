@@ -1,11 +1,14 @@
 <?php 
 namespace Briel;
 
-const DEBUG = true;
+const LOCALSITE = false;
 
-const FILEROOT = 'C:/Users/gabri/Code/Briel comics website/briel-comics/draft_site';
-if (DEBUG) define("SITEROOT", '/draft_site');
-else define("SITEROOT", FILEROOT);
+const FILEFOLDER = 'C:/Users/gabri/Code/Briel comics website/briel-comics';
+define("FILEFOLDERREGEXP", '(' . str_replace('/', '[/\\\]', FILEFOLDER) . ')');
+const SITEFOLDER = '/draft_site';
+const FILEROOT = FILEFOLDER . SITEFOLDER;
+if (LOCALSITE) define("SITEROOT", FILEROOT);
+else define("SITEROOT", SITEFOLDER);
 
 const SEARCHFIELDSPECS = [  'tag', 
                             'cw', 
@@ -32,5 +35,14 @@ const FONTFACESCSSNAME = 'briel_font-faces.css';
 const SITEICONNAME = 'smileicon.ico';
 
 const SQLDATETIMEFORMAT = 'Y-m-d H:i:s';
+
+/**
+ * Summary of Briel\createDateFromSQLDateTime
+ * @param string $dateStr
+ * @return bool|\DateTimeImmutable
+ */
+function createDateFromSQLDateTime(string $dateStr) {
+    return \DateTimeImmutable::createFromFormat(SQLDATETIMEFORMAT, $dateStr);
+}
 
 ?>

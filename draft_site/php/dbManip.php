@@ -38,10 +38,10 @@ const TEXTMATCHTHRESHOLD = 0.1;
 
 /**
  * Summary of Briel\promptInput
- * @param mixed $prompt
+ * @param string $prompt
  * @return string
  */
-function promptInput($prompt) {
+function promptInput(string $prompt) {
     echo $prompt;
     return trim(fgets(STDIN));
 }
@@ -50,26 +50,17 @@ function promptPathHTML() {
     return promptInput("Enter HTML file path (doesn't need to exist):\n> ");
 }
 
-
-/**
- * Summary of Briel\createDateFromSQLDateTime
- * @param mixed $dateStr
- * @return bool|\DateTimeImmutable
- */
-function createDateFromSQLDateTime($dateStr) {
-    return \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $dateStr);
-}
-
 /**
  * Summary of Briel\pdoConnect
  * WILL NEED TO EDIT IN AN ENVIRONMENT VARIABLE FOR THE PASSWORD
  * Returns the PDO connection if successful, `false` if not.
  * Default values come from my laptop server settings.
- * @param mixed $dbhost
- * @param mixed $dbuser
- * @param mixed $dbname
- * @param mixed $dbport
- * @param mixed $echoConnSuccess
+ * @param string $dbhost
+ * @param string $dbuser
+ * @param string $dbname
+ * @param int $dbport
+ * @param bool $enterPassword
+ * @param bool $echoConnSuccess
  * @return bool|\PDO
  */
 function pdoConnect(string $dbhost = 'localhost', 
@@ -77,7 +68,7 @@ function pdoConnect(string $dbhost = 'localhost',
                     string $dbname = 'briel_comics_test', 
                     int $dbport = 3307, 
                     bool $enterPassword = false,
-                    bool $echoConnSuccess = DEBUG ) {
+                    bool $echoConnSuccess = false   ) {
     try {
         $conn = new \PDO("mysql:host=$dbhost;
                           dbname=$dbname;
@@ -138,7 +129,7 @@ function promptRollback(\PDO $pdoConn, string $message = '') {
 }
 
 function executeAndFetch(   \PDOStatement $statement, 
-                            ?array $executeArr = NULL, 
+                            ?array $executeArr = null, 
                             $mode = \PDO::FETCH_BOTH    ) {
     if ($statement->execute($executeArr)) {
         return $statement->fetch($mode);
@@ -150,9 +141,10 @@ function queryAndFetchScalar(string $statementText, \PDO $pdoConn) {
 }
 
 function executeAndFetchScalar( \PDOStatement $statement, 
-                                $execVar = NULL ) {
-    return $statement->execute([$execVar]) 
-            ? $statement->fetch(\PDO::FETCH_NUM)[0] : false;
+                                $execScalar = null ) {
+    return $statement->execute([$execScalar]) ? 
+            $statement->fetch(\PDO::FETCH_NUM)[0] 
+            : false;
 }
 
 function rowPlaceholder(int $n) {
@@ -160,15 +152,14 @@ function rowPlaceholder(int $n) {
 }
 
 function searchcacheKeyFromSearchString(string $searchStr) {
-    $termArr = array_filter(explode(' ', $searchStr), 
-                            fn($el) => \strlen($el) > 0);
+    $termArr = preg_split('/\s+/', $searchStr, flags: PREG_SPLIT_NO_EMPTY);
     sort($termArr, SORT_STRING);
     return implode(' ', $termArr);  // delimit with spaces so we can pass this to searchComics
 }
 
 function recordsToAttrRowStrs(  array $records, 
-                                $attrIDKey, 
-                                $attrNameKey, 
+                                string $attrIDKey, 
+                                string $attrNameKey, 
                                 int $padLen = 8 ) {
     return array_map(fn($record) => str_pad($record[$attrIDKey], 
                                             $padLen, 
@@ -177,16 +168,16 @@ function recordsToAttrRowStrs(  array $records,
                         $records);
 }
 
-function valueRows($arr) {
+function valueRows(array $arr) {
     return 'VALUES ' . \implode(', ', \array_map(fn($a) => "ROW($a)", $arr));
 }
 
-function attributeTableStr( $records, 
-                            $tableTitle, 
-                            $attrIDKey, 
-                            $attrNameKey, 
-                            $rowPadLen = 8, 
-                            $tableSpacerLen = 42    ) {
+function attributeTableStr( array $records, 
+                            string $tableTitle, 
+                            string $attrIDKey, 
+                            string $attrNameKey, 
+                            int $rowPadLen = 8, 
+                            int $tableSpacerLen = 42    ) {
 
     return "\n" . str_repeat('-', $tableSpacerLen) 
             . "\n" . $tableTitle 
@@ -198,10 +189,10 @@ function attributeTableStr( $records,
             . "\n" . str_repeat('_', $tableSpacerLen) . "\n";
 }
 
-function generateFileRecordInteractive( $filePath, 
+function generateFileRecordInteractive( string $filePath, 
                                         \PDO $pdoConn, 
-                                        ?string $ratioStr = NULL, 
-                                        ?\PDOStatement $ratioStatement = NULL   ) {
+                                        ?string $ratioStr = null, 
+                                        ?\PDOStatement $ratioStatement = null   ) {
     echo "Generating record for `" . basename($filePath) . '`...';
     if (!is_file($filePath)) {
         echo "`$filePath` is not an existing file. Aborting record generation...\n";
@@ -226,7 +217,7 @@ function generateFileRecordInteractive( $filePath,
 
     if (!$ratioStatement) $ratioStatement = $pdoConn->prepare(
             "SELECT ratioid FROM aspectratio WHERE ratio = ?;");
-    $fetchedRow = NULL;
+    $fetchedRow = null;
     if (!$ratioStr) {
         $ratioStr = promptInput("Enter aspect ratio (format width:height)\n> ");
     }
@@ -267,8 +258,8 @@ function generateFileRecordInteractive( $filePath,
  * @param \PDO $pdoConn An existing PDO object.
  * @param string $tableName String containing name of the table in the database
  * @param array<string> $insertColumns Array of strings with titles of columns
- * @param array<array<string>> $records 2D array of strings, indexed by record then by column
- * Fuck! This messes up given that records are *also* arrays. 
+ * @param array<array> $records 2D array, indexed by record then by column
+ * Fuck! This messes up given that individual records are *also* arrays. 
  * Make sure to always put the records in an array, even if there's just one.
  */
 function prepareInsertRecords(  \PDO $pdoConn, 
@@ -291,18 +282,17 @@ function prepareInsertRecords(  \PDO $pdoConn,
  * Summary of Briel\executeInsertRecords
  * @param \PDO $pdoConn
  * @param \PDOStatement $insertStatement Assumes this is prepared by `prepareInsertRecords`
- * @param array $records Fuck! This messes up given that records are *also* arrays. 
+ * @param array<array> $records Fuck! This messes up given that records are *also* arrays. 
  * Make sure to always put the records in an array, even if there's just one.
- * @param bool $debugTransaction
  * @param bool $promptToCommit
  * @return bool
  */
 function executeInsertRecords(  \PDO $pdoConn, 
                                 \PDOStatement $insertStatement, 
                                 array $records, 
-                                bool $debugTransaction = DEBUG, 
                                 bool $promptToCommit = true, 
                                 string $promptCommitMessage = ''   ) {
+                                    
     if (!tryBeginTransaction($pdoConn)) return false;
 
     if (\is_array($records)) {
@@ -332,7 +322,9 @@ function executeInsertRecords(  \PDO $pdoConn,
  * @param string $tableName String containing name of the table in the database
  * @param array $insertColumns Array of strings with titles of columns
  * @param array $records 2D array of strings, indexed by record then by column
- * @param bool $promptToCommit
+ * @param bool $promptToCommit Whether you want to output a prompt for committing 
+ * the transaction
+ * @param string $promptCommitMessage The message output with `$promptToCommit`.
  */
 function queryInsertRecords(\PDO $pdoConn, 
                             string $tableName, 
@@ -340,6 +332,7 @@ function queryInsertRecords(\PDO $pdoConn,
                             array $records, 
                             bool $promptToCommit = true, 
                             string $promptCommitMessage = '') {
+
     $insertStatement = prepareInsertRecords($pdoConn, 
                                             $tableName, 
                                             $insertColumns, 
@@ -360,6 +353,7 @@ function queryInsertRecords(\PDO $pdoConn,
  * @param array $records
  * @param \PDO $pdoConn
  * @param bool $promptToCommit
+ * @param string $promptCommitMessage
  * @return bool|\PDOStatement
  */
 function insertFileRecords( array $records, 
@@ -375,7 +369,6 @@ function insertFileRecords( array $records,
                                         $promptCommitMessage );
     return $queryResult;
 }
-
 
 // function insertFileRecordsFolder(   string $dirPath, 
 //                                     \PDO $pdoConn, 
@@ -423,9 +416,20 @@ function insertFileRecords( array $records,
 //                              $pdoConn);
 // }
 
+;
+
+/**
+ * Summary of Briel\insertPageRecords
+ * @param array $records
+ * @param \PDO $pdoConn
+ * @param bool $promptToCommit
+ * @param string $promptCommitMessage
+ * @return bool|\PDOStatement
+ */
 function insertPageRecords( array $records, 
                             \PDO $pdoConn, 
-                            bool $promptToCommit = true ) {
+                            bool $promptToCommit = true, 
+                            string $promptCommitMessage = ''    ) {
     if (!tryBeginTransaction($pdoConn)) return false;
 
     $queryResult = queryInsertRecords(  $pdoConn, 
@@ -438,6 +442,14 @@ function insertPageRecords( array $records,
     return $queryResult;
 }
 
+/**
+ * Summary of Briel\insertNewTags
+ * @param array $tags
+ * @param \PDO $pdoConn
+ * @param bool $promptToCommit
+ * @param string $promptCommitMessage
+ * @return bool|\PDOStatement
+ */
 function insertNewTags( array $tags, 
                         \PDO $pdoConn, 
                         bool $promptToCommit = true, 
@@ -499,7 +511,7 @@ function getFileWidthPaths(int $pageid, \PDO $pdoConn) {
  * Summary of Briel\isFilePath
  * @param string $str
  * @param string $fileExt
- * @return bool|int
+ * @return bool|int Returns 1 on a find, 0 on no find, or false on some other failure
  */
 function isFilePath(string $str, string $fileExt = ".+") {
     return preg_match('(.*[\\\/].+\.' . "$fileExt)", $str);
@@ -508,9 +520,7 @@ function isFilePath(string $str, string $fileExt = ".+") {
 /**
  * Summary of Briel\generatePageRecordInteractive
  * @param \PDO $pdoConn
- * @return array{imagedesc: bool|string, path: string, 
- *               pageid: string, spreadid: mixed, 
- *               stylepath: string, title: string}
+ * @return array
  */
 function generatePageRecordInteractive(\PDO $pdoConn) {
     echo "Generating new page record...\n";
@@ -565,7 +575,7 @@ function generatePageRecordInteractive(\PDO $pdoConn) {
         echo "Error: $stylePath not a css file.\n";
         $stylePath = promptInput("Enter path to special style (or 'n' if none):\n> ");
     }
-    if ($stylePath == "n") $stylePath = NULL;
+    if ($stylePath == "n") $stylePath = null;
 
     // pageid is automatically generated upon inserting these values.
     return array_combine(PAGEINSERTCOLUMNS, [   $title, 
@@ -575,133 +585,16 @@ function generatePageRecordInteractive(\PDO $pdoConn) {
                                                 $stylePath  ]);
 }
 
-// /**
-//  * Summary of Briel\insertAssociationsInteractive
-//  * @param array $pageRecord
-//  * @param string $table
-//  * @param \PDO $pdoConn
-//  * @param bool $promptToCommit
-//  * @return bool|string[]
-//  */
-// function insertAssociationsInteractive( array $pageRecord, 
-//                                         string $table, 
-//                                         \PDO $pdoConn, 
-//                                         bool $promptToCommit = false ) {
-//     if (!tryBeginTransaction($pdoConn)) return false;
-//     if ($table != 'tag' AND $table != 'contwarning') {
-//         echo "'$table' not a valid table.";
-//         return false;
-//     }
-
-//     $existing = $pdoConn->query("SELECT name FROM $table;")
-//                             ->fetchAll(\PDO::FETCH_COLUMN);
-//     $insertNew = $pdoConn->prepare("INSERT INTO $table (name) VALUE (?);");
-//     $getIDFromName = $pdoConn->prepare("SELECT {$table}id FROM $table WHERE name = ?;");
-
-//     $listStr = promptInput("Adding $table associations with {$pageRecord['title']}...\n"
-//                             . "Type in comma-separated {$table}s. Existing {$table}s:\n"
-//                             . implode(",\t", $existing)
-//                             . "\n> ");
-    
-//     $exists = $pdoConn->prepare(
-//         "SELECT EXISTS(SELECT name FROM $table WHERE name = ?);");
-//     $assocRecords = [];
-//     $finalList = [];
-//     $leafList = array_map('trim', explode(",", $listStr));
-//     foreach ($leafList as $leaf) {
-//         if (!preg_match('/^\w[-\w]*$/', $leaf)) {
-//             echo <<<WARN
-//                     Warning: only permitted special characters are - and _, 
-//                     and - can't start the $table. 
-//                     Skipping $leaf."
-//                     WARN;
-//             continue;
-//         } 
-        
-//         // Only get below here if the name matches allowed characters.
-//         if (!executeAndFetchScalar($exists, $leaf)) {
-//             if (promptInput("$leaf not an existing $table. Add it? (y/n) > ") == "y") {
-//                 $insertNew->execute([$leaf]);
-//             } else {
-//                 echo "Okay, skipping $leaf...\n";
-//                 continue;
-//             }
-//         }
-
-//         $assocRecords[] = [executeAndFetchScalar($getIDFromName, $leaf), 
-//                               $pageRecord["pageid"]];
-//         $finalList[] = $leaf;
-//     }
-
-//     if (queryInsertRecords( $pdoConn, 
-//                             "{$table}page", 
-//                             ["{$table}id", "pageid"], 
-//                             $assocRecords, 
-//                             false)  ) {
-//         if (promptCommit($pdoConn, 
-//                         "{$table}s now associated with this page:\n\t"
-//                                 . implode(", ", $finalList) . "\n") ) {
-//             return $finalList;
-//         } else {
-//             promptRollback($pdoConn);
-//             return false;
-//         }
-//     } else {
-//         promptRollback($pdoConn, "Error: could not insert records.");
-//         return false;
-//     }
-// }
-
-// /**
-//  * Summary of Briel\insertTagAssociationsInteractive
-//  * Assumes `$pageRecord` is filled out and given a page ID
-//  * @param mixed $pageRecord
-//  * @param \PDO $pdoConn
-//  * @return bool|string[]
-//  */
-// function insertTagAssociationsInteractive($pageRecord, \PDO $pdoConn) {
-//     return insertAssociationsInteractive($pageRecord, "tag", $pdoConn);
-// }
-
-// /**
-//  * Summary of Briel\insertCWAssociationsInteractive
-//  * Assumes `$pageRecord` is filled out and given a page ID
-//  * @param mixed $pageRecord
-//  * @param \PDO $pdoConn
-//  * @return bool|string[]
-//  */
-// function insertCWAssociationsInteractive($pageRecord, \PDO $pdoConn) {
-//     return insertAssociationsInteractive($pageRecord, "contwarning", $pdoConn);
-// }
-
-function upList($pageID,
-                $getSource, 
-                $delRowByTarget) {
-    $getSource->execute([$pageID]);
-    if ($sourceRec = $getSource->fetch(\PDO::FETCH_ASSOC)) {
-        $delRowByTarget->execute([$pageID]);
-        $listAbove = upList($sourceRec["sourceid"], 
-                            $getSource, 
-                            $delRowByTarget);
-        $listAbove[] = $pageID; // append
-        return $listAbove; 
-    } else {    // No entries where sourceid = $pageID
-        return [$pageID];
-    }
+function orderContinues(array $record, string $key) {
+    return $record !== false AND $record[$key] !== null;
 }
 
-function downList($pageID, $getTarget, $delRowBySource) {
-    $getTarget->execute([$pageID]);
-    if ($targetRec = $getTarget->fetch(\PDO::FETCH_ASSOC)) {
-        $delRowBySource->execute([$pageID]);
-        $listBelow = downList(  $targetRec["targetid"], 
-                                $getTarget, 
-                                $delRowBySource );
-        array_unshift($listBelow, $pageID); // prepend
-        return $listBelow;
-    } else {    // No entries where targetid = $pageID
-        return [$pageID];
-    }
+function nextOrderContinues(array $targetRecord) {
+    return $targetRecord !== false AND $targetRecord['targetid'] !== null;
+}
+
+function prevOrderContinues(array $sourceRecord) {
+    return $sourceRecord !== false AND $sourceRecord['sourceid'] !== null;
 }
 
 /**
@@ -715,8 +608,8 @@ function downList($pageID, $getTarget, $delRowBySource) {
  */
 function orderPageIDs(  array $pageIDs, 
                         \PDO $pdoConn, 
-                        ?\PDOStatement $getSource = NULL, 
-                        ?\PDOStatement $getTarget = NULL    ) {
+                        ?\PDOStatement $getSource = null, 
+                        ?\PDOStatement $getTarget = null    ) {
     if (!$getSource) $getSource = getPrevPageFromIDStmt($pdoConn);
     if (!$getTarget) $getTarget = getNextPageFromIDStmt($pdoConn);
     $pageIDsOrdered = [];
@@ -726,8 +619,10 @@ function orderPageIDs(  array $pageIDs,
 
     $getSource->execute([$page]);
     for (   $source = $getSource->fetch(\PDO::FETCH_ASSOC); 
-            $source !== false AND !empty($remainingPageIDs); 
-            $getSource->execute([$source]), $source = $getSource->fetch(\PDO::FETCH_ASSOC)  ) {
+            !empty($remainingPageIDs) AND prevOrderContinues($source); 
+            $getSource->execute([$source['sourceid']]), 
+                    $source = $getSource->fetch(\PDO::FETCH_ASSOC)  ) {
+
         if (($key = array_search($source['sourceid'], $remainingPageIDs)) !== false) {
             $pageIDsOrdered = [$source['sourceid'], ...$pageIDsOrdered];
             unset($remainingPageIDs[$key]);
@@ -739,8 +634,9 @@ function orderPageIDs(  array $pageIDs,
 
     $getTarget->execute([$page]);
     for (   $target = $getTarget->fetch(\PDO::FETCH_ASSOC); 
-            $target !== false AND !empty($remainingPageIDs); 
-            $getTarget->execute([$target]), $target = $getTarget->fetch(\PDO::FETCH_ASSOC)) {
+            !empty($remainingPageIDs) AND nextOrderContinues($target); 
+            $getTarget->execute([$target['targetid']]), 
+                    $target = $getTarget->fetch(\PDO::FETCH_ASSOC)) {
 
         if (($key = array_search($target['targetid'], $remainingPageIDs)) !== false) {
             $pageIDsOrdered = [...$pageIDsOrdered, $target['targetid']];
@@ -758,13 +654,13 @@ function orderPageIDs(  array $pageIDs,
 
 function getFirstPageID(\PDO $pdoConn, 
                         array $pageIDs, 
-                        ?\PDOStatement $getSource = NULL) {
+                        ?\PDOStatement $getSource = null) {
     if (!$getSource) $getSource = getPrevPageFromIDStmt($pdoConn);
     
     $firstID = array_first($pageIDs);
     $getSource->execute([$firstID]);
     for (   $source = $getSource->fetch(\PDO::FETCH_ASSOC); 
-            $source !== false AND !empty($pageIDs); 
+            !empty($pageIDs) AND prevOrderContinues($source); 
             $getSource->execute([$source]), 
                     $source = $getSource->fetch(\PDO::FETCH_ASSOC)) {
 
@@ -779,13 +675,13 @@ function getFirstPageID(\PDO $pdoConn,
 
 function getLastPageID( \PDO $pdoConn, 
                         array $pageIDs, 
-                        ?\PDOStatement $getTarget = NULL    ) {
+                        ?\PDOStatement $getTarget = null    ) {
     if (!$getTarget) $getTarget = getNextPageFromIDStmt($pdoConn);
     
     $lastID = array_last($pageIDs);
     $getTarget->execute([$lastID]);
     for (   $target = $getTarget->fetch(\PDO::FETCH_ASSOC); 
-            $target !== false AND !empty($pageIDs); 
+            !empty($pageIDs) AND nextOrderContinues($target); 
             $getTarget->execute([$target]), 
                     $target = $getTarget->fetch(\PDO::FETCH_ASSOC)) {
 
@@ -810,19 +706,19 @@ function getLastPageID( \PDO $pdoConn,
  */
 function orderPageRecords(  \PDO $pdoConn, 
                             array $pageRecords, 
-                            ?\PDOStatement $getSource = NULL, 
-                            ?\PDOStatement $getTarget = NULL    ) {
+                            ?\PDOStatement $getSource = null, 
+                            ?\PDOStatement $getTarget = null    ) {
     if (!$getSource) $getSource = getPrevPageFromIDStmt($pdoConn);
     if (!$getTarget) $getTarget = getNextPageFromIDStmt($pdoConn);
     // re-index pageRecords by page ID (check `array_column` documentation)
-    $pageRecords = array_column($pageRecords, NULL, 'pageid');
+    $pageRecords = array_column($pageRecords, null, 'pageid');
     $pageRecordsOrdered = [];
 
     $initID = array_key_first($pageRecords);
     $initRecord = $pageRecords[$initID];
     $getSource->execute([$initRecord['pageid']]);
     for (   $source = $getSource->fetch(\PDO::FETCH_ASSOC); 
-            $source !== false AND !empty($pageRecords); 
+            !empty($pageRecords) AND prevOrderContinues($source); 
             $getSource->execute([$source]), $source = $getSource->fetch(\PDO::FETCH_ASSOC)  ) {
 
         if (\array_key_exists($source['sourceid'], $pageRecords)) {
@@ -836,7 +732,7 @@ function orderPageRecords(  \PDO $pdoConn,
 
     $getTarget->execute([$initID]);
     for (   $target = $getTarget->fetch(\PDO::FETCH_ASSOC); 
-            $target !== false AND !empty($pageRecords); 
+            !empty($pageRecords) AND nextOrderContinues($target); 
             $getTarget->execute([$target]), 
                     $target = $getTarget->fetch(\PDO::FETCH_ASSOC)  ) {
 
@@ -852,6 +748,36 @@ function orderPageRecords(  \PDO $pdoConn,
     }
 
     return $pageRecordsOrdered;
+}
+
+function upList($pageID,
+                $getSource, 
+                $delRowByTarget) {
+    $getSource->execute([$pageID]);
+    if (prevOrderContinues($sourceRec = $getSource->fetch(\PDO::FETCH_ASSOC))) {
+        $delRowByTarget->execute([$pageID]);
+        $listAbove = upList($sourceRec["sourceid"], 
+                            $getSource, 
+                            $delRowByTarget);
+        $listAbove[] = $pageID; // append
+        return $listAbove; 
+    } else {    // No entries where sourceid = $pageID and targetid != null
+        return [$pageID];
+    }
+}
+
+function downList($pageID, $getTarget, $delRowBySource) {
+    $getTarget->execute([$pageID]);
+    if (nextOrderContinues($targetRec = $getTarget->fetch(\PDO::FETCH_ASSOC))) {
+        $delRowBySource->execute([$pageID]);
+        $listBelow = downList(  $targetRec["targetid"], 
+                                $getTarget, 
+                                $delRowBySource );
+        array_unshift($listBelow, $pageID); // prepend
+        return $listBelow;
+    } else {    // No entries where targetid = $pageID and sourceid != null
+        return [$pageID];
+    }
 }
 
 /**
@@ -902,11 +828,11 @@ function getPageOrderLists(\PDO $pdoConn) {
 function getEndOfOrderID(   string $orderTableName, 
                             int $id, 
                             \PDO $pdoConn, 
-                            ?\PDOStatement $getTarget = NULL    ) {
+                            ?\PDOStatement $getTarget = null    ) {
     if (!$getTarget) $getTarget = getNextIDFromIDStmt($pdoConn, $orderTableName);
     $getTarget->execute([$id]);
     $lastTargetID = $id;
-    while (($lastTarget = $getTarget->fetch()) !== false) {
+    while (nextOrderContinues($lastTarget = $getTarget->fetch(\PDO::FETCH_ASSOC))) {
         $lastTargetID = $lastTarget['targetid'];
         $getTarget->execute([$lastTargetID]);
     }
@@ -914,11 +840,11 @@ function getEndOfOrderID(   string $orderTableName,
     return $lastTargetID;
 }
 
-function getEndOfPageOrderID(int $pageID, \PDO $pdoConn, ?\PDOStatement $getTarget = NULL) {
+function getEndOfPageOrderID(int $pageID, \PDO $pdoConn, ?\PDOStatement $getTarget = null) {
     return getEndOfOrderID('pageorder', $pageID, $pdoConn, $getTarget);
 }
 
-function getEndOfUpdateOrderID(int $updateID, \PDO $pdoConn, ?\PDOStatement $getTarget = NULL) {
+function getEndOfUpdateOrderID(int $updateID, \PDO $pdoConn, ?\PDOStatement $getTarget = null) {
     return getEndOfOrderID('comicupdateorder', $updateID, $pdoConn, $getTarget);
 }
 
@@ -926,14 +852,14 @@ function insertAfter(   string $orderTableName,
                         int $prevID, 
                         int $newID, 
                         \PDO $pdoConn, 
-                        ?\PDOStatement $getTarget = NULL, 
+                        ?\PDOStatement $getTarget = null, 
                         bool $promptToCommit = false, 
                         string $promptCommitMessage = ''    ) {
     if (!tryBeginTransaction($pdoConn)) return false;
 
     if (!$getTarget) $getTarget = getNextIDFromIDStmt($pdoConn, $orderTableName);
     $nextID = executeAndFetchScalar($getTarget, $prevID);
-    if ($nextID == false) $nextID = NULL;
+    if ($nextID === false) $nextID = null;
     
     $insert = $pdoConn->prepare(<<<STMT
                             UPDATE $orderTableName SET targetid = :newID 
@@ -941,18 +867,27 @@ function insertAfter(   string $orderTableName,
                             INSERT INTO $orderTableName 
                                 VALUE (:newID, :nextID);
                             STMT);
-    $success = $insert->execute([   ":newID"  => $newID, 
+    try {
+        $success = $insert->execute([   ":newID"  => $newID, 
                                     ":prevID" => $prevID, 
                                     ":nextID" => $nextID    ]);
-    if ($promptToCommit) promptCommit($pdoConn, $promptCommitMessage);
-    return $success;
+        if ($success) {
+            if ($promptToCommit) promptCommit($pdoConn, $promptCommitMessage);
+        } else {
+            promptRollback($pdoConn, 'Insertion in order failed.');
+        }
+        return $success;
+    } catch (\PDOException $e) {
+        promptRollback($pdoConn, $e->getMessage());
+        return false;
+    }
 }
 
 
 function insertPageAfter(   int $prevPageID, 
                             int $newPageID, 
                             \PDO $pdoConn, 
-                            ?\PDOStatement $getTarget = NULL, 
+                            ?\PDOStatement $getTarget = null, 
                             bool $promptToCommit = false,
                             string $promptCommitMessage = ''    ) {
     return insertAfter( 'pageorder', 
@@ -967,7 +902,7 @@ function insertPageAfter(   int $prevPageID,
 function insertUpdateAfter( int $prevUpdateID, 
                             int $newUpdateID, 
                             \PDO $pdoConn, 
-                            ?\PDOStatement $getTarget = NULL, 
+                            ?\PDOStatement $getTarget = null, 
                             bool $promptToCommit = false,
                             string $promptCommitMessage = ''    ) {
     return insertAfter( 'comicupdateorder', 
@@ -994,6 +929,10 @@ function getMostRecentUpdate(\PDO $pdoConn) {
     return getMostRecent('comicupdate', 'updateid', $pdoConn);
 }
 
+function getEndofRecentPageOrderID(\PDO $pdoConn) {
+    return getEndOfPageOrderID(getMostRecentPage($pdoConn), $pdoConn);
+}
+
 function getEndofRecentUpdateOrderID(\PDO $pdoConn) {
     return getEndOfUpdateOrderID(getMostRecentUpdate($pdoConn), $pdoConn);
 }
@@ -1016,15 +955,15 @@ function insertAtEnd(   string $orderTableName,
                         string $idName, 
                         int $newID, 
                         \PDO $pdoConn, 
-                        ?\PDOStatement $getTarget = NULL, 
+                        ?\PDOStatement $getTarget = null, 
                         bool $promptToCommit = true, 
                         string $promptCommitMessage = ''    ) {
     return insertAfter(
             $orderTableName, 
-            getEndOfOrderID(    $orderTableName, 
-                                getMostRecent($tableName, $idName, $pdoConn), 
-                                $pdoConn, 
-                                $getTarget  ),
+            getEndOfOrderID($orderTableName, 
+                            getMostRecent($tableName, $idName, $pdoConn), 
+                            $pdoConn, 
+                            $getTarget),
             $newID, 
             $pdoConn, 
             $getTarget, 
@@ -1035,7 +974,7 @@ function insertAtEnd(   string $orderTableName,
 
 function insertUpdateAtEnd( int $newID, 
                             \PDO $pdoConn, 
-                            ?\PDOStatement $getTarget = NULL, 
+                            ?\PDOStatement $getTarget = null, 
                             bool $promptToCommit = true, 
                             string $promptCommitMessage = ''    ) {
     return insertAtEnd( 'comicupdateorder', 
@@ -1050,7 +989,7 @@ function insertUpdateAtEnd( int $newID,
 
 function insertPageAtEnd(   int $newID, 
                             \PDO $pdoConn, 
-                            ?\PDOStatement $getTarget = NULL, 
+                            ?\PDOStatement $getTarget = null, 
                             bool $promptToCommit = true, 
                             string $promptCommitMessage = ''    ) {
     return insertAtEnd( 'pageorder', 
@@ -1071,46 +1010,47 @@ function insertPageBefore($nextPageID, $newPageID, \PDO $pdoConn) {
     $prevPageID = executeAndFetchScalar($getPrev, $nextPageID);
 
     $insert = $pdoConn->prepare(<<<STMT
-                            UPDATE pageorder SET sourceid = :newpageID 
+                            UPDATE pageorder SET sourceid = :newPageID 
                                 WHERE targetid = :nextPageID;
                             INSERT INTO pageorder 
                                 VALUE (:prevPageID, :newPageID);
                             STMT);
-    return $insert->execute([":newpageID"  => $newPageID, 
+    return $insert->execute([":newPageID"  => $newPageID, 
                              ":prevPageID" => $prevPageID, 
                              ":nextPageID" => $nextPageID]);
 }
 
-/**
- * Summary of Briel\deletePageAfter
- * @param mixed $pageID
- * @param mixed $prevPageID
- * @param \PDO $pdoConn
- */
-function deletePageAfter($pageID, $prevPageID, \PDO $pdoConn) {
-    $getNext = $pdoConn->prepare(
-                "SELECT targetid FROM pageorder WHERE sourceid = ?;");
-
+function deletePageAfter(int $pageID, \PDO $pdoConn, ?\PDOStatement $getTarget) {
+    if (!$getTarget) $getTarget = getNextPageFromIDStmt($pdoConn);
+    $getTarget->execute([$pageID]);
+    $target = $getTarget->fetch(\PDO::FETCH_ASSOC);
+    if ($target !== false AND ($prevPageID = $target['targetid']) !== null) {
     $delPage = $pdoConn->prepare(<<<STMT
                 SET @nextID = (
                     SELECT targetid FROM pageorder
-                        WHERE sourceid = :pageID
+                        WHERE sourceid = :pageID AND targetid IS NOT NULL
+                        LIMIT 1
                 );
-                DELETE FROM pageorder WHERE sourceID = :pageID;
+                DELETE FROM pageorder WHERE sourceid = :pageID AND targetid IS NOT NULL;
                 UPDATE pageorder SET targetID = @nextID
                     WHERE sourceID = :prevID;
                 STMT);
     
-    return $delPage->execute([":pageID" => $pageID, 
-                              ":prevID" => $prevPageID]);
+        return $delPage->execute([  ":pageID" => $pageID, 
+                                    ":prevID" => $prevPageID    ]);
+    } else {
+        return true; // Vacuously I guess
+    }
 }
 
 function appendPages(   array $pageIDs, 
-                        array $lastPageID, 
                         \PDO $pdoConn, 
+                        ?array $lastPageID = null, 
                         bool $promptToCommit = true, 
                         string $promptCommitMessage = ''    ) {
     if (!tryBeginTransaction($pdoConn)) return false;
+
+    if ($lastPageID === null) $lastPageID = getEndofRecentPageOrderID($pdoConn);
 
     $records = [];
     $records[] = [$lastPageID, $pageIDs[0]];
@@ -1143,12 +1083,12 @@ function associateInteractive(  array $record,
 
     echo "Associating {$leafTableType}s with `{$record['title']}`...\n";
 
-    $leafName = NULL;
+    $leafName = null;
     $leafIDName = "{$leafTableType}id";
-    $leafTableAssocName = NULL;
-    $rootName = NULL;
-    $rootIDName = NULL;
-    $rootTableName = NULL;
+    $leafTableAssocName = null;
+    $rootName = null;
+    $rootIDName = null;
+    $rootTableName = null;
     switch ($leafTableType) {
         case 'tag': 
         case 'contwarning':
@@ -1333,7 +1273,6 @@ function associatePagesInteractive( array $updateRecord,
                                 $promptCommitMessage);
 }
 
-
 function associateFilesInteractive( array $pageRecord, 
                                     \PDO $pdoConn, 
                                     bool $promptToCommit = true, 
@@ -1346,15 +1285,10 @@ function associateFilesInteractive( array $pageRecord,
 }
 
 function appendGeneratePageRecords( \PDO $pdoConn, 
-                                    ?int $lastPageID = NULL,
+                                    ?int $lastPageID = null,
                                     bool $promptToCommit = true, 
                                     string $promptCommitMessage = ''    ) {
     if (!tryBeginTransaction($pdoConn)) return false;
-
-    if ($lastPageID === NULL) {
-        // if not given an existing page ID to append to, 
-        $lastPageID = getEndOfPageOrderID(getMostRecentPage($pdoConn), $pdoConn);
-    }
 
     $records = [];
     $getRecordBack = $pdoConn->prepare(<<<STMT
@@ -1366,7 +1300,11 @@ function appendGeneratePageRecords( \PDO $pdoConn,
     echo "Generating page records...\n";
     do {
         $record = generatePageRecordInteractive($pdoConn);
-        queryInsertRecords($pdoConn, 'page', PAGEINSERTCOLUMNS, [$record]);
+        if (!queryInsertRecords($pdoConn, 'page', PAGEINSERTCOLUMNS, [$record])) {
+            promptRollback($pdoConn, 'Inserting page records failed.');
+            return false;
+        }
+        
         $getRecordBack->execute([$record['title']]);
         $record = $getRecordBack->fetch(\PDO::FETCH_ASSOC);
 
@@ -1379,11 +1317,13 @@ function appendGeneratePageRecords( \PDO $pdoConn,
         if (promptInput("Associate content warnings? (y/n) > " == 'y'))
             associateCWsInteractive($record, $pdoConn, promptToCommit: false);
 
-        appendPages([$record], $lastPageID, $pdoConn, promptToCommit: false);
-        $lastPageID = $record['pageid'];
+        if (!appendPages([$record], $pdoConn, $lastPageID, promptToCommit: false)) {
+            promptRollback($pdoConn, 'Ording pages failed.');
+            return false;
+        }
 
         $records[] = $record;
-    } while (promptInput("Generate another page? (y/n) > " == 'y'));
+    } while (promptInput("Generate another page? (y/n) > ") == 'y');
 
     if ($promptToCommit) promptCommit($pdoConn, $promptCommitMessage);
 
@@ -1743,8 +1683,8 @@ function createTempSearchTables($joinTokens,
                                 \PDO $pdoConn) {
     $tagSearchDefinition = '';
     $cwSearchDefinition = '';
-    $possibleTagMatches = NULL;
-    $possibleCWMatches = NULL;
+    $possibleTagMatches = null;
+    $possibleCWMatches = null;
     if ($tagTokens OR $joinTokens) {
         $tagSearchDefinition = 
                 'WITH joinsearch AS (SELECT * FROM ('
@@ -2148,7 +2088,7 @@ function getTagsFromPageIDStmt(\PDO $pdoConn) {
 function getTagsFromMultiplePageIDsStmt(array $numIDs, \PDO $pdoConn) {
     return $pdoConn->prepare(
             "SELECT name FROM tagpage INNER JOIN tag USING (tagid) WHERE pageid IN"
-                . rowPlaceholder($numIDs)
+                . rowPlaceholder(\count($numIDs))
                 . ";"
     );
 }
@@ -2166,7 +2106,7 @@ function getCWsFromMultiplePageIDsStmt(array $numIDs, \PDO $pdoConn) {
             SELECT name FROM contwarningpage INNER JOIN contwarning USING (contwarningid) 
                 WHERE pageid IN
             STMT;
-    return $pdoConn->prepare($stmtPrefix . rowPlaceholder($numIDs) . ";");
+    return $pdoConn->prepare($stmtPrefix . rowPlaceholder(\count($numIDs)) . ";");
 }
 
 function getThumbnailFromPageIDStmt(\PDO $pdoConn) {
@@ -2202,8 +2142,8 @@ function getPageIDsFromUpdateIDStmt(\PDO $pdoConn) {
 
 function getFirstPageIDOfUpdateFromID(  \PDO $pdoConn, 
                                         int $updateID, 
-                                        ?\PDOStatement $getPageFromUpdateID = NULL, 
-                                        ?\PDOStatement $getPrevPageFromID = NULL    ) {
+                                        ?\PDOStatement $getPageFromUpdateID = null, 
+                                        ?\PDOStatement $getPrevPageFromID = null    ) {
     if (!$getPageFromUpdateID) $getPageFromUpdateID = getPageIDsFromUpdateIDStmt($pdoConn);
     $getPageFromUpdateID->execute([$updateID]);
 
@@ -2216,9 +2156,9 @@ function getFirstPageIDOfUpdateFromID(  \PDO $pdoConn,
 
 function getFirstPageRecordOfUpdateFromID(  \PDO $pdoConn, 
                                             int $updateID, 
-                                            ?\PDOStatement $getPageFromUpdateID = NULL, 
-                                            ?\PDOStatement $getPrevPageFromID = NULL, 
-                                            ?\PDOStatement $getPageRecordFromID = NULL    ) {
+                                            ?\PDOStatement $getPageFromUpdateID = null, 
+                                            ?\PDOStatement $getPrevPageFromID = null, 
+                                            ?\PDOStatement $getPageRecordFromID = null    ) {
     if (!$getPageRecordFromID) $getPageRecordFromID = getPageRecordFromIDStmt($pdoConn);
     return executeAndFetch(
             $getPageRecordFromID, 
@@ -2231,8 +2171,8 @@ function getFirstPageRecordOfUpdateFromID(  \PDO $pdoConn,
 
 function getLastPageIDOfUpdateFromID(   \PDO $pdoConn, 
                                         int $updateID, 
-                                        ?\PDOStatement $getPageFromUpdateID = NULL, 
-                                        ?\PDOStatement $getNextPageFromID = NULL    ) {
+                                        ?\PDOStatement $getPageFromUpdateID = null, 
+                                        ?\PDOStatement $getNextPageFromID = null    ) {
     if (!$getPageFromUpdateID) $getPageFromUpdateID = getPageIDsFromUpdateIDStmt($pdoConn);
     $getPageFromUpdateID->execute([$updateID]);
 
@@ -2245,9 +2185,9 @@ function getLastPageIDOfUpdateFromID(   \PDO $pdoConn,
 
 function getLastPageRecordOfUpdateFromID(   \PDO $pdoConn, 
                                             int $updateID, 
-                                            ?\PDOStatement $getPageFromUpdateID = NULL, 
-                                            ?\PDOStatement $getNextPageFromID = NULL, 
-                                            ?\PDOStatement $getPageRecordFromID = NULL    ) {
+                                            ?\PDOStatement $getPageFromUpdateID = null, 
+                                            ?\PDOStatement $getNextPageFromID = null, 
+                                            ?\PDOStatement $getPageRecordFromID = null    ) {
     if (!$getPageRecordFromID) $getPageRecordFromID = getPageRecordFromIDStmt($pdoConn);
     return executeAndFetch(
             $getPageRecordFromID, 
@@ -2258,6 +2198,15 @@ function getLastPageRecordOfUpdateFromID(   \PDO $pdoConn,
     );
 }
 
+/**
+ * Summary of Briel\getPrevIDFromIDStmt
+ * @param \PDO $pdoConn
+ * @param string $tableName
+ * @return bool|\PDOStatement when executed, this statement will return `false` if 
+ * there is no record with the given ID as a target, `null` if the record exists but
+ * the thing is the first in an order, or the ID if the thing does have a preceding 
+ * thing. 
+ */
 function getPrevIDFromIDStmt(\PDO $pdoConn, string $tableName) {
     return $pdoConn->prepare("SELECT sourceid FROM $tableName WHERE targetid = ?;");
 }
@@ -2277,21 +2226,63 @@ function getPrevPageRecordFromIDStmt(   \PDO $pdoConn   ) {
     return getPrevRecordFromIDStmt($pdoConn, 'page', 'pageid', 'pageorder');
 }
 
+/**
+ * Summary of Briel\getNextIDFromIDStmt
+ * @param \PDO $pdoConn
+ * @param string $tableName
+ * @return bool|\PDOStatement when executed, this statement will return `false` if 
+ * there is no record with the given ID as a source, `null` if the record exists but
+ * the thing is the last in an order, or the ID if the thing does have a subsequent 
+ * thing. 
+ */
 function getNextIDFromIDStmt(\PDO $pdoConn, string $tableName) {
     return $pdoConn->prepare("SELECT targetid FROM $tableName WHERE sourceid = ?;");
 }
 
+/**
+ * Summary of Briel\getPrevPageFromIDStmt
+ * @param \PDO $pdoConn
+ * @return bool|\PDOStatement when executed, this statement will return `false` if 
+ * there is no record with the given ID as a target, `null` if the record exists but
+ * the page is the first in an order, or the ID if the page does have a preceding 
+ * page. 
+ */
 function getPrevPageFromIDStmt(\PDO $pdoConn) {
     return getPrevIDFromIDStmt($pdoConn, "pageorder");
 }
 
+/**
+ * Summary of Briel\getNextPageFromIDStmt
+ * @param \PDO $pdoConn
+ * @return bool|\PDOStatement when executed, this statement will return `false` if 
+ * there is no record with the given ID as a source, `null` if the record exists but
+ * the page is the last in an order, or the ID if the page does have a subsequent 
+ * page. 
+ */
 function getNextPageFromIDStmt(\PDO $pdoConn) {
     return getNextIDFromIDStmt($pdoConn, "pageorder");
 }
+
+/**
+ * Summary of Briel\getPrevUpdateFromIDStmt
+ * @param \PDO $pdoConn
+ * @return bool|\PDOStatement when executed, this statement will return `false` if 
+ * there is no record with the given ID as a target, `null` if the record exists but
+ * the update is the first in an order, or the ID if the update does have a preceding 
+ * update. 
+ */
 function getPrevUpdateFromIDStmt(\PDO $pdoConn) {
     return getPrevIDFromIDStmt($pdoConn, "comicupdateorder");
 }
 
+/**
+ * Summary of Briel\getNextUpdateFromIDStmt
+ * @param \PDO $pdoConn
+ * @return bool|\PDOStatement when executed, this statement will return `false` if 
+ * there is no record with the given ID as a source, `null` if the record exists but
+ * the update is the last in an order, or the ID if the update does have a subsequent 
+ * update. 
+ */
 function getNextUpdateFromIDStmt(\PDO $pdoConn) {
     return getNextIDFromIDStmt($pdoConn, "comicupdateorder");
 }
@@ -2313,16 +2304,16 @@ function getThumbnailRecordsFromIDStmt(\PDO $pdoConn) {
 /**
  * Summary of Briel\backupSearchData
  * @param \PDO $pdoConn [optional]
- * @param mixed $search [optional] Default NULL. If NULL, backs up entire search cache.
+ * @param mixed $search [optional] Default null. If null, backs up entire search cache.
  * @param mixed $searchDesc [optional]
  * @param mixed $matchExactly [optional]
  * @return void
  */
 function backupSearchData(  \PDO $pdoConn, 
-                            $search = NULL, 
+                            $search = null, 
                             $searchDesc = false, 
                             $matchExactly = false   ) {
-    if ($search === NULL) {
+    if ($search === null) {
         $pdoConn->query(<<<STMT
                 INSERT INTO searchcachehistory (
                     search, searchimgdesc, matchexactly, numtimes, firstsearched, lastsearched
