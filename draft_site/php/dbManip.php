@@ -47,7 +47,8 @@ function promptInput(string $prompt) {
 }
 
 function promptPathHTML() {
-    return promptInput("Enter HTML file path (doesn't need to exist):\n> ");
+    return str_replace('\\', '/', promptInput(
+            "Enter HTML file path (doesn't need to exist):\n> "));
 }
 
 /**

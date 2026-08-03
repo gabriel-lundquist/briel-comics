@@ -29,6 +29,8 @@ const SEARCHCACHEDIRPATH = SITEROOT . '/searchcache';
 const BLANKSEARCHPATH = SITEROOT . '/blank_search.html';
 const ARCHIVEDIRPATH = SITEROOT . "/archive";
 const ARCHIVESTARTPATH = ARCHIVEDIRPATH . '/archive_p1.html';
+const FONTFACESPATH = SITEROOT . '/styles/briel_font-faces.css';
+const SITEICONPATH = SITEROOT . '/images/smileicon.ico';
 
 const FONTFACESCSSNAME = 'briel_font-faces.css';
 

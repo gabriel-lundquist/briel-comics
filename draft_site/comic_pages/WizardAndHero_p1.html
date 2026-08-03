@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en-US">
+    <head>
+        <!-- Good to include charset just to prevent weird errors later on. -->
+        <meta charset="utf-8">
+        
+        <!-- Prevents mobile browsers from screwing with you. -->
+        <meta name="viewport" content="width=device-width">
+
+        <meta name="author" content="Breel">
+        <meta name="description" content="A page displaying a comic.">
+        
+        <title>Wizard and Hero page 1 |  b r i e l  Comics</title>
+        <link rel="icon" href="/draft_site/images/smileicon.ico" type="image/x-icon">
+
+        <link href="/draft_site/styles/briel_font-faces.css" rel="stylesheet">
+        <link href="/draft_site/styles/reading_page_style.css" 
+              rel="stylesheet" 
+              id="reading_stylesheet">
+
+        <script type="module" src="/draft_site/js/reading_page_script.js"></script>
+    </head>
+
+    <body>
+        <a href="/draft_site/home.html" class="nav-button prev-button" title="Previous"></a>
+
+        <div class="page-display">
+            <main> 
+                <map name="nav-on-comic">
+    <!-- Left quarter of image goes back -->
+    <!-- To change with javascript (coords) -->
+    <area
+        shape="rect"
+        coords="0,0,200,1072"
+        href="/draft_site/home.html"
+        alt="Previous"
+        class="nav-button prev-button"
+    />
+    <!-- Right quarter goes forward -->
+    <!-- To change with javascript (coords) -->
+    <area
+        shape="rect"
+        coords="600,0,800,1072"
+        href="/draft_site/comic_pages/WizardAndHero_p2.html"
+        alt="Next"
+        class="nav-button next-button"
+    />
+</map>
+
+<img
+    class="comic-page"
+    srcset="/draft_site/images/Wizard and Hero/p1_800w.png 800w
+/draft_site/images/Wizard and Hero/p1_1400w.png 1400w
+/draft_site/images/Wizard and Hero/p1_2000w.png 2000w
+"
+    sizes="(max-width: 800px) 100vw,
+            (max-width: 1920px) 800px,
+(max-width: 3000px) 1400px,
+2000px"   
+    src="/draft_site/images/Wizard and Hero/p1_800w.png"
+    alt="Page 1 of Wizard and Hero. A black and white comic where a young hero wanders through a lab and encounters a wizard."
+    usemap="#nav-on-comic"
+    id="single_page"
+>                <nav>
+                    <p class="nav-line">
+                        <a href="/draft_site/home.html" 
+                           class="nav-button prev-button">Previous</a>
+                        <a href="/draft_site/comic_pages/WizardAndHero_p2.html" 
+                           class="nav-button next-button">Next</a>
+                    </p>
+                    <p class="nav-line">
+                        <a href="/draft_site/home.html" 
+                           class="nav-button prev-upd8-button">Skip back</a>
+                        <a href="/draft_site/home.html" 
+                           class="nav-button home-button">Home</a>
+                        <a href="/draft_site/comic_pages/INTHEWHALE.html" 
+                           class="nav-button next-upd8-button">Skip forth</a>
+                    </p>
+                    <p class="nav-line">
+                        <a href="/draft_site/archive/archive_p1.html" 
+                           class="nav-button archive-button">Archive</a>
+                    </p>
+                </nav>
+                <section id="tag_section">
+    <h2>Tags</h2>
+    <p id="tags-para">
+    <a href="/draft_site/search.php?search=tag%3AWizard_and_Hero">Wizard_and_Hero</a>
+<a href="/draft_site/search.php?search=tag%3Ahero_ayotli">hero_ayotli</a>
+<a href="/draft_site/search.php?search=tag%3Awizard_zissel">wizard_zissel</a>
+    </p>
+</section>
+<section id="desc_section">
+    <h2><a href="#text_description" 
+            class="text_desc_heading">Text Description</a></h2>
+    <p class="text-desc">
+        Panel 1: Ayotli, a short young woman with a big round nose, peeks through a door frame. Ayotli: "Hello?" Panel 2: Various containers, devices, and tools are spread over the floor and several counters. The room is cramped for all the stuff in it. Ayotli: "Whoa." Panel 3: Zissel, a tall, thin woman with a long braid and a pointy nose, rigidly strides into view from around a corner. Zissel: "Hey! You're candidate H5, right?" Panel 4: Ayotli has short hair and wears a tank top, emphasizing her shoulders. Dismayed, she hunches and reaches out a hand to Zissel, looking up at her face. Zissel herself is leaning forward with her hands on her hips, expectant. Ayotli: "Um. I'm Ayotli." Panel 5: Zissel reciprocates the dap. Both she and Ayotli stand straighter and relax their faces. Zissel: "Okay. Ayotli. I'm Wizard Zissel."    </p>
+</section>
+            </main>
+
+            <footer>
+                <p class="copyright">
+    ©Copyright 2025-2026 by Briel Comics.
+    All rights reserved.
+</p>            </footer>
+
+        </div>  
+        
+        <a href="/draft_site/comic_pages/WizardAndHero_p2.html" class="nav-button next-button" title="Next"></a>
+    </body>
+</html>
+

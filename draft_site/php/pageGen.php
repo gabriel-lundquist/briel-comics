@@ -16,7 +16,7 @@ const CHECKBOXON = 'on';
 const THUMBNAILWIDTH = '100px';
 
 const DEFAULTWINDOWWIDTHS = [DISPLAYWIDTH1, DISPLAYWIDTH2];
-const DEFAULTIMAGEWIDTHSORDERED = [1400, 800, 2000];
+const DEFAULTIMAGEWIDTHSORDERED = [800, 1400, 2000];
 
 const DEFAULTPREVLINK = HOMEPATH;
 const DEFAULTNEXTLINK = COMMENTPATH;
@@ -36,11 +36,11 @@ class SearchResultInfo {
     public $pageContWarns;
     public $thumbnailRecord;
     public $isExact;
-    private $matchTags = NULL;
-    private $nonMatchTags = NULL;
-    private $matchContWarns = NULL;
-    private $nonMatchContWarns = NULL;
-    private $descMatches = NULL;
+    private $matchTags = null;
+    private $nonMatchTags = null;
+    private $matchContWarns = null;
+    private $nonMatchContWarns = null;
+    private $descMatches = null;
 
     public function __construct($searchRecord, 
                                 $tokenExecList, 
@@ -58,7 +58,7 @@ class SearchResultInfo {
     }
 
     public function getMatchTags() {
-        if ($this->matchTags === NULL) {
+        if ($this->matchTags === null) {
             $this->matchTags = [];
             foreach (array_filter(  $this->searchRecord, 
                                     fn($k) => str_starts_with($k, 'tag'), 
@@ -72,7 +72,7 @@ class SearchResultInfo {
     }
 
     public function getNonMatchTags() {
-        if ($this->nonMatchTags === NULL) {
+        if ($this->nonMatchTags === null) {
             // Not sure why VS Code is marking this as unreachable...
             $this->nonMatchTags = array_diff($this->pageTags, $this->getMatchTags());
         }
@@ -81,7 +81,7 @@ class SearchResultInfo {
     }
 
     public function getMatchCWs() {
-        if ($this->matchContWarns === NULL) {
+        if ($this->matchContWarns === null) {
             $this->matchContWarns = [];
             foreach (array_filter($this->searchRecord, 
                                     fn($k) => str_starts_with($k, 'cw'), 
@@ -95,7 +95,7 @@ class SearchResultInfo {
     }
 
     public function getNonMatchCWs() {
-        if ($this->nonMatchContWarns === NULL) {
+        if ($this->nonMatchContWarns === null) {
             // Not sure why VS Code is marking this as unreachable...
             $this->nonMatchContWarns = array_diff(  $this->pageContWarns, 
                                                     $this->getMatchCWs()    );
@@ -109,7 +109,7 @@ class SearchResultInfo {
     }
 
     public function getDescMatches() {
-        if ($this->descMatches === NULL) {
+        if ($this->descMatches === null) {
             // Not sure why VS Code is marking this as unreachable...
             $this->descMatches = array_map(  
                     fn($str) => strtolower(substr($str, \strlen('desc'))), 
@@ -171,9 +171,9 @@ class PageInfo {
                                 $tags, 
                                 $contWarns, 
                                 $spreadType, 
-                                $srcWidthsOrdered = NULL, 
-                                $stylePath = NULL, 
-                                $windowWidthsOrdered = NULL) {
+                                $srcWidthsOrdered = null, 
+                                $stylePath = null, 
+                                $windowWidthsOrdered = null) {
         $this->record       = $record;
         $this->prevLink     = $prevLink;
         $this->nextLink     = $nextLink;
@@ -259,11 +259,11 @@ function generateComicpage(PageInfo $page) {
         <meta name="author" content="Breel">
         <meta name="description" content="A page displaying a comic.">
         
-        <title><?= $page->record['title'] ?> | Breel Comix</title>
-        <link rel="icon" href="<?= SITEROOT ?>/images/<?= SITEICONNAME ?>" type="image/x-icon">
+        <title><?= $page->record['title'] . ' | ' . randomPageTitle() ?></title>
+        <link rel="icon" href="<?= SITEICONPATH ?>" type="image/x-icon">
 
-        <link href="<?= SITEROOT ?>/styles/briel_font-faces.css" rel="stylesheet">
-        <link href="<?= $page->record['stylepath'] === NULL 
+        <link href="<?= FONTFACESPATH ?>" rel="stylesheet">
+        <link href="<?= $page->record['stylepath'] === null 
                             ? $page->stylePath
                             : $page->record['stylepath'] ?>" 
               rel="stylesheet" 
@@ -273,18 +273,11 @@ function generateComicpage(PageInfo $page) {
     </head>
 
     <body>
-
         <a href="<?= $page->prevLink ?>" class="nav-button prev-button" title="Previous"></a>
 
         <div class="page-display">
             <main> 
-                <?php 
-    generateComicDisplayElements(   $page->pageImgRecords, 
-                                    $page->prevLink, 
-                                    $page->nextLink, 
-                                    $page->srcWidthsOrdered, 
-                                    $page->windowWidthsOrdered  ); 
-                ?>
+                <?php generateComicDisplayElements($page); ?>
                 <nav>
                     <p class="nav-line">
                         <a href="<?= $page->prevLink ?>" 
@@ -295,24 +288,19 @@ function generateComicpage(PageInfo $page) {
                     <p class="nav-line">
                         <a href="<?= $page->prevUpd8Link ?>" 
                            class="nav-button prev-upd8-button">Skip back</a>
-                        <a href="<?= SITEROOT ?>/home_page.html" 
+                        <a href="<?= HOMEPATH ?>" 
                            class="nav-button home-button">Home</a>
                         <a href="<?= $page->nextUpd8Link ?>" 
                            class="nav-button next-upd8-button"><?=
-    $page->nextUpd8Link AND !\in_array($page->nextUpd8Link, [COMMENTPATH, HOMEPATH]) ?
-            "Skip forth" : "More" ?></a>
+    (\in_array($page->nextUpd8Link, DEFAULTNEXTLINKS)) ?
+            "More" : "Skip forth" ?></a>
                     </p>
                     <p class="nav-line">
-                        <a href="<?= SITEROOT ?>/archive/archive_p1.html" 
+                        <a href="<?= ARCHIVESTARTPATH ?>" 
                            class="nav-button archive-button">Archive</a>
                     </p>
                 </nav>
-                <?php 
-    generateReadingAccessoryElements(   $page->record, 
-                                        $page->tags, 
-                                        $page->contWarns, 
-                                        $searchPath ); 
-                ?>
+                <?php generateReadingAccessoryElements($page); ?>
             </main>
 
             <footer>
@@ -321,8 +309,7 @@ function generateComicpage(PageInfo $page) {
 
         </div>  
         
-        <a href="<?= $nextLink ?>" class="nav-button next-button" title="Next"></a>
-
+        <a href="<?= $page->nextLink ?>" class="nav-button next-button" title="Next"></a>
     </body>
 </html>
 
@@ -346,8 +333,8 @@ function generateReadingStyle(  $bgColor,
                                 $windowWidths = DEFAULTWINDOWWIDTHS,
                                 $pageSectionShrinkFactor = 0.95,
                                 $comicTopMargin = 8,
-                                $gradient = NULL, 
-                                $bgImageURL = NULL, 
+                                $gradient = null, 
+                                $bgImageURL = null, 
                                 $stretchBGImg = false   ) {
     sort($fileWidths);
     $fileWidthsOrdered = $fileWidths;
@@ -552,28 +539,22 @@ a.text_desc_heading {
     }
 }
 
-function generateComicDisplayElements(  $pageImgRecords, 
-                                        $prevLink, 
-                                        $nextLink,
-                                        $srcDefaultWidths = [1400, 800, 2000],
-                                        $windowWidthsOrder = [  DISPLAYWIDTH1, 
-                                                                DISPLAYWIDTH2   ]   ) {
+function generateComicDisplayElements(PageInfo $page) {
     // create an array of files ordered by width, keyed to width
-    $filesWidthOrder = array_combine(array_column($pageImgRecords, 'width'), 
-                                 $pageImgRecords);
+    $filesWidthOrder = array_combine(   array_column($page->pageImgRecords, 'width'), 
+                                        $page->pageImgRecords );
     ksort($filesWidthOrder);
 
     // attempts to find an image with a width matching the defaults above as the default
-    $srcWidth = NULL;
-    foreach ($srcDefaultWidths as $width) {
+    $srcWidth = null;
+    foreach ($page->srcWidthsOrdered as $width) {
         if (\array_key_exists($width, $filesWidthOrder)) {
             $srcWidth = $width;
             break;
         }
     }
     // if it can't find such an image, it just takes the smallest file provided
-    // TODO: restrict this array to only files with a 'page' purpose
-    if ($srcWidth === NULL) {
+    if ($srcWidth === null) {
         $srcWidth = \array_key_first($filesWidthOrder);
     }
 
@@ -586,7 +567,7 @@ function generateComicDisplayElements(  $pageImgRecords,
         coords="0,0,<?= 0.25 * $srcWidth ?>,<?= 
                 $filesWidthOrder[$srcWidth]['height'] 
             ?>"
-        href="<?= $prevLink ?>"
+        href="<?= $page->prevLink ?>"
         alt="Previous"
         class="nav-button prev-button"
     />
@@ -597,7 +578,7 @@ function generateComicDisplayElements(  $pageImgRecords,
         coords="<?= 0.75 * $srcWidth ?>,0,<?= $srcWidth ?>,<?= 
                 $filesWidthOrder[$srcWidth]['height'] 
                 ?>"
-        href="<?= $nextLink ?>"
+        href="<?= $page->nextLink ?>"
         alt="Next"
         class="nav-button next-button"
     />
@@ -610,12 +591,13 @@ function generateComicDisplayElements(  $pageImgRecords,
         echo $file['path'] . ' ' . $file['width'] . "w\n";
     }
         ?>"
-    sizes="(max-width: <?= array_first($filesWidthOrder)['width'] ?>px) 100vw, <?php 
-    reset($filesWidthOrder);
-    // Undefined behavior if `count(filesWidthOrder) < count($windowWidthsOrder) + 1`
-    foreach ($windowWidthsOrder as $maxWidth) {
+    sizes="(max-width: <?= array_first($filesWidthOrder)['width'] ?>px) 100vw,
+            <?php 
+    for (   $maxWidth = reset($page->windowWidthsOrdered), $file = reset($filesWidthOrder); 
+            $maxWidth !== false AND $file !== false;
+            $maxWidth = next($page->windowWidthsOrdered), $file = next($filesWidthOrder)) {
         echo "(max-width: {$maxWidth}px) "
-                . next($filesWidthOrder)['width'] 
+                . $file['width'] 
                 . "px,\n";
     }
     echo array_last($filesWidthOrder)['width'];
@@ -636,44 +618,50 @@ function cwLink($cw, $searchPath = SEARCHPATH) {
     return "<a href=\"$searchPath?search=" . urlencode("cw:$cw") . "\">$cw</a>";
 }
 
-function generateReadingAccessoryElements(  
-        $pageRecord, 
-        $tags, 
-        $contWarns, 
-        $searchPath = SEARCHPATH
-) {
+function generateReadingAccessoryElements(PageInfo $page) {
     ob_start();
+    if ($page->tags) {
 ?>
 <section id="tag_section">
     <h2>Tags</h2>
     <p id="tags-para">
     <?php
-    foreach ($tags as $tag) {
-        echo tagLink($tag) . "\n";
-    }
+        foreach ($page->tags as $tag) {
+            echo tagLink($tag) . "\n";
+        }
     ?>
     </p>
 </section>
+<?php
+    }
 
+    if ($page->contWarns) {
+?>
 <section id="cw_section">
     <h2>Content Warnings</h2>
     <p id="cws-para">
     <?php
-    foreach ($contWarns as $cw) {
-        echo cwLink($cw) . "\n";
-    }
+        foreach ($page->contWarns as $cw) {
+            echo cwLink($cw) . "\n";
+        }
     ?>
     </p>
 </section>
+<?php
+    } 
 
+    if ($page->record["imagedesc"]) {
+?>
 <section id="desc_section">
     <h2><a href="#text_description" 
             class="text_desc_heading">Text Description</a></h2>
     <p class="text-desc">
-        <?= $pageRecord["imagedesc"] ?>
+        <?= $page->record["imagedesc"] ?>
     </p>
 </section>
 <?php 
+    }
+
     return ob_get_flush();
 }
 
@@ -690,7 +678,7 @@ function generateBlogEntryElements(BlogInfo $blog) {
 function generateHomepage(  BlogInfo $blogInfo, 
                             PageInfo $pageInfo, 
                             string $searchPath = SEARCHPATH, 
-                            ?string $stylePath = NULL, 
+                            ?string $stylePath = null, 
                             string $scriptPath = SITEROOT . '/js/reading_page_script.js'   ) {
     ob_start();
 ?>
@@ -706,7 +694,7 @@ function generateHomepage(  BlogInfo $blogInfo,
         <meta name="author" content="Breel">
         <meta name="description" content="A home page for a comics website.">
         
-        <title><?= randomName() ?> web log</title>
+        <title><?= randomPageTitle() ?> web log</title>
         <link href="<?= SITEROOT ?>/images/<?= SITEICONNAME ?>" rel="icon" type="image/x-icon">
 
         <link href="<?= SITEROOT ?>/styles/<?= FONTFACESCSSNAME ?>" rel="stylesheet">
@@ -752,13 +740,7 @@ function generateHomepage(  BlogInfo $blogInfo,
             </header>
 
             <main> 
-                <?php 
-    generateComicDisplayElements(   $pageInfo->pageImgRecords, 
-                                    $pageInfo->prevLink, 
-                                    $pageInfo->nextLink, 
-                                    $pageInfo->srcWidthsOrdered, 
-                                    $pageInfo->windowWidthsOrdered  ); 
-                ?>
+                <?php generateComicDisplayElements($pageInfo); ?>
                 <nav>
                     <p class="nav-line">
                         <a href="<?= $pageInfo->prevLink ?>" 
@@ -785,7 +767,7 @@ function generateHomepage(  BlogInfo $blogInfo,
                         ?>
                     </p>
                     <p class="nav-line">
-                        <a href="<?= SITEROOT ?>/archive/archive_p1.html" 
+                        <a href="<?= ARCHIVESTARTPATH ?>" 
                            class="nav-button archive-button">Archive</a>
                     </p>
                 </nav>
@@ -795,12 +777,7 @@ function generateHomepage(  BlogInfo $blogInfo,
                     <?php generateBlogEntryElements($blogInfo); ?>
                 </section>
 
-                <?php 
-    generateReadingAccessoryElements(   $pageInfo->record, 
-                                        $pageInfo->tags, 
-                                        $pageInfo->contWarns, 
-                                        $searchPath ); 
-                ?>
+                <?php generateReadingAccessoryElements($pageInfo); ?>
             </main>
 
             <footer>
@@ -845,7 +822,7 @@ function formatSearchNavLink(int $navIndex, array $getParams) {
             . '">' . $navIndex . '</a> ... ';
 }
 
-function randomName() {
+function randomPageTitle() {
     $name = match(rand(0,3)) { 
         0 => 'Briel', 
         1 => 'Breel', 
@@ -973,6 +950,21 @@ function generateSearchNav( int $resultPageCount,
     return generateNav($resultPageCount, $resultPageIdx, $links);
 }
 
+function tagSubstrCaseInsen(string $toSurround, string $str, string $tag) {
+    $remaining = $str;
+    $processedStr = '';
+    for (   $i = stripos($str, $toSurround); 
+            $i != false; 
+            $remaining = substr($remaining, $i + strlen($toSurround)), 
+                    $i = stripos($remaining, $toSurround)) {
+
+        $processedStr .= substr($remaining, 0, $i) 
+                . "<$tag>" . substr($remaining, $i, strlen($toSurround)) . "</$tag>";
+    }
+    $processedStr .= $remaining;
+    return $processedStr;
+}
+
 /**
  * Summary of Briel\generateSearchEntry
  * Does flush to output. Start a buffer to prevent this.
@@ -1069,15 +1061,7 @@ function generateSearchEntry(SearchResultInfo $result) {
     if ($result->isExact) {
         $hilitedDesc = $result->searchRecord['imagedesc'];
         foreach ($result->getDescMatches() as $match) {
-            $hilitedDesc = str_replace( $match, 
-                                        "<strong>$match</strong>", 
-                                        $hilitedDesc);
-            $hilitedDesc = str_replace( ucfirst($match), 
-                                        '<strong>' . ucfirst($match) . '</strong>', 
-                                        $hilitedDesc    );
-            $hilitedDesc = str_replace( strtoupper($match), 
-                                        '<strong>' . strtoupper($match) . '</strong>', 
-                                        $hilitedDesc    );
+            $hilitedDesc = tagSubstrCaseInsen($match, $hilitedDesc, "strong");
         }
         
         echo $hilitedDesc;
@@ -1169,7 +1153,7 @@ function generateSearchPage(string $searchStr,
                             array $searchResultInfos, 
                             array $getParams, 
                             int $pageIndex = 1,
-                            ?array $allFileNames = NULL) {
+                            ?array $allFileNames = null) {
     
     ob_start();
 ?>
@@ -1182,7 +1166,7 @@ function generateSearchPage(string $searchStr,
         <meta name="author" content="Breel">
         <meta name="description" content="Breel comics search page.">
         
-        <title>Search | <?= randomName() ?></title>
+        <title>Search | <?= randomPageTitle() ?></title>
         <link rel="icon" href="<?= SITEROOT ?>/images/<?= SITEICONNAME ?>" type="image/x-icon" />
 
         <link href="<?= SITEROOT ?>/styles/defaults.css" rel="stylesheet" />
@@ -1216,37 +1200,9 @@ function generateSearchPage(string $searchStr,
         </main>
 
         <footer>
-            <aside>
-                <h3 id="search_options">Search options</h3>
-                <ul>
-                    <li>Enter <kbd>-blegh</kbd> to exclude any page that contains "blegh"</li>
-                    <li>Enter <kbd>title:tuesday</kbd> to get pages with "tuesday" in their 
-                        titles, as opposed to just searching <kbd>tuesday</kbd> which gets you 
-                        any page with a "tuesday" tag or posted on a tuesday or whatever. 
-                        Valid prefixes are:
-                        <ul>
-                            <?php 
-    foreach (SEARCHFIELDSPECS as $field) {
-        echo "<li><kbd>$field:</kbd>";
-        switch ($field) {
-            case 'cw': echo ' (as in Content Warning)'; break;
-            case 'day': echo ' (searches both day of the month and day of the week)'; break;
-        }
-        echo '</li>';
-    }                       ?>              
-                        </ul>
-                    </li>
-                    <li>You can use both at once, like <kbd>-cw:gore</kbd>
-                        if you're okay with the word "gore" but you don't want to see 
-                        any comics with guts.</li>
-                    <li>Check "Search image descriptions too" and <strong>uncheck</strong>
-                        "Match terms exactly" if you're looking for a specific comic but 
-                        you can't remember exact dialogue. The machine will attempt to 
-                        find image descriptions that have similar words (no AI, just 
-                        MySQL's fulltext search algorithm).</li>
-                </ul>
-            </aside>
             <?php 
+    include 'searchExplainerElement.php';
+
     generateSearchForm( '-footer', 
                         $searchStr, 
                         $getParams['desc'] == CHECKBOXON, 
@@ -1359,7 +1315,7 @@ function generateArchiveEntry($updateInfo) {
     </div>
     <div class="thumbnails-div">
         <?php 
-    foreach (   array_map(  NULL, 
+    foreach (   array_map(  null, 
                             $updateInfo->thumbnailRecordsOrdered, 
                             $updateInfo->pageRecordsOrdered ) 
                 as [$thumbnail, $page]  ) {     ?> 
@@ -1405,7 +1361,7 @@ function generateArchivePage(   $updateInfos,
         <meta name="author" content="Breel">
         <meta name="description" content="Breel comics archive.">
         
-        <title>Search | <?= randomName() ?></title>
+        <title>Search | <?= randomPageTitle() ?></title>
         <link rel="icon" href="<?= SITEROOT ?>/images/<?= SITEICONNAME ?>" type="image/x-icon" />
 
         <link href="<?= SITEROOT ?>/styles/defaults.css" rel="stylesheet" />

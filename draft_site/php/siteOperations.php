@@ -94,18 +94,20 @@ function getPageInfo(   \PDO $pdoConn,
     $nailRecords = $getThumbnailRecords->fetchAll(\PDO::FETCH_ASSOC);
 
     if (!LOCALSITE) {   // temporary measure until I get this hooked up to NGINX
-        $record['path'] = replacePathsForServerSite($record['path']);
+        $record['path'] = str_replace('\\', '/', replacePathsForServerSite($record['path']));
 
         foreach (array_keys($links) as $key) {
-            $links[$key] = replacePathsForServerSite($links[$key]);
+            $links[$key] = str_replace('\\', '/', replacePathsForServerSite($links[$key]));
         }
 
         foreach(array_keys($imgRecords) as $key) {
-            $imgRecords[$key]['path'] = replacePathsForServerSite($imgRecords[$key]['path']);
+            $imgRecords[$key]['path'] = 
+                    str_replace('\\', '/', replacePathsForServerSite($imgRecords[$key]['path']));
         }
 
         foreach(array_keys($nailRecords) as $key) {
-            $nailRecords[$key]['path'] = replacePathsForServerSite($nailRecords[$key]['path']);
+            $nailRecords[$key]['path'] = 
+                    str_replace('\\', '/', replacePathsForServerSite($nailRecords[$key]['path']));
         }
     }
 
@@ -259,27 +261,45 @@ function postUpdate(?\PDO $pdoConn = NULL) {
     // add update ID to update order
     insertUpdateAtEnd($updateRecord['updateid'], $pdoConn);
 
+    $prevUpdateID = getEndOfRecentUpdateOrderID($pdoConn);
+    $getPrevUpdatePages = getPageIDsFromUpdateIDStmt($pdoConn);
+    $getPrevUpdatePages->execute([$prevUpdateID]);
+    $prevUpdatePageIDs = $getPrevUpdatePages->fetchAll(\PDO::FETCH_COLUMN);
+
     // generate page records, add them to pageorder, and associate them to files/tags/cws
     $pageRecords = appendGeneratePageRecords(
             $pdoConn, 
-            getLastPageIDOfUpdateFromID($pdoConn, getEndOfRecentUpdateOrderID($pdoConn))
+            getLastPageIDOfUpdateFromID($pdoConn, $prevUpdateID)
     );
 
     // associate pages with update
     associatePagesInteractive($updateRecord, $pdoConn);
 
     echo "Getting page information for HTML files...\n";
-    // generate page info to be used in files
-    $allPageInfo = array_fill(0, \count($pageRecords), NULL);
+    // get page info to be used in new HTML files
+    $allPageInfo = array_fill(0, \count($pageRecords), null);
     for ($i = 0; $i < \count($allPageInfo); $i++) {
         $allPageInfo[$i] = getPageInfo($pdoConn, $pageRecords[$i]['pageid']);
     }
 
+    // get page info to be used to regenerate previous HTML files
+    $allPrevPageInfo = array_fill(0, \count($prevUpdatePageIDs), null);
+    for ($i = 0; $i < \count($allPrevPageInfo); $i++) {
+        $allPrevPageInfo[$i] = getPageInfo($pdoConn, $prevUpdatePageIDs[$i]);
+    }
+
     echo "Generating HTML files...\n";
-    // generate HTML files using page info
     ob_start(); // generateComicpage will flush output
+    // generate new HTML files using page info
     foreach ($allPageInfo as $page) {
-        file_put_contents($page->record['path'], generateComicpage($page));
+        if (!file_put_contents($page->record['path'], generateComicpage($page)))
+            echo "Failed to put file at {$page->record['path']}.\n";
+    }
+    
+    // regenerate HTML files from previous update (update links)
+    foreach ($allPrevPageInfo as $prevPage) {
+        if (!file_put_contents($prevPage->record['path'], generateComicPage($prevPage)))
+            echo "Failed to put file from previous update at {$page->record['path']}.\n";
     }
     ob_end_clean();
 

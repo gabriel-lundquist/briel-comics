@@ -3,8 +3,11 @@ namespace Briel;
 
 require_once 'siteOperations.php';
 
-$conn = pdoConnect();
+$conn = pdoConnect(echoConnSuccess: LOCALSITE);
 
-$wizInfo1 = getPageInfo($conn, 29);
-
-print_r($wizInfo1);
+foreach ([29, 30, 31, 32] as $id) {
+    $info[$id] = getPageInfo($conn, $id);
+    // have to be careful to always include the full filesystem path when writing to files
+    print_r(file_put_contents(  (LOCALSITE ? '' : FILEFOLDER) . $info[$id]->record['path'], 
+                                generateComicpage($info[$id])       ));
+}

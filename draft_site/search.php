@@ -26,7 +26,7 @@ ob_start();
 $pdoConnection = Briel\pdoConnect(); // check for a cookie? session storage?
 ob_end_clean();
 if ($pdoConnection === false) {
-    readfile(BLANKSEARCHPATH);
+    readfile(Briel\BLANKSEARCHPATH);
     exit("Oh fuck! MySQL connection failed...");
 }
 
@@ -84,7 +84,7 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
 
     if ($prevSearchOtherIndex->fetch()[0] != 0) {
         // the search does exist! just not this page. output blank search page
-        readfile(BLANKSEARCHPATH);
+        readfile(Briel\BLANKSEARCHPATH);
         $isOutputYet = true;
 
         // and update that ofc
@@ -133,7 +133,7 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
 
                 // obligatory check for whether the index doesn't exist
                 if (($allSearch = $prevSearch->fetch(PDO::FETCH_ASSOC)) === false) {
-                    readfile(BLANKSEARCHPATH);
+                    readfile(Briel\BLANKSEARCHPATH);
                     $isOutputYet = true;
 
                 // but if it does, output the appropriate blank search
@@ -197,7 +197,7 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
                 $execParams = [];
                 $insertStmt = '';
                 for ($i = 1; $i <= count($pageStrs); $i++) {
-                    $filePath = SEARCHCACHEDIRPATH 
+                    $filePath = Briel\SEARCHCACHEDIRPATH 
                                 . implode('_', ['/search', 
                                                 urlencode($searchcacheKey), 
                                                 $getParams['desc'], 
@@ -234,7 +234,7 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
                     $insert->execute($execParams);
                 }
             } else { // ...unless we have generated no pages, then output blank
-                readfile(BLANKSEARCHPATH);
+                readfile(Briel\BLANKSEARCHPATH);
                 $isOutputYet = true;
             }
         }
