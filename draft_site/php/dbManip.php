@@ -87,11 +87,24 @@ function pdoConnect(string $dbhost = 'localhost',
     }
 }
 
+function tryPDOConnect(&$pdoConn) {
+    if (!$pdoConn) {
+        $pdoConn = pdoConnect();
+        if (!$pdoConn) return false;
+        else return true;
+    } else return true;
+
+}
+
 function dumpQuery(string $query, \PDO $pdoConn) {
     var_dump($pdoConn->query($query)->fetchAll(\PDO::FETCH_ASSOC));
 }
 
-function tryBeginTransaction(\PDO $pdoConn) {
+function tryBeginTransaction(\PDO|bool $pdoConn) {
+    if (!$pdoConn) {
+        echo "Connection to SQL server doesn't exist.";
+        return false;
+    }
     if ($pdoConn->inTransaction()) {
         try {
             $pdoConn->beginTransaction();
@@ -155,7 +168,8 @@ function rowPlaceholder(int $n) {
 function searchcacheKeyFromSearchString(string $searchStr) {
     $termArr = preg_split('/\s+/', $searchStr, flags: PREG_SPLIT_NO_EMPTY);
     sort($termArr, SORT_STRING);
-    return implode(' ', $termArr);  // delimit with spaces so we can pass this to searchComics
+    return implode(' ', $termArr);  
+    // delimit with spaces so we can pass this to searchComics
 }
 
 function recordsToAttrRowStrs(  array $records, 
@@ -190,31 +204,35 @@ function attributeTableStr( array $records,
             . "\n" . str_repeat('_', $tableSpacerLen) . "\n";
 }
 
-function generateFileRecordInteractive( string $filePath, 
-                                        \PDO $pdoConn, 
-                                        ?string $ratioStr = null, 
-                                        ?\PDOStatement $ratioStatement = null   ) {
-    echo "Generating record for `" . basename($filePath) . '`...';
-    if (!is_file($filePath)) {
-        echo "`$filePath` is not an existing file. Aborting record generation...\n";
-        return false;
-    }
+function getNoninteractiveFileRecordParts(  string $filePath, 
+                                            \PDO $pdoConn, 
+                                            array $incompleteRecord = []) {
+    $absPath = str_replace('\\', '/', realpath($filePath));
 
-    $absPath = realpath($filePath);
-
-    // I *think* this should work
     [$imgWidth, $imgHeight] = getimagesize($absPath);
-
-    $alttext = promptInput("Enter alt text (or a path to it):\n> ");
-    if (is_readable($alttext)) {
-        if (!($alttext = file_get_contents($alttext))) $alttext = "";
-    }
 
     $fileExt = substr($filePath, strrpos($filePath, ".") + 1);
 
     // this will give you a different size than what Windows tells you, 
-    // since Windows defines 1 KB = 1024 B, not 1 KB = 1000 B like usual.
+    // since Windows defines 1 kB = 1024 B, not 1 kB = 1000 B like usual.
     $fileSizeKB = (int) (filesize($filePath) / 1000);
+
+    return [...$incompleteRecord, 
+            'path' => $absPath, 
+            'width' => $imgWidth, 
+            'height' => $imgHeight, 
+            'filetype' => $fileExt, 
+            'filesize' => $fileSizeKB];
+}
+
+function getInteractiveFileRecordParts( \PDO $pdoConn, 
+                                        array $incompleteRecord = [],
+                                        ?string $ratioStr = null, 
+                                        ?\PDOStatement $ratioStatement = null   ) {
+    $alttext = promptInput("Enter alt text (or a path to it):\n> ");
+    if (is_readable($alttext)) {
+        $alttext = file_get_contents($alttext) ?: "";
+    }
 
     if (!$ratioStatement) $ratioStatement = $pdoConn->prepare(
             "SELECT ratioid FROM aspectratio WHERE ratio = ?;");
@@ -233,25 +251,132 @@ function generateFileRecordInteractive( string $filePath,
     }
     $ratioID = $fetchedRow['ratioid'];
 
-    $getPurposeID = $pdoConn->prepare("SELECT purposeid FROM filepurpose WHERE purpose = ?;");
-    if (promptInput("Is this file a whole page, to be displayed for reading? (y/n) > ") == "y") {
+    $getPurposeID = $pdoConn->prepare(
+            "SELECT purposeid FROM filepurpose WHERE purpose = ?;");
+    if (promptInput(
+                "Is this file a whole page, to be displayed for reading? (y/n) > "
+            ) == "y") {
         $getPurposeID->execute(['page']);
     } elseif (promptInput("Okay, not a page image. Is it a thumbnail? (y/n) > ") == "y") {
         $getPurposeID->execute(['thumbnail']);
+    } elseif (promptInput("Okay, not a thumbnail. Is it a preview? (y/n) > ") == "y") {
+        $getPurposeID->execute(['preview']);
     } else {
         echo "Okay, for now it's classified as 'other'.\n";
         $getPurposeID->execute(['other']);
     }
     $purposeID = $getPurposeID->fetch()[0];
 
-    return array_combine(FILEINSERTCOLUMNS, [   $absPath, 
-                                                $imgWidth, 
-                                                $imgHeight, 
-                                                $alttext, 
-                                                $fileExt, 
-                                                $fileSizeKB, 
-                                                $ratioID, 
-                                                $purposeID  ]);
+    return [...$incompleteRecord, 
+            'alttext' => $alttext, 
+            'ratioid' => $ratioID, 
+            'purposeid' => $purposeID];
+}
+
+function generateFileRecordInteractive( string $filePath, 
+                                        \PDO $pdoConn, 
+                                        ?string $ratioStr = null, 
+                                        ?\PDOStatement $ratioStatement = null   ) {
+    echo "Generating record for `" . basename($filePath) . '`...';
+    if (!is_file($filePath)) {
+        echo "$filePath is not an existing file. Aborting record generation...\n";
+        return false;
+    }
+
+    return [...getNoninteractiveFileRecordParts($filePath, $pdoConn), 
+            ...getInteractiveFileRecordParts(   $pdoConn, 
+                                                ratioStr: $ratioStr, 
+                                                ratioStatement: $ratioStatement)];
+}
+
+function generateInsertFileRecords(?\PDO $pdoConn = null) {
+    if (!tryPDOConnect($pdoConn)) {
+        echo "Couldn't establish/continue SQL server connection. Aborting...\n";
+        return false;
+    }
+    tryBeginTransaction($pdoConn);
+
+    // after file upload, generate file records
+    $tryAgain = false;
+    $fileRecords = null;
+    do {
+        $fileRecords = [];
+        for ($numFiles = 1; promptInput("Add a file? (y/n) > ") == 'y'; $numFiles++) {
+            $fileRecords[] = generateFileRecordInteractive(
+                    str_replace('\\', '/', promptInput("Enter path for file $numFiles: > ")), 
+                    $pdoConn);
+        }
+        if ($numFiles > 1) {
+            echo ($numFiles - 1) . " file records generated:\n";
+            print_r($fileRecords);
+            // insert file records
+            if (promptinput("Insert these into the database? (y/n) > ") == "y") {
+                insertFileRecords($fileRecords, $pdoConn, promptCommitMessage: "Okay...");
+                echo "...done!\n";
+                $tryAgain = false;
+            } elseif (promptInput(
+                        "Okay. Wanna try again at adding files? (y/n) > ") == "y") {
+                $tryAgain = true;
+            } else {
+                echo "Okay, moving on...\n";
+                $tryAgain = false;
+            }
+        }
+    } while ($tryAgain);
+
+    return $fileRecords;
+}
+
+function generateInsertFileRecordsForPage(  int $pageID, 
+                                            ?\PDO $pdoConn = null, 
+                                            string $folder = "" ) {
+    echo "Generating file records for page $pageID...\n";
+    if (!tryPDOConnect($pdoConn)) {
+        echo "Couldn't establish/continue SQL server connection. Aborting...\n";
+        return false;
+    }
+    tryBeginTransaction($pdoConn);
+
+    $paths = [];
+    if (is_dir($folder)) {
+        if (!str_ends_with($folder, '/') AND !str_ends_with($folder, '\\')) $folder .= '/';
+        echo "Image files found in `$folder`:\n";
+        $paths = array_map(fn($entry) => $folder . $entry, scandir($folder));
+        $paths = array_filter(  
+                $paths, 
+                fn($p) => preg_match('(image/.*)', mime_content_type($p))
+        );
+        echo \implode("\n", $paths) . "\n";
+
+    } else {
+        echo "Enter paths for files, pressing `Enter` after each. Enter `n` to stop.\n";
+        for ($path = promptInput('> '); $path != 'n'; $path = promptInput('> ')) {
+            if (is_file($path)) $paths[] = $path;
+            else echo "Not a file. Enter `n` to stop.\n";
+        }
+    }
+
+    $constantFields = getInteractiveFileRecordParts($pdoConn);
+    $records = [];
+    foreach ($paths as $path) {
+        $records[] = [
+                'pageid' => $pageID, 
+                ...$constantFields,
+                ...getNoninteractiveFileRecordParts($path, $pdoConn)
+        ]; 
+    }
+
+    echo "\nGenerated records:\n";
+    print_r($records);
+    // insert file records
+    if (promptinput("Insert these into the database? (y/n) > ") == "y") {
+        queryInsertRecords($pdoConn, 'file', array_keys($records[0]), $records);
+        echo "...done!\n";
+        return true;
+    } else {
+        echo "Okay, moving on...\n";
+        return false;
+    }
 }
 
 /**

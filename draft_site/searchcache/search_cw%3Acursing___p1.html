@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8">
+        <!-- Good to include charset just to prevent weird errors later on. -->
+        <meta name="viewport" content="width=device-width"/>
+        <meta name="author" content="Breel">
+        <meta name="description" content="Breel comics search page.">
+        
+        <title>Search |  b r i e l  Comics</title>
+        <link rel="icon" href="/draft_site/images/smileicon.ico" type="image/x-icon" />
+
+        <link href="/draft_site/styles/defaults.css" rel="stylesheet" />
+        <link href="/draft_site/styles/briel_font-faces.css" rel="stylesheet" />
+        <link href="/draft_site/styles/update_list_style.css" rel="stylesheet" />
+        <link href="/draft_site/styles/search_page_style.css" rel="stylesheet" />
+        
+        <script type="module" src="/draft_site/js/search_page_script.js"></script>
+    </head>
+
+    <body>
+        <header>
+            <h1>Search</h1>
+            <form role="search" action="/draft_site/search.php" method="get">
+    <p>
+        <input 
+            type="search" 
+            name="search" 
+            id="search-header"
+            placeholder="Search comic pages..."
+            minlength="2"
+            maxlength="256"
+            size="34"
+            pattern="[\w ,.?!();:-&quot;&#039;]{2,256}"
+            aria-label="Search comic pages"
+            value="cw:cursing"
+            class="search-comics"
+        /> 
+        <button type="submit">Search</button>
+    </p>
+    <label for="search-header" class="search-label">
+        Searches tags, dates, titles, and page numbers by default. 
+            See <a href="#search_options">search options</a>.
+        </label>
+    <p>
+        <div class="search-check">
+            <input  type="checkbox" 
+                    name="desc" 
+                    id="desc-header"
+                                >
+            <label for="desc-header">Search image descriptions too</label>
+        </div>
+        <div class="search-check">
+            <input  type="checkbox" 
+                    name="exact" 
+                    id="exact-header"
+                                        >
+            <label for="exact-header">Match terms exactly</label>
+        </div>
+    </p>
+</form>
+        </header>
+
+        <main>
+            <h2>Results</h2>
+            <button class="toggle-nails">Hide thumbnails</button>
+            <article class="search-entry">
+    <div class="thumbnails-div">
+        <a href="/draft_site/comic_pages/INTHEWHALE.html" 
+           class="page-link">
+            <img
+                class="thumbnail"
+                attr-src="/draft_site/images/IN_THE_WHALE/2026-03-22InTheWhale_Ninepanel_nail.jpg"
+                src=""
+                alt="A small, square version of the black, white, and magenta comic In The Whale."
+                width="100px"
+                height="100px"
+                loading="lazy"
+            >
+        </a> 
+    </div>
+    <div class="detail-div">
+        <h3><a href="/draft_site/comic_pages/INTHEWHALE.html" class="page-link">IN THE WHALE</a></h3>
+        <p> <h4>Date:</h4>
+            <time date="2025-06-26">2025, Jun. 26th, Thursday</time>
+        </p>
+        <p><h4>Tags:</h4>
+            <a href="/draft_site/search.php?search=tag%3AIN_THE_WHALE">IN_THE_WHALE</a>        </p>
+        <p><h4>Content warnings:</h4>
+            <a href="/draft_site/search.php?search=cw%3Acursing"><em>cursing</em></a>, <a href="/draft_site/search.php?search=cw%3Asex_mention">sex_mention</a>        </p>
+        <p><h4>Description:</h4>
+            A white, black and magenta nine-panel comics page. Panel 1: a whale with the text "IN THE WHALE" above it. Panel 2: three figures sit on a wooden raft in a pool of water in the mouth of a whale. Two have black shadows, one has a pink shadow. The man with the black shadow says, "What are you going to do when you get out?" Panel 3: the man says, "I'm going to eat at my favorite adobo place. Shoot the shit with Urduja." He imagines a scene with him sitting at a bar eating adobo, talking to a woman behind the counter. The woman with the pink shadow says, "That's nice..." Panel 4: the woman with the black shadow says, "I'm going to fuck the first person I see." The man laughs, "Hah!" The woman with the pink shadow looks at her wanly. Panel 5: The woman with the black shadow says, "And I'm going to go to every party and get smashed to hell." She imagines herself in a room full of people, drinking from a bottle she holds over her head. The woman with the pink shadow asks, "See, but will you? Did you do that before we got stuck here?" Panel 6: the woman with the black shadow crosses her arms in front of her and says, "Doesn't matter. I'm different now." The woman with the pink shadow holds her knees to her chest and says, "I don't know..." The man with the black shadow says, "I can see it. Just wanting to connect with someone." Panel 7: the woman with the pink shadow holds herself tighter and says, "True. That's all I want. Just to connect with someone again." Panel 8: the woman with the pink shadow is alone on the raft, under the enormous ribs of the whale's mouth. The people with the black shadows are gone. Panel 9: the whale swims into the deep.        </p>
+    </div> <!-- class detail-div -->
+</article>
+        </main>
+
+        <footer>
+            <aside>
+<h3 id="search_options">Search options</h3>
+<ul>
+    <li>Enter <kbd>-blegh</kbd> to exclude any page with "blegh"</li>
+    <li>Enter <kbd>title:tuesday</kbd> to get pages with "tuesday" in their 
+        titles, as opposed to just searching <kbd>tuesday</kbd> which gets you 
+        any page with a "tuesday" tag or posted on a tuesday or whatever. 
+        Valid prefixes are:
+        <ul>
+            			<li><kbd>tag:</kbd></li>
+			<li><kbd>cw:</kbd> (as in Content Warning)</li>
+			<li><kbd>title:</kbd></li>
+			<li><kbd>day:</kbd> (searches both day of the month and day of the week)</li>
+			<li><kbd>month:</kbd></li>
+			<li><kbd>year:</kbd></li>
+			<li><kbd>description:</kbd></li>
+              
+            </ul>
+        </li>
+        <li>You can use both at once, like <kbd>-cw:gore</kbd>
+            if you're okay with the word "gore" but you don't want to see 
+            any comics with guts.</li>
+        <li>Check "Search image descriptions too" and <strong>uncheck</strong>
+            "Match terms exactly" if you're looking for a specific comic but 
+            you can't remember exact dialogue. The machine will attempt to 
+            find image descriptions that have similar words (no AI, just 
+            MySQL's fulltext search algorithm).</li>
+    </ul>
+</aside><form role="search" action="/draft_site/search.php" method="get">
+    <p>
+        <input 
+            type="search" 
+            name="search" 
+            id="search-footer"
+            placeholder="Search comic pages..."
+            minlength="2"
+            maxlength="256"
+            size="34"
+            pattern="[\w ,.?!();:-&quot;&#039;]{2,256}"
+            aria-label="Search comic pages"
+            value="cw:cursing"
+            class="search-comics"
+        /> 
+        <button type="submit">Search</button>
+    </p>
+    <label for="search-footer" class="search-label">
+        Searches tags, dates, titles, and page numbers by default. 
+        </label>
+    <p>
+        <div class="search-check">
+            <input  type="checkbox" 
+                    name="desc" 
+                    id="desc-footer"
+                                >
+            <label for="desc-footer">Search image descriptions too</label>
+        </div>
+        <div class="search-check">
+            <input  type="checkbox" 
+                    name="exact" 
+                    id="exact-footer"
+                                        >
+            <label for="exact-footer">Match terms exactly</label>
+        </div>
+    </p>
+</form>
+<nav>
+    <h3>Archive navigation</h3>
+    0 <a href="search_cw:cursing___p2.html">1</a> ... <a href="search_cw:cursing___p2.html">Earliest</a></nav>
+<p class="copyright">
+    ©Copyright 2025-2026 by Briel Comics.
+    All rights reserved.
+</p>        </footer>
+    </body>
+
+</html>

@@ -26,7 +26,7 @@ ob_start();
 $pdoConnection = Briel\pdoConnect(); // check for a cookie? session storage?
 ob_end_clean();
 if ($pdoConnection === false) {
-    readfile(Briel\BLANKSEARCHPATH);
+    readfile(Briel\FILEROOT . Briel\BLANKSEARCHFILENAME);
     exit("Oh fuck! MySQL connection failed...");
 }
 
@@ -50,7 +50,8 @@ $prevSearch->execute([
 
 $isOutputYet = false;
 
-if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
+$prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC);
+if ($prevExists !== false) {
     // this search *has* been done before.
     readfile($prevExists['path']);
     $isOutputYet = true;
@@ -84,7 +85,7 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
 
     if ($prevSearchOtherIndex->fetch()[0] != 0) {
         // the search does exist! just not this page. output blank search page
-        readfile(Briel\BLANKSEARCHPATH);
+        readfile(Briel\FILEROOT . Briel\BLANKSEARCHFILENAME);
         $isOutputYet = true;
 
         // and update that ofc
@@ -113,7 +114,7 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
                     [':search' => '', ':exact' => '', ':desc' => '']);
 
             if ($prevSearchOtherIndex->fetch()[0] == 0) {
-                // this means that there *is* no blank search
+                // this means that there *is* no all search
                 // we need to generate its results
                 // set stuff up so that the search section below searches ''
                 // (luckily the actual $_GET parameters are unchanged)
@@ -131,9 +132,10 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
                         ':pageindex' => $getParams[Briel\SEARCHPAGEINDEXKEY]
                 ]);
 
+                $allSearch = $prevSearch->fetch(PDO::FETCH_ASSOC);
                 // obligatory check for whether the index doesn't exist
-                if (($allSearch = $prevSearch->fetch(PDO::FETCH_ASSOC)) === false) {
-                    readfile(Briel\BLANKSEARCHPATH);
+                if ($allSearch === false) {
+                    readfile(Briel\FILEROOT . Briel\BLANKSEARCHFILENAME);
                     $isOutputYet = true;
 
                 // but if it does, output the appropriate blank search
@@ -197,8 +199,8 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
                 $execParams = [];
                 $insertStmt = '';
                 for ($i = 1; $i <= count($pageStrs); $i++) {
-                    $filePath = Briel\SEARCHCACHEDIRPATH 
-                                . implode('_', ['/search', 
+                    $filePath = Briel\FILEROOT . Briel\SEARCHCACHEDIR
+                                . implode('_', ['search', 
                                                 urlencode($searchcacheKey), 
                                                 $getParams['desc'], 
                                                 $getParams['exact'], 
@@ -234,7 +236,7 @@ if (($prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC)) !== false) {
                     $insert->execute($execParams);
                 }
             } else { // ...unless we have generated no pages, then output blank
-                readfile(Briel\BLANKSEARCHPATH);
+                readfile(Briel\FILEROOT . Briel\BLANKSEARCHFILENAME);
                 $isOutputYet = true;
             }
         }

@@ -1,14 +1,19 @@
 <?php 
+# Folder paths should have a slash at the end
 namespace Briel;
 
 const LOCALSITE = false;
 
-const FILEFOLDER = 'C:/Users/gabri/Code/Briel comics website/briel-comics';
-define("FILEFOLDERREGEXP", '(' . str_replace('/', '[/\\\]', FILEFOLDER) . ')');
-const SITEFOLDER = '/draft_site';
-const FILEROOT = FILEFOLDER . SITEFOLDER;
+const FILEFOLDER = 'C:/Users/gabri/Code/Briel comics website/briel-comics/';
+const SITEFOLDER = '/draft_site/';
+const FILEROOT = FILEFOLDER . 'draft_site/';
 if (LOCALSITE) define("SITEROOT", FILEROOT);
 else define("SITEROOT", SITEFOLDER);
+
+// This is the regular expression that matches paths on the local filesystem
+// Used temporarily, as a stopgap until I get NGINX hooked up and filtering filesystem
+// paths into site paths
+define("FILEFOLDERREGEXP", '(' . str_replace('/', '[/\\\]', FILEFOLDER) . ')');
 
 const SEARCHFIELDSPECS = [  'tag', 
                             'cw', 
@@ -21,16 +26,18 @@ const SEARCHFIELDSPECS = [  'tag',
 const WHITESPACES = " \n\t\r";
 const PUNCTUATION = '~`!@#$%^&*()_-+=[]{}\\|:;"\'<>,.?/¡¿';
 
-const SEARCHPATH = SITEROOT . '/search.php';
-const HOMEPATH = SITEROOT . '/home.html';
-const COMMENTPATH = SITEROOT . '/comments.php';
-const BLOGARCHIVEPATH = SITEROOT . '/weblog.html';
-const SEARCHCACHEDIRPATH = SITEROOT . '/searchcache';
-const BLANKSEARCHPATH = SITEROOT . '/blank_search.html';
-const ARCHIVEDIRPATH = SITEROOT . "/archive";
-const ARCHIVESTARTPATH = ARCHIVEDIRPATH . '/archive_p1.html';
-const FONTFACESPATH = SITEROOT . '/styles/briel_font-faces.css';
-const SITEICONPATH = SITEROOT . '/images/smileicon.ico';
+const SEARCHPATH = SITEROOT . 'search.php';
+const HOMEPATH = SITEROOT . 'home.html';
+const COMMENTPATH = SITEROOT . 'comments.php';
+const BLOGARCHIVEPATH = SITEROOT . 'weblog.html';
+const SEARCHCACHEDIR = 'searchcache/';
+const SEARCHCACHEDIRPATH = SITEROOT . SEARCHCACHEDIR;
+const BLANKSEARCHFILENAME = 'blank_search.html';
+const BLANKSEARCHPATH = SITEROOT . BLANKSEARCHFILENAME;
+const ARCHIVEDIRPATH = SITEROOT . "archive/";
+const ARCHIVESTARTPATH = ARCHIVEDIRPATH . 'archive_p1.html';
+const FONTFACESPATH = SITEROOT . 'styles/briel_font-faces.css';
+const SITEICONPATH = SITEROOT . 'images/smileicon.ico';
 
 const FONTFACESCSSNAME = 'briel_font-faces.css';
 

@@ -16,7 +16,21 @@ const CHECKBOXON = 'on';
 const THUMBNAILWIDTH = '100px';
 
 const DEFAULTWINDOWWIDTHS = [DISPLAYWIDTH1, DISPLAYWIDTH2];
-const DEFAULTIMAGEWIDTHSORDERED = [800, 1400, 2000];
+const DEFAULTDISPLAYWIDTHSORDERED = [800, 1400, 2100];
+const DEFAULTFILEWIDTHSORDERED = [  800, 
+                                    1000, 
+                                    1200, 
+                                    1400, 
+                                    1600, 
+                                    1750, 
+                                    2100, 
+                                    2400, 
+                                    2625, 
+                                    2800, 
+                                    3150, 
+                                    3675, 
+                                    4200,
+                                    6300    ];
 
 const DEFAULTPREVLINK = HOMEPATH;
 const DEFAULTNEXTLINK = COMMENTPATH;
@@ -158,9 +172,9 @@ class PageInfo {
     public $tags;
     public $contWarns;
     public $spreadType;
-    public $srcWidthsOrdered;
-    public $stylePath = SITEROOT . '/styles/reading_page_style.css';
-    public $windowWidthsOrdered = DEFAULTWINDOWWIDTHS;
+    public $srcWidthsOrdered; // The display widths the images take up
+    public $stylePath = SITEROOT . 'styles/reading_page_style.css';
+    public $windowWidthsOrdered = DEFAULTWINDOWWIDTHS; // Breakpoints 
     public function __construct($record, 
                                 $prevLink, 
                                 $nextLink,
@@ -185,12 +199,12 @@ class PageInfo {
         $this->contWarns    = $contWarns;
         $this->spreadType   = $spreadType;
         $this->srcWidthsOrdered = 
-            $srcWidthsOrdered ?: // if $srcWidthsOrdered is falsy, alter based on spread type
+            $srcWidthsOrdered ?: // if falsy, alter based on spread type
             match($this->spreadType) {
-                'double' => array_map(fn($n) => 2 * $n, DEFAULTIMAGEWIDTHSORDERED),
-                default => DEFAULTIMAGEWIDTHSORDERED
-            }
-        ; // window widths stay the same
+                'double' => array_map(fn($n) => 2 * $n, DEFAULTDISPLAYWIDTHSORDERED),
+                default => DEFAULTDISPLAYWIDTHSORDERED
+            } // window widths stay the same
+        ; 
         if ($stylePath) $this->stylePath = $stylePath;
         if ($windowWidthsOrdered) $this->windowWidthsOrdered = $windowWidthsOrdered;
     }
@@ -206,7 +220,7 @@ class BlogInfo {
 }
 
 function replacePathsForServerSite(string $str) {
-    return preg_replace(FILEFOLDERREGEXP, '', $str);
+    return preg_replace(FILEFOLDERREGEXP, '/', $str);
 }
 
 function classIs($node, $className) {
@@ -243,6 +257,11 @@ function assignNavLink($node,
     return false;
 }
 
+/**
+ * Summary of Briel\generateComicpage
+ * @param PageInfo $page
+ * @return array|bool|string|null
+ */
 function generateComicpage(PageInfo $page) {
     $searchPath = SEARCHPATH;
     ob_start(); 
@@ -269,7 +288,7 @@ function generateComicpage(PageInfo $page) {
               rel="stylesheet" 
               id="reading_stylesheet">
 
-        <script type="module" src="<?= SITEROOT ?>/js/reading_page_script.js"></script>
+        <script type="module" src="<?= SITEROOT ?>js/reading_page_script.js"></script>
     </head>
 
     <body>
@@ -316,7 +335,7 @@ function generateComicpage(PageInfo $page) {
 <?php
     if (LOCALSITE) {
         return ob_get_flush();
-    } else {
+    } else {    // temporary, until I get NGINX hooked up
         $pageStr = ob_get_clean();
         $pageStr = replacePathsForServerSite($pageStr);
         echo $pageStr;
@@ -329,7 +348,7 @@ function generateReadingStyle(  $bgColor,
                                 $hiliteColor, 
                                 $visitedColor,
                                 $comicDefaultWidth = 800,
-                                $fileWidths = DEFAULTIMAGEWIDTHSORDERED, 
+                                $fileWidths = DEFAULTDISPLAYWIDTHSORDERED, 
                                 $windowWidths = DEFAULTWINDOWWIDTHS,
                                 $pageSectionShrinkFactor = 0.95,
                                 $comicTopMargin = 8,
@@ -447,7 +466,6 @@ nav {
     font-size: larger;
     /* Make font size of text in the nav pane (previous, next, etc.) 4 
     points bigger than the inherited size */
-    /* font-size: calc(1em + 4pt); */
 }
 
 a:link {
@@ -528,14 +546,19 @@ a.text_desc_heading {
         $comicTopMargin ?>vh);
 }
 
+.page-display img.fit-page {
+    margin-top: 0;
+    max-width: 100%;
+    max-height: 100vh;
+}
+
 <?php
     if (LOCALSITE) {    
         return ob_get_flush();
     } else {    // temporary, until I get NGINX hooked up
-        $pageStr = ob_get_clean();
-        $pageStr = replacePathsForServerSite($pageStr);
-        echo $pageStr;
-        return $pageStr;
+        $sheetStr = replacePathsForServerSite(ob_get_clean());
+        echo $sheetStr;
+        return $sheetStr;
     }
 }
 
@@ -554,6 +577,7 @@ function generateComicDisplayElements(PageInfo $page) {
         }
     }
     // if it can't find such an image, it just takes the smallest file provided
+    // for the initial display width of the image
     if ($srcWidth === null) {
         $srcWidth = \array_key_first($filesWidthOrder);
     }
@@ -585,23 +609,31 @@ function generateComicDisplayElements(PageInfo $page) {
 </map>
 
 <img
-    class="comic-page"
+    class="comic-page<?= ($page->spreadType == 'screenfit') ? ' fit-page' : '' ?>"
     srcset="<?php
     foreach ($filesWidthOrder as $file) {
-        echo $file['path'] . ' ' . $file['width'] . "w\n";
+        echo $file['path'] . ' ' . $file['width'] . "w,\n";
     }
         ?>"
-    sizes="(max-width: <?= array_first($filesWidthOrder)['width'] ?>px) 100vw,
-            <?php 
-    for (   $maxWidth = reset($page->windowWidthsOrdered), $file = reset($filesWidthOrder); 
-            $maxWidth !== false AND $file !== false;
-            $maxWidth = next($page->windowWidthsOrdered), $file = next($filesWidthOrder)) {
-        echo "(max-width: {$maxWidth}px) "
-                . $file['width'] 
-                . "px,\n";
+    sizes = "<?php 
+    switch ($page->spreadType) {
+        case 'normal':
+        case 'double':
+        case 'screenfit':
+        case 'strip':
+        default: 
+            echo "(max-width: " . array_first($page->srcWidthsOrdered) . "px) 100vw,\n";
+            for (   $maxWidth = reset($page->windowWidthsOrdered), 
+                            $displayWidth = reset($page->srcWidthsOrdered); 
+                    $maxWidth !== false AND $displayWidth !== false;
+                    $maxWidth = next($page->windowWidthsOrdered), 
+                            $displayWidth = next($page->srcWidthsOrdered)) {
+                echo "(max-width: {$maxWidth}px) {$displayWidth}px,\n";
+            }
+            echo array_last($page->srcWidthsOrdered) . "px";
+            break;
     }
-    echo array_last($filesWidthOrder)['width'];
-            ?>px"   
+    ?>" 
     src="<?= $filesWidthOrder[$srcWidth]['path'] ?>"
     alt="<?= $filesWidthOrder[$srcWidth]['alttext'] ?>"
     usemap="#nav-on-comic"
@@ -679,7 +711,7 @@ function generateHomepage(  BlogInfo $blogInfo,
                             PageInfo $pageInfo, 
                             string $searchPath = SEARCHPATH, 
                             ?string $stylePath = null, 
-                            string $scriptPath = SITEROOT . '/js/reading_page_script.js'   ) {
+                            string $scriptPath = SITEROOT . 'js/reading_page_script.js'   ) {
     ob_start();
 ?>
 <!doctype html>
@@ -695,9 +727,9 @@ function generateHomepage(  BlogInfo $blogInfo,
         <meta name="description" content="A home page for a comics website.">
         
         <title><?= randomPageTitle() ?> web log</title>
-        <link href="<?= SITEROOT ?>/images/<?= SITEICONNAME ?>" rel="icon" type="image/x-icon">
+        <link href="<?= SITEROOT ?>images/<?= SITEICONNAME ?>" rel="icon" type="image/x-icon">
 
-        <link href="<?= SITEROOT ?>/styles/<?= FONTFACESCSSNAME ?>" rel="stylesheet">
+        <link href="<?= SITEROOT ?>styles/<?= FONTFACESCSSNAME ?>" rel="stylesheet">
         <link href="<?= $pageInfo->stylePath ?>" rel="stylesheet" id="reading_stylesheet">
         <?php // Tries to apply page's reading style, but the homepage's style takes priority
         if ($stylePath) { ?>
@@ -729,9 +761,9 @@ function generateHomepage(  BlogInfo $blogInfo,
     }   
                 ?>
                 <img
-                    srcset="<?= SITEROOT ?>/images/<?= $bannerFileStem ?>_800w.png 800w, 
-                            <?= SITEROOT ?>/images/<?= $bannerFileStem ?>_1400w.png 1400w"
-                    src="<?= SITEROOT ?>/images/<?= $bannerFileStem ?>_800w.png"
+                    srcset="<?= SITEROOT ?>images/<?= $bannerFileStem ?>_800w.png 800w, 
+                            <?= SITEROOT ?>images/<?= $bannerFileStem ?>_1400w.png 1400w"
+                    src="<?= SITEROOT ?>images/<?= $bannerFileStem ?>_800w.png"
                     sizes="(max-width: 800px) 100vw, 
                            (max-width: 1920) 800px, 
                            1400px"
@@ -1167,14 +1199,14 @@ function generateSearchPage(string $searchStr,
         <meta name="description" content="Breel comics search page.">
         
         <title>Search | <?= randomPageTitle() ?></title>
-        <link rel="icon" href="<?= SITEROOT ?>/images/<?= SITEICONNAME ?>" type="image/x-icon" />
+        <link rel="icon" href="<?= SITEROOT ?>images/<?= SITEICONNAME ?>" type="image/x-icon" />
 
-        <link href="<?= SITEROOT ?>/styles/defaults.css" rel="stylesheet" />
-        <link href="<?= SITEROOT ?>/styles/<?= FONTFACESCSSNAME ?>" rel="stylesheet" />
-        <link href="<?= SITEROOT ?>/styles/update_list_style.css" rel="stylesheet" />
-        <link href="<?= SITEROOT ?>/styles/search_page_style.css" rel="stylesheet" />
+        <link href="<?= SITEROOT ?>styles/defaults.css" rel="stylesheet" />
+        <link href="<?= SITEROOT ?>styles/<?= FONTFACESCSSNAME ?>" rel="stylesheet" />
+        <link href="<?= SITEROOT ?>styles/update_list_style.css" rel="stylesheet" />
+        <link href="<?= SITEROOT ?>styles/search_page_style.css" rel="stylesheet" />
         
-        <script type="module" src="<?= SITEROOT ?>/js/search_page_script.js"></script>
+        <script type="module" src="<?= SITEROOT ?>js/search_page_script.js"></script>
     </head>
 
     <body>
@@ -1362,14 +1394,14 @@ function generateArchivePage(   $updateInfos,
         <meta name="description" content="Breel comics archive.">
         
         <title>Search | <?= randomPageTitle() ?></title>
-        <link rel="icon" href="<?= SITEROOT ?>/images/<?= SITEICONNAME ?>" type="image/x-icon" />
+        <link rel="icon" href="<?= SITEROOT ?>images/<?= SITEICONNAME ?>" type="image/x-icon" />
 
-        <link href="<?= SITEROOT ?>/styles/defaults.css" rel="stylesheet" />
-        <link href="<?= SITEROOT ?>/styles/<?= FONTFACESCSSNAME ?>" rel="stylesheet" />
-        <link href="<?= SITEROOT ?>/styles/update_list_style.css" rel="stylesheet" />
-        <link href="<?= SITEROOT ?>/styles/archive_page_style.css" rel="stylesheet" />
+        <link href="<?= SITEROOT ?>styles/defaults.css" rel="stylesheet" />
+        <link href="<?= SITEROOT ?>styles/<?= FONTFACESCSSNAME ?>" rel="stylesheet" />
+        <link href="<?= SITEROOT ?>styles/update_list_style.css" rel="stylesheet" />
+        <link href="<?= SITEROOT ?>styles/archive_page_style.css" rel="stylesheet" />
         
-        <script type="module" src="<?= SITEROOT ?>/js/archive_page_script.js"></script>
+        <script type="module" src="<?= SITEROOT ?>js/archive_page_script.js"></script>
     </head>
 
     <body>
@@ -1418,7 +1450,7 @@ function generateAllArchivePages(array $allUpdateInfos, array &$paths = []) {
     $infosOnPage = array_chunk($allUpdateInfos, RESULTSPERPAGE);
     $pageStrs = array_fill_keys(range(1, \count($infosOnPage) + 1), '');
     if ($paths == []) {
-        $paths = array_map( fn($i) => ARCHIVEDIRPATH . "/archive_p{$i}.html", 
+        $paths = array_map( fn($i) => ARCHIVEDIRPATH . "archive_p{$i}.html", 
                             range(1, \count($infosOnPage) + 1)  );
     }
 

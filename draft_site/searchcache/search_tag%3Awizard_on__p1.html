@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8">
+        <!-- Good to include charset just to prevent weird errors later on. -->
+        <meta name="viewport" content="width=device-width"/>
+        <meta name="author" content="Breel">
+        <meta name="description" content="Breel comics search page.">
+        
+        <title>Search | BREEL Comics</title>
+        <link rel="icon" href="/draft_site/images/smileicon.ico" type="image/x-icon" />
+
+        <link href="/draft_site/styles/defaults.css" rel="stylesheet" />
+        <link href="/draft_site/styles/briel_font-faces.css" rel="stylesheet" />
+        <link href="/draft_site/styles/update_list_style.css" rel="stylesheet" />
+        <link href="/draft_site/styles/search_page_style.css" rel="stylesheet" />
+        
+        <script type="module" src="/draft_site/js/search_page_script.js"></script>
+    </head>
+
+    <body>
+        <header>
+            <h1>Search</h1>
+            <form role="search" action="/draft_site/search.php" method="get">
+    <p>
+        <input 
+            type="search" 
+            name="search" 
+            id="search-header"
+            placeholder="Search comic pages..."
+            minlength="2"
+            maxlength="256"
+            size="34"
+            pattern="[\w ,.?!();:-&quot;&#039;]{2,256}"
+            aria-label="Search comic pages"
+            value="tag:wizard"
+            class="search-comics"
+        /> 
+        <button type="submit">Search</button>
+    </p>
+    <label for="search-header" class="search-label">
+        Searches tags, dates, titles, and page numbers by default. 
+            See <a href="#search_options">search options</a>.
+        </label>
+    <p>
+        <div class="search-check">
+            <input  type="checkbox" 
+                    name="desc" 
+                    id="desc-header"
+                    checked="CHECKED"            >
+            <label for="desc-header">Search image descriptions too</label>
+        </div>
+        <div class="search-check">
+            <input  type="checkbox" 
+                    name="exact" 
+                    id="exact-header"
+                                        >
+            <label for="exact-header">Match terms exactly</label>
+        </div>
+    </p>
+</form>
+        </header>
+
+        <main>
+            <h2>Results</h2>
+            <button class="toggle-nails">Hide thumbnails</button>
+            <article class="search-entry">
+    <div class="thumbnails-div">
+        <a href="draft_site/comic_pages/WizardAndHero_p3.html" 
+           class="page-link">
+            <img
+                class="thumbnail"
+                attr-src="draft_site/images/Wizard_and_Hero/p3_nail.jpg"
+                src=""
+                alt="A small, square version of the black-and-white comic Wizard and Hero page 3."
+                width="100px"
+                height="100px"
+                loading="lazy"
+            >
+        </a> 
+    </div>
+    <div class="detail-div">
+        <h3><a href="draft_site/comic_pages/WizardAndHero_p3.html" class="page-link">Wizard and Hero page 3</a></h3>
+        <p> <h4>Date:</h4>
+            <time date="2025-06-26">2025, Jun. 26th, Thursday</time>
+        </p>
+        <p><h4>Tags:</h4>
+            <a href="/draft_site/search.php?search=tag%3AWizard_and_Hero"><em>Wizard_and_Hero</em></a>, <a href="/draft_site/search.php?search=tag%3Awizard_zissel"><em>wizard_zissel</em></a>, <a href="/draft_site/search.php?search=tag%3Ahero_ayotli">hero_ayotli</a>        </p>
+        <p><h4>Description:</h4>
+            Panel 1: Zissel meets Ayotli's gaze, expression concerned but frank. Zissel: "I also want to say that the administration is kind of stretched thin because of this whole situation, which, by the way, is the only reason I CAN say this to you without being reprimanded." Panel 2: A dark crack begins to shatter a grid. Ayotli looks on, holding her arms against each other. Zissel: "Normally the high shamans have these planned out years in advance but this one caught us by surprise and we haven't been able to be as rigorous as we should be." Panel 3: Zissel almost looks angry, jabbing a thumb at herself. Zissel: "So... our information-gathering isn't very rigorous. Our mapping isn't very rigorous. Our selection of advisor--read, ME--wasn't very rigorous." Panel 4: Ayotli stands and listens, surrounded by the chaos of the workshop. Zissel: "And our selection of hero--read, YOU--was even less so." Panel 5: Zissel is bent over in her chair, so now Ayotli has to look slightly down at her. The workshop disappears, and it's just the two of them, Zissel's words against Ayotli's expression--something subtle, something sad and concerned but not denying hope. Zissel: "We're playing it by ear." Panel 6: The workshop returns. Ayotli looks up and away, wondering. Ayotli: "Will we be okay?" Zissel looks down and away. Zissel: "Hm. We'll see." A darkness forebodes.        </p>
+    </div> <!-- class detail-div -->
+</article>
+<article class="search-entry">
+    <div class="thumbnails-div">
+        <a href="draft_site/comic_pages/WizardAndHero_p2.html" 
+           class="page-link">
+            <img
+                class="thumbnail"
+                attr-src="draft_site/images/Wizard_and_Hero/p2_nail.jpg"
+                src=""
+                alt="A small, square version of the black-and-white comic Wizard and Hero page 2."
+                width="100px"
+                height="100px"
+                loading="lazy"
+            >
+        </a> 
+    </div>
+    <div class="detail-div">
+        <h3><a href="draft_site/comic_pages/WizardAndHero_p2.html" class="page-link">Wizard and Hero page 2</a></h3>
+        <p> <h4>Date:</h4>
+            <time date="2025-06-26">2025, Jun. 26th, Thursday</time>
+        </p>
+        <p><h4>Tags:</h4>
+            <a href="/draft_site/search.php?search=tag%3AWizard_and_Hero"><em>Wizard_and_Hero</em></a>, <a href="/draft_site/search.php?search=tag%3Awizard_zissel"><em>wizard_zissel</em></a>, <a href="/draft_site/search.php?search=tag%3Ahero_ayotli">hero_ayotli</a>        </p>
+        <p><h4>Description:</h4>
+            Panel 1: Zissel leads Ayotli through the workshop. Zissel: "So, listen." Panel 2: Zissel reaches her destination and, still standing, makes a few final keystrokes on her three-monitor computer setup. Ayotli looks on. Zissel: "Your destiny has been a fairly slapdash project." Panel 3: Zissel stretches a set of gel-strands, one of the handles between her teeth. Zissel: "Ernf. I'd like to apologize on behalf of the administration for the sake of mutual trust going forwards." Panel 4: Zissel is silent as she wraps the strands around the large bdellic-wave transmitter she had been preparing. Panel 5: Ayotli is hunched again, her left hand holding her right elbow. Zissel sits down in her rolling chair as the transmitter powers up. Zissel: "And that's all they wanted me to say, but..."        </p>
+    </div> <!-- class detail-div -->
+</article>
+<article class="search-entry">
+    <div class="thumbnails-div">
+        <a href="draft_site/comic_pages/WizardAndHero_p1.html" 
+           class="page-link">
+            <img
+                class="thumbnail"
+                attr-src="draft_site/images/Wizard_and_Hero/p1_nail.jpg"
+                src=""
+                alt="A small, square version of the black-and-white comic Wizard and Hero page 1."
+                width="100px"
+                height="100px"
+                loading="lazy"
+            >
+        </a> 
+    </div>
+    <div class="detail-div">
+        <h3><a href="draft_site/comic_pages/WizardAndHero_p1.html" class="page-link">Wizard and Hero page 1</a></h3>
+        <p> <h4>Date:</h4>
+            <time date="2025-06-26">2025, Jun. 26th, Thursday</time>
+        </p>
+        <p><h4>Tags:</h4>
+            <a href="/draft_site/search.php?search=tag%3AWizard_and_Hero"><em>Wizard_and_Hero</em></a>, <a href="/draft_site/search.php?search=tag%3Awizard_zissel"><em>wizard_zissel</em></a>, <a href="/draft_site/search.php?search=tag%3Ahero_ayotli">hero_ayotli</a>        </p>
+        <p><h4>Description:</h4>
+            Panel 1: Ayotli, a short young woman with a big round nose, peeks through a door frame. Ayotli: "Hello?" Panel 2: Various containers, devices, and tools are spread over the floor and several counters. The room is cramped for all the stuff in it. Ayotli: "Whoa." Panel 3: Zissel, a tall, thin woman with a long braid and a pointy nose, rigidly strides into view from around a corner. Zissel: "Hey! You're candidate H5, right?" Panel 4: Ayotli has short hair and wears a tank top, emphasizing her shoulders. Dismayed, she hunches and reaches out a hand to Zissel, looking up at her face. Zissel herself is leaning forward with her hands on her hips, expectant. Ayotli: "Um. I'm Ayotli." Panel 5: Zissel reciprocates the dap. Both she and Ayotli stand straighter and relax their faces. Zissel: "Okay. Ayotli. I'm Wizard Zissel."        </p>
+    </div> <!-- class detail-div -->
+</article>
+        </main>
+
+        <footer>
+            <aside>
+<h3 id="search_options">Search options</h3>
+<ul>
+    <li>Enter <kbd>-blegh</kbd> to exclude any page with "blegh"</li>
+    <li>Enter <kbd>title:tuesday</kbd> to get pages with "tuesday" in their 
+        titles, as opposed to just searching <kbd>tuesday</kbd> which gets you 
+        any page with a "tuesday" tag or posted on a tuesday or whatever. 
+        Valid prefixes are:
+        <ul>
+            			<li><kbd>tag:</kbd></li>
+			<li><kbd>cw:</kbd> (as in Content Warning)</li>
+			<li><kbd>title:</kbd></li>
+			<li><kbd>day:</kbd> (searches both day of the month and day of the week)</li>
+			<li><kbd>month:</kbd></li>
+			<li><kbd>year:</kbd></li>
+			<li><kbd>description:</kbd></li>
+              
+            </ul>
+        </li>
+        <li>You can use both at once, like <kbd>-cw:gore</kbd>
+            if you're okay with the word "gore" but you don't want to see 
+            any comics with guts.</li>
+        <li>Check "Search image descriptions too" and <strong>uncheck</strong>
+            "Match terms exactly" if you're looking for a specific comic but 
+            you can't remember exact dialogue. The machine will attempt to 
+            find image descriptions that have similar words (no AI, just 
+            MySQL's fulltext search algorithm).</li>
+    </ul>
+</aside><form role="search" action="/draft_site/search.php" method="get">
+    <p>
+        <input 
+            type="search" 
+            name="search" 
+            id="search-footer"
+            placeholder="Search comic pages..."
+            minlength="2"
+            maxlength="256"
+            size="34"
+            pattern="[\w ,.?!();:-&quot;&#039;]{2,256}"
+            aria-label="Search comic pages"
+            value="tag:wizard"
+            class="search-comics"
+        /> 
+        <button type="submit">Search</button>
+    </p>
+    <label for="search-footer" class="search-label">
+        Searches tags, dates, titles, and page numbers by default. 
+        </label>
+    <p>
+        <div class="search-check">
+            <input  type="checkbox" 
+                    name="desc" 
+                    id="desc-footer"
+                    checked="CHECKED"            >
+            <label for="desc-footer">Search image descriptions too</label>
+        </div>
+        <div class="search-check">
+            <input  type="checkbox" 
+                    name="exact" 
+                    id="exact-footer"
+                                        >
+            <label for="exact-footer">Match terms exactly</label>
+        </div>
+    </p>
+</form>
+<nav>
+    <h3>Archive navigation</h3>
+    0 <a href="search_tag:wizard_on__p2.html">1</a> ... <a href="search_tag:wizard_on__p2.html">Earliest</a></nav>
+<p class="copyright">
+    ©Copyright 2025-2026 by Briel Comics.
+    All rights reserved.
+</p>        </footer>
+    </body>
+
+</html>

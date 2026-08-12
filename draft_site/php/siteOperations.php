@@ -93,23 +93,23 @@ function getPageInfo(   \PDO $pdoConn,
     $imgRecords = $getImgRecords->fetchAll(\PDO::FETCH_ASSOC);
     $nailRecords = $getThumbnailRecords->fetchAll(\PDO::FETCH_ASSOC);
 
-    if (!LOCALSITE) {   // temporary measure until I get this hooked up to NGINX
-        $record['path'] = str_replace('\\', '/', replacePathsForServerSite($record['path']));
+    // if (!LOCALSITE) {   // temporary measure until I get this hooked up to NGINX
+    //     $record['path'] = str_replace('\\', '/', replacePathsForServerSite($record['path']));
 
-        foreach (array_keys($links) as $key) {
-            $links[$key] = str_replace('\\', '/', replacePathsForServerSite($links[$key]));
-        }
+    //     foreach (array_keys($links) as $key) {
+    //         $links[$key] = str_replace('\\', '/', replacePathsForServerSite($links[$key]));
+    //     }
 
-        foreach(array_keys($imgRecords) as $key) {
-            $imgRecords[$key]['path'] = 
-                    str_replace('\\', '/', replacePathsForServerSite($imgRecords[$key]['path']));
-        }
+    //     foreach(array_keys($imgRecords) as $key) {
+    //         $imgRecords[$key]['path'] = 
+    //                 str_replace('\\', '/', replacePathsForServerSite($imgRecords[$key]['path']));
+    //     }
 
-        foreach(array_keys($nailRecords) as $key) {
-            $nailRecords[$key]['path'] = 
-                    str_replace('\\', '/', replacePathsForServerSite($nailRecords[$key]['path']));
-        }
-    }
+    //     foreach(array_keys($nailRecords) as $key) {
+    //         $nailRecords[$key]['path'] = 
+    //                 str_replace('\\', '/', replacePathsForServerSite($nailRecords[$key]['path']));
+    //     }
+    // }
 
     return new PageInfo(
             $record, 
@@ -213,7 +213,10 @@ function regenerateHomepage(?\PDO $pdoConn = NULL, ?string $stylePath = NULL) {
 }
 
 function postUpdate(?\PDO $pdoConn = NULL) {
-    if (!$pdoConn) $pdoConn = pdoConnect();
+    if (!tryPDOConnect($pdoConn)) {
+        echo "Couldn't establish/continue SQL server connection. Aborting...\n";
+        return false;
+    }
     echo "Creating update...\n";
     tryBeginTransaction($pdoConn);
 
@@ -323,6 +326,7 @@ function postUpdate(?\PDO $pdoConn = NULL) {
 
     // backup and delete/regenerate affected searches
     // Eh....... for now, don't parse through affected searches, just delete them all
+    // TODO: edit this to regenerate searches!
     backupSearchData($pdoConn);
     $pdoConn->exec("DELETE FROM searchcache;");
     if (promptInput("Would you like to delete the cached search page HTML files?\n(y/n) > ")
@@ -332,4 +336,22 @@ function postUpdate(?\PDO $pdoConn = NULL) {
         }
     }
     // `search.php` will rewrite anything not in the search cache, so it's not a big deal
+}
+
+function regenerateComicPages(array|int $pageIDs, ?\PDO $pdoConn = null) {
+    if (!tryPDOConnect($pdoConn)) {
+        echo "Couldn't establish/continue SQL server connection. Aborting...\n";
+        return false;
+    }
+    if (\is_int($pageIDs)) $pageIDs = [$pageIDs];
+    echo "Regenerating comic page(s)...\n";
+
+    ob_start();
+    foreach ($pageIDs as $id) {
+        $info = getPageInfo($pdoConn, $id);
+        $success = file_put_contents($info->record['path'], generateComicpage($info));
+        if (!$success) 
+            echo "Failed to write page ID {$id} to path {$info->record['path']}\n";
+    }
+    ob_end_clean();
 }
