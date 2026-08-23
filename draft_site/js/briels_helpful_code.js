@@ -179,9 +179,9 @@ export function getLink(document, linkClass) {
 
 export function resizeNavImageMaps( imgElement, 
                                     areaPrevElement, 
-                                    areaNextElement) {
-    const imgWidth = imgElement.clientWidth;
-    const imgHeight = imgElement.clientHeight;
+                                    areaNextElement ) {
+    const imgWidth = imgElement.naturalWidth;
+    const imgHeight = imgElement.naturalHeight;
     areaPrevElement.setAttribute("coords", 
                         `0,0,${Math.ceil(0.25 * imgWidth)},${imgHeight}`);
     areaNextElement.setAttribute("coords", 

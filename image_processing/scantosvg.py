@@ -3,7 +3,7 @@ from PIL import Image
 import sys
 import os
 
-def convert_files(paths: tuple[str]):
+def convert_files(paths: tuple):
     for path in paths:
         [name, ext] = os.path.splitext(path)
         if os.path.isfile(path) and str.lower(ext) in [".jpg", ".jpeg", ".png"]:

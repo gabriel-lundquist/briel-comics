@@ -9,6 +9,7 @@ require_once './php/pageGen.php';
 // first, do maintenance on the GET request information
 $getParams = $_GET; // copy $_GET
 if (getenv('DEBUG_SEARCH')) { // an environment variable injected in my VSCode debug launch.json
+    //
 }
 
 if (!key_exists('search', $getParams)) $getParams['search'] = '';
@@ -38,7 +39,7 @@ $prevInTransaction = $pdoConnection->inTransaction();
 $prevSearch = $pdoConnection->prepare(<<<STMT
     SELECT path FROM searchcache 
     WHERE search = :search AND matchexactly = :exact AND searchimgdesc = :desc
-        AND resultpageindex = :pageindex
+        AND resultpageindex = :pageindex;
     STMT);
 $searchcacheKey = Briel\searchcacheKeyFromSearchString($getParams['search']);
 $prevSearch->execute([  

@@ -6,126 +6,106 @@ use DateTimeImmutable;
 require_once 'dbManip.php';
 require_once 'pageGen.php';
 
-/**
- * Summary of Briel\getPageInfo
- * Given the database as the source of truth, collects all necessary information to generate the
- * HTML file.
- * @param \PDO $pdoConn
- * @param int $pageID
- * @param mixed $getPageRecord
- * @param mixed $getPrevPageID
- * @param mixed $getNextPageID
- * @param mixed $getPrevUpdateID
- * @param mixed $getNextUpdateID
- * @param mixed $getPageFromUpdateID
- * @param mixed $getImgRecords
- * @param mixed $getThumbnailRecords
- * @param mixed $getTags
- * @param mixed $getCWs
- * @param mixed $getSpreadType
- * @return PageInfo
- */
 function getPageInfo(   \PDO $pdoConn, 
                         int $pageID, 
-                        ?\PDOStatement $getPageRecord = NULL, 
-                        ?\PDOStatement $getPrevPageID = NULL, 
-                        ?\PDOStatement $getNextPageID = NULL, 
-                        ?\PDOStatement $getPrevUpdateID = NULL, 
-                        ?\PDOStatement $getNextUpdateID = NULL, 
-                        ?\PDOStatement $getPageFromUpdateID = NULL, 
-                        ?\PDOStatement $getImgRecords = NULL, 
-                        ?\PDOStatement $getThumbnailRecords = NULL, 
-                        ?\PDOStatement $getTags = NULL, 
-                        ?\PDOStatement $getCWs = NULL, 
-                        ?\PDOStatement $getSpreadType = NULL    ) {
-    if (!$getPageRecord) $getPageRecord = getPageRecordFromIDStmt($pdoConn);
-    if (!$getPrevPageID) $getPrevPageID = getPrevPageFromIDStmt($pdoConn);
-    if (!$getNextPageID) $getNextPageID = getNextPageFromIDStmt($pdoConn);
-    if (!$getPrevUpdateID) $getPrevUpdateID = getPrevUpdateFromIDStmt($pdoConn);
-    if (!$getNextUpdateID) $getNextUpdateID = getNextUpdateFromIDStmt($pdoConn);
-    if (!$getPageFromUpdateID) $getPageFromUpdateID = getPageIDsFromUpdateIDStmt($pdoConn);
-    if (!$getImgRecords) $getImgRecords = getPageImgRecordsFromIDStmt($pdoConn);
-    if (!$getThumbnailRecords) $getThumbnailRecords = getThumbnailRecordsFromIDStmt($pdoConn);
-    if (!$getTags) $getTags = getTagsFromPageIDStmt($pdoConn);
-    if (!$getCWs) $getCWs = getCWsFromPageIDStmt($pdoConn);
-    if (!$getSpreadType) $getSpreadType = $pdoConn->prepare(
-            "SELECT spreadtype FROM spread WHERE spreadid = ?;");
+                        ?ComicPageStatements $stmt = null, 
+                        ?\PDOStatement $getPageRecord = null, 
+                        ?\PDOStatement $getPrevPageID = null, 
+                        ?\PDOStatement $getNextPageID = null, 
+                        ?\PDOStatement $getPrevUpdateID = null, 
+                        ?\PDOStatement $getNextUpdateID = null, 
+                        ?\PDOStatement $getPageFromUpdateID = null, 
+                        ?\PDOStatement $getUpdateFromPageID = null, 
+                        ?\PDOStatement $getImgRecords = null, 
+                        ?\PDOStatement $getThumbnailRecords = null, 
+                        ?\PDOStatement $getTags = null, 
+                        ?\PDOStatement $getCWs = null, 
+                        ?\PDOStatement $getSpreadType = null, 
+                        ?\PDOStatement $getStylePath = null ) {
+    if (!$stmt) $stmt = new ComicPageStatements(    $pdoConn, 
+                                                    $getPageRecord, 
+                                                    $getPrevPageID, 
+                                                    $getNextPageID, 
+                                                    $getPrevUpdateID, 
+                                                    $getNextUpdateID, 
+                                                    $getPageFromUpdateID, 
+                                                    $getUpdateFromPageID, 
+                                                    $getImgRecords, 
+                                                    $getThumbnailRecords, 
+                                                    $getTags, 
+                                                    $getCWs, 
+                                                    $getSpreadType, 
+                                                    $getStylePath   );
+    $stmt->executePageIDStmts($pageID);
 
-    foreach ([  $getPageRecord, 
-                $getPrevPageID, 
-                $getNextPageID, 
-                $getPrevUpdateID, 
-                $getNextUpdateID, 
-                $getImgRecords, 
-                $getThumbnailRecords, 
-                $getTags, 
-                $getCWs     ] as $getStatement) {
-        // this works the way you'd hope it would!
-        $getStatement->execute([$pageID]);
+    $record = $stmt->getPageRecord->fetch(\PDO::FETCH_ASSOC);
+
+    $links = array_fill_keys(['prev', 'next', 'prevUpd8', 'nextUpd8', 'skipBack'], '');
+
+    $links['prev'] = 
+            (($prev = $stmt->getPrevPageID->fetch(\PDO::FETCH_NUM)) AND $prev[0] !== null) ?
+                executeAndFetch($stmt->getPageRecord, [$prev[0]], \PDO::FETCH_ASSOC)['path']
+                : DEFAULTPREVLINK;
+
+    $links['next'] = 
+            (($next = $stmt->getNextPageID->fetch(\PDO::FETCH_NUM)) AND $next[0] !== null) ? 
+                executeAndFetch($stmt->getPageRecord, [$next[0]], \PDO::FETCH_ASSOC)['path']
+                : DEFAULTNEXTLINK;
+
+    $updateID = executeAndFetchScalar($stmt->getUpdateFromPageID, $record['pageid']);
+    if ($updateID OR $updateID === 0) {   
+        $prevUpd8ID = executeAndFetchScalar($stmt->getPrevUpdateID, $updateID);
+        if ($prevUpd8ID) {
+            $links['prevUpd8'] = getFirstPageRecordOfUpdateFromID(   
+                    $pdoConn, 
+                    $prevUpd8ID, 
+                    $stmt->getPageFromUpdateID, 
+                    $stmt->getPrevPageID, 
+                    $stmt->getPageRecord    )['path'];
+        }
+
+        $page1 = getFirstPageRecordOfUpdateFromID(  $pdoConn, 
+                                                    $updateID, 
+                                                    $stmt->getPageFromUpdateID, 
+                                                    $stmt->getPrevPageID, 
+                                                    $stmt->getPageRecord    );
+        $links['skipBack'] = ($page1['pageid'] == $record['pageid']) ? 
+                $links['prevUpd8'] :
+                $page1['path'];
+        
+        $nextUpd8ID = executeAndFetchScalar($stmt->getNextUpdateID, $updateID);
+        if ($nextUpd8ID) {
+            $links['nextUpd8'] = getFirstPageRecordOfUpdateFromID(   
+                    $pdoConn, 
+                    $nextUpd8ID, 
+                    $stmt->getPageFromUpdateID, 
+                    $stmt->getPrevPageID, 
+                    $stmt->getPageRecord    )['path'];
+        }
     }
 
-    $record = $getPageRecord->fetch(\PDO::FETCH_ASSOC);
-
-    $links = array_fill_keys(['prev', 'next', 'prevUpd8', 'nextUpd8'], '');
-    $links['prev'] = (($prev = $getPrevPageID->fetch(\PDO::FETCH_NUM)) AND $prev[0] !== null) ?
-            executeAndFetch($getPageRecord, [$prev[0]], \PDO::FETCH_ASSOC)['path']
-            : DEFAULTPREVLINK;
-    $links['next'] = (($next = $getNextPageID->fetch(\PDO::FETCH_NUM)) AND $next[0] !== null) ? 
-            executeAndFetch($getPageRecord, [$next[0]], \PDO::FETCH_ASSOC)['path']
-            : DEFAULTNEXTLINK;
-    $links['prevUpd8'] = 
-            (($prevUpd8 = $getPrevUpdateID->fetch(\PDO::FETCH_NUM)) AND $prevUpd8[0] !== null) ? 
-                    getFirstPageRecordOfUpdateFromID(   $pdoConn, 
-                                                        $prevUpd8[0], 
-                                                        $getPageFromUpdateID, 
-                                                        $getPrevPageID, 
-                                                        $getPageRecord  )['path']
-                    : DEFAULTPREVUPDATELINK;
-    $links['nextUpd8'] = 
-            (($nextUpd8 = $getNextUpdateID->fetch(\PDO::FETCH_NUM)) AND $nextUpd8[0] !== null) ? 
-                    getFirstPageRecordOfUpdateFromID(   $pdoConn, 
-                                                        $nextUpd8[0], 
-                                                        $getPageFromUpdateID, 
-                                                        $getPrevPageID, 
-                                                        $getPageRecord  )['path']
-                    : DEFAULTNEXTUPDATELINK;
-
-    $imgRecords = $getImgRecords->fetchAll(\PDO::FETCH_ASSOC);
-    $nailRecords = $getThumbnailRecords->fetchAll(\PDO::FETCH_ASSOC);
-
-    // if (!LOCALSITE) {   // temporary measure until I get this hooked up to NGINX
-    //     $record['path'] = str_replace('\\', '/', replacePathsForServerSite($record['path']));
-
-    //     foreach (array_keys($links) as $key) {
-    //         $links[$key] = str_replace('\\', '/', replacePathsForServerSite($links[$key]));
-    //     }
-
-    //     foreach(array_keys($imgRecords) as $key) {
-    //         $imgRecords[$key]['path'] = 
-    //                 str_replace('\\', '/', replacePathsForServerSite($imgRecords[$key]['path']));
-    //     }
-
-    //     foreach(array_keys($nailRecords) as $key) {
-    //         $nailRecords[$key]['path'] = 
-    //                 str_replace('\\', '/', replacePathsForServerSite($nailRecords[$key]['path']));
-    //     }
-    // }
+    if (!$links['prevUpd8']) $links['prevUpd8'] = DEFAULTPREVLINK;
+    if (!$links['skipBack']) $links['skipBack'] = DEFAULTPREVLINK;
+    if (!$links['nextUpd8']) $links['nextUpd8'] = DEFAULTNEXTLINK;
 
     return new PageInfo(
             $record, 
             $links['prev'], 
             $links['next'], 
+            $updateID, 
             $links['prevUpd8'], 
+            $links['skipBack'], 
             $links['nextUpd8'], 
-            $imgRecords, 
-            $nailRecords, 
-            $getTags->fetchAll(\PDO::FETCH_COLUMN),
-            $getCWs->fetchAll(\PDO::FETCH_COLUMN),
-            executeAndFetchScalar($getSpreadType, $record['spreadid'])
+            $stmt->getImgRecords->fetchAll(\PDO::FETCH_ASSOC),
+            $stmt->getThumbnailRecords->fetchAll(\PDO::FETCH_ASSOC), 
+            $stmt->getTags->fetchAll(\PDO::FETCH_COLUMN),
+            $stmt->getCWs->fetchAll(\PDO::FETCH_COLUMN),
+            executeAndFetchScalar($stmt->getSpreadType, $record['spreadid']), 
+            executeAndFetchScalar($stmt->getStylePath, $record['colorstyleid'])
     );
 }
 
-function getAllUpdateInfo(?\PDO $pdoConn = NULL) {
+function getAllUpdateInfo(?\PDO $pdoConn = null) {
     if (!$pdoConn) $pdoConn = pdoConnect();
     $getUpdates = $pdoConn->query(
             "SELECT * FROM comicupdate WHERE postdate IS NOT NULL ORDER BY postdate;");
@@ -178,13 +158,13 @@ function getAllUpdateInfo(?\PDO $pdoConn = NULL) {
     return $allUpdateInfo;
 }
 
-function regenerateArchivePages(?\PDO $pdoConn = NULL, array $paths = []) {
+function regenerateArchivePages(?\PDO $pdoConn = null, array $paths = []) {
     if (!$pdoConn) $pdoConn = pdoConnect();
     $pageStrs = generateAllArchivePages(getAllUpdateInfo($pdoConn), $paths);
     // Remember: $pageStrs and $paths are 1-indexed for parity with the site
     // Also remember: `$paths` is modified by `generateAllArchivePages`
 
-    foreach (array_map(NULL, $paths, $pageStrs) as [$path, $page]) {
+    foreach (array_map(null, $paths, $pageStrs) as [$path, $page]) {
         file_put_contents($path, $page);
     }
 
@@ -198,8 +178,11 @@ function regenerateArchivePages(?\PDO $pdoConn = NULL, array $paths = []) {
  * @param mixed $stylePath
  * @return bool|string
  */
-function regenerateHomepage(?\PDO $pdoConn = NULL, ?string $stylePath = NULL) {
-    if (!$pdoConn) $pdoConn = pdoConnect();
+function regenerateHomepage(?\PDO $pdoConn = null, ?string $stylePath = null) {
+    if (!tryPDOConnect($pdoConn)) {
+        echo "Could not continue/create database connection. Aborting...";
+        return false;
+    };
     $mostRecentBlog = $pdoConn->query("SELECT * FROM blog ORDER BY postdate DESC LIMIT 1;")
                                 ->fetch(\PDO::FETCH_ASSOC);
     $pageID = getFirstPageIDOfUpdateFromID($pdoConn, getMostRecentUpdate($pdoConn));
@@ -212,15 +195,7 @@ function regenerateHomepage(?\PDO $pdoConn = NULL, ?string $stylePath = NULL) {
     return ob_get_clean();
 }
 
-function postUpdate(?\PDO $pdoConn = NULL) {
-    if (!tryPDOConnect($pdoConn)) {
-        echo "Couldn't establish/continue SQL server connection. Aborting...\n";
-        return false;
-    }
-    echo "Creating update...\n";
-    tryBeginTransaction($pdoConn);
-
-    // after file upload, generate file records
+function generateInsertUpdateFileRecords(\PDO $pdoConn) {
     $tryAgain = false;
     do {
         $fileRecords = [];
@@ -245,6 +220,200 @@ function postUpdate(?\PDO $pdoConn = NULL) {
             }
         }
     } while ($tryAgain);
+}
+
+function generateSaveUpdatePageFiles(\PDO $pdoConn, array $pageRecords, array $prevUpdatePageIDs) {
+    echo "Getting page information for HTML files...\n";
+    $comicPageStmts = new ComicPageStatements($pdoConn);
+
+    $allPageInfo = array_fill(0, \count($pageRecords), null);
+    for ($i = 0; $i < \count($allPageInfo); $i++) {
+        $allPageInfo[$i] = getPageInfo($pdoConn, $pageRecords[$i]['pageid'], stmt: $comicPageStmts);
+    }
+
+    // get page info to be used to regenerate previous HTML files
+    $allPrevPageInfo = array_fill(0, \count($prevUpdatePageIDs), null);
+    for ($i = 0; $i < \count($allPrevPageInfo); $i++) {
+        $allPrevPageInfo[$i] = getPageInfo($pdoConn, $prevUpdatePageIDs[$i], stmt: $comicPageStmts);
+    }
+
+    echo "Generating HTML files...\n";
+    ob_start(); // generateComicpage will flush output
+    // generate new HTML files using page info
+    foreach ($allPageInfo as $page) {
+        if (!file_put_contents($page->record['path'], generateComicpage($page)))
+            echo "Failed to put file at {$page->record['path']}.\n";
+    }
+    
+    // regenerate HTML files from previous update (update links)
+    foreach ($allPrevPageInfo as $prevPage) {
+        if (!file_put_contents($prevPage->record['path'], generateComicPage($prevPage)))
+            echo "Failed to put file from previous update at {$page->record['path']}.\n";
+    }
+    ob_end_clean();
+}
+
+function redoCachedSearches(\PDO $pdoConn) {
+    backupSearchData($pdoConn);
+    
+    $getSearch = $pdoConn->query(
+            "SELECT DISTINCT search, searchimgdesc, matchexactly FROM searchcache;");
+    $getSearchAtIndex = $pdoConn->prepare(<<<STMT
+        SELECT * FROM searchcache 
+        WHERE search = :search AND matchexactly = :exact AND searchimgdesc = :desc
+            AND resultpageindex = :pageindex;
+        STMT);
+    $getSearchNotLessThanIndex = $pdoConn->prepare(<<<STMT
+        SELECT * FROM searchcache 
+        WHERE search = :search AND matchexactly = :exact AND searchimgdesc = :desc
+            AND resultpageindex >= :minpageindex;
+        STMT);
+    $deleteSearchNotLessThanIndex = $pdoConn->prepare(<<<STMT
+        DELETE FROM searchcache WHERE 
+            search = :search AND matchexactly = :exact AND searchimgdesc = :desc
+            AND resultpageindex >= :minpageindex);
+        STMT);
+    $getTags = getTagsFromPageIDStmt($pdoConn);
+    $getCWs = getCWsFromPageIDStmt($pdoConn);
+    $getThumbnail = getThumbnailFromPageIDStmt($pdoConn);
+    $getThumbnailContingency = getMinSizeFileFromPageIDStmt($pdoConn);
+    
+    $allsearchIsRegenerated = false;
+    
+    $insertParams = [];
+    $insertStmt = '';
+    for (   $n = 0, $search = $getSearch->fetch(\PDO::FETCH_ASSOC); 
+            $search !== false; 
+            $n++, $search = $getSearch->fetch(\PDO::FETCH_ASSOC)  ) {
+                
+        $desc = ($search['searchimgdesc'] == CHECKBOXON);
+        $exact = ($search['matchexactly'] == CHECKBOXON);
+
+        [$results, $s, $execList] = allSearchComics($search['search'], 
+                                                    $pdoConn, 
+                                                    $exact, 
+                                                    $desc);
+        
+        if (\count($results) >= getNumServablePages($pdoConn)) { 
+            // this search has returned all pages!
+            if (!$allsearchIsRegenerated) {
+                // we look to regenerate the all search
+                // set stuff up so that the search section below searches ''
+                $search['search'] = '';
+                $search['searchimgdesc'] = '';
+                $desc = false;
+                $search['matchexactly'] = '';
+                $exact = false;
+                [$results, $s, $execList] = allSearchComics('', $pdoConn);
+            } else { // all search has already been regenerated, go to next loop.
+                continue;
+            }
+        }
+
+        // get the info for each page (lists of tags, cws, thumbnails)
+        $resultInfos = array_fill(0, count($results), null);
+        for ($i = 0; $i < count($results); $i++) {
+            $getThumbnail->execute([$results[$i]['pageid']]);
+            $thumbnailRecord = null;
+            if (($thumbnailRecord = $getThumbnail->fetch(\PDO::FETCH_ASSOC)) === false) {
+                $getThumbnailContingency->execute([$results[$i]['pageid']]);
+                // If this also returns false, there are no associated files.
+                $thumbnailRecord = $getThumbnailContingency->fetch(\PDO::FETCH_ASSOC);
+            } 
+            
+            $getTags->execute([$results[$i]['pageid']]);
+            $getCWs->execute([$results[$i]['pageid']]);
+
+            $resultInfos[$i] = new SearchResultInfo(
+                    $results[$i], 
+                    $execList, 
+                    $getTags->fetchAll(\PDO::FETCH_COLUMN), 
+                    $getCWs->fetchAll(\PDO::FETCH_COLUMN), 
+                    $thumbnailRecord, 
+                    $exact
+            );
+        }
+
+        // generateAllSearchPages on the sorted string and the info array
+        $fileNames = [];
+        $pageStrs = generateAllSearchPages(   
+                $search['search'], 
+                $resultInfos, 
+                [   'search' => $search['search'], 
+                    'desc' => $search['searchimgdesc'], 
+                    'exact' => $search['matchexactly'], 
+                    SEARCHPAGEINDEXKEY => 0 ],   // this last value is just in case
+                $fileNames
+        );
+
+        if ($pageStrs) {
+            // save all pages and update cache records
+            $i = 1;
+            for ($i = 1; $i <= \count($pageStrs); $i++) {
+                $filePath = SEARCHCACHEDIRPATH
+                            . implode('_', [    'search', 
+                                                $search['search'], 
+                                                $search['searchimgdesc'], 
+                                                $search['matchexactly'], 
+                                                "p{$i}.html"    ]);
+                // save the file
+                if (file_put_contents($filePath, $pageStrs[$i - 1]) === false) {
+                    continue;
+                    // do NOT update table if we can't write to file
+                }
+
+                $getSearchAtIndex->execute([':search' => $search['search'], 
+                                            ':desc' => $search['searchimgdesc'], 
+                                            ':exact' => $search['matchexactly'], 
+                                            ':pageindex' => $i]);
+                $searchAtIndex = $getSearchAtIndex->fetch(\PDO::FETCH_ASSOC);
+                if (!$searchAtIndex) {
+                    // assemble the statement...
+                    $insertStmt .= 
+                    " ROW(:search{$i}_$n, :desc{$i}_$n, :exact{$i}_$n, :index{$i}_$n, :path{$i}_$n)";
+                    $insertParams = [   ...$insertParams, 
+                                        ":search{$i}_$n" => $search['search'], 
+                                        ":desc{$i}_$n" => $search['searchimgdesc'], 
+                                        ":exact{$i}_$n" => $search['matchexactly'], 
+                                        ":index{$i}_$n" => $i, 
+                                        ":path{$i}_$n" => $filePath ];
+                }
+            }
+
+            // You better have backed up previous searches!
+            $deleteSearchNotLessThanIndex->execute([':search' => $search['search'], 
+                                                    ':desc' => $search['searchimgdesc'], 
+                                                    ':exact' => $search['matchexactly'], 
+                                                    ':minpageindex' => $i]);
+            
+        } 
+    }
+    
+    if ($insertStmt != '') {
+        tryBeginTransaction($pdoConn);
+        // insert the records from assembled statement
+        $insert = $pdoConn->prepare(<<<STMT
+                INSERT INTO searchcache (   search, 
+                                            searchimgdesc, 
+                                            matchexactly, 
+                                            resultpageindex, 
+                                            path    )
+                VALUES $insertStmt;
+                STMT);
+        $insert->execute($insertParams);
+    }
+}
+
+function postUpdate(?\PDO $pdoConn = null) {
+    if (!tryPDOConnect($pdoConn)) {
+        echo "Couldn't establish/continue SQL server connection. Aborting...\n";
+        return false;
+    }
+    echo "Creating update...\n";
+    tryBeginTransaction($pdoConn);
+
+    // after file upload, generate file records
+    generateInsertUpdateFileRecords($pdoConn);
     
     // generate update record
     $updateRecord = generateUpdateRecordInteractive($pdoConn);
@@ -278,33 +447,8 @@ function postUpdate(?\PDO $pdoConn = NULL) {
     // associate pages with update
     associatePagesInteractive($updateRecord, $pdoConn);
 
-    echo "Getting page information for HTML files...\n";
-    // get page info to be used in new HTML files
-    $allPageInfo = array_fill(0, \count($pageRecords), null);
-    for ($i = 0; $i < \count($allPageInfo); $i++) {
-        $allPageInfo[$i] = getPageInfo($pdoConn, $pageRecords[$i]['pageid']);
-    }
-
-    // get page info to be used to regenerate previous HTML files
-    $allPrevPageInfo = array_fill(0, \count($prevUpdatePageIDs), null);
-    for ($i = 0; $i < \count($allPrevPageInfo); $i++) {
-        $allPrevPageInfo[$i] = getPageInfo($pdoConn, $prevUpdatePageIDs[$i]);
-    }
-
-    echo "Generating HTML files...\n";
-    ob_start(); // generateComicpage will flush output
-    // generate new HTML files using page info
-    foreach ($allPageInfo as $page) {
-        if (!file_put_contents($page->record['path'], generateComicpage($page)))
-            echo "Failed to put file at {$page->record['path']}.\n";
-    }
-    
-    // regenerate HTML files from previous update (update links)
-    foreach ($allPrevPageInfo as $prevPage) {
-        if (!file_put_contents($prevPage->record['path'], generateComicPage($prevPage)))
-            echo "Failed to put file from previous update at {$page->record['path']}.\n";
-    }
-    ob_end_clean();
+    // generate and save new HTML files as well as new versions of old HTML files
+    generateSaveUpdatePageFiles($pdoConn, $pageRecords, $prevUpdatePageIDs);
 
     // add post date to pages and update
     $addDateToPage = $pdoConn->prepare("UPDATE page SET postdate = NOW() WHERE pageid = ?;");
@@ -325,9 +469,9 @@ function postUpdate(?\PDO $pdoConn = NULL) {
     regenerateArchivePages($pdoConn, $archivePagePaths);
 
     // backup and delete/regenerate affected searches
-    // Eh....... for now, don't parse through affected searches, just delete them all
     // TODO: edit this to regenerate searches!
     backupSearchData($pdoConn);
+    
     $pdoConn->exec("DELETE FROM searchcache;");
     if (promptInput("Would you like to delete the cached search page HTML files?\n(y/n) > ")
             == "y") {
@@ -338,20 +482,26 @@ function postUpdate(?\PDO $pdoConn = NULL) {
     // `search.php` will rewrite anything not in the search cache, so it's not a big deal
 }
 
-function regenerateComicPages(array|int $pageIDs, ?\PDO $pdoConn = null) {
+function regenerateComicPages(  array|int $pageIDs, 
+                                ?\PDO $pdoConn = null, 
+                                ?ComicPageStatements $pageStmts = null   ) {
     if (!tryPDOConnect($pdoConn)) {
         echo "Couldn't establish/continue SQL server connection. Aborting...\n";
         return false;
     }
     if (\is_int($pageIDs)) $pageIDs = [$pageIDs];
+
     echo "Regenerating comic page(s)...\n";
+    $pageStmts ??= new ComicPageStatements($pdoConn);
 
     ob_start();
     foreach ($pageIDs as $id) {
-        $info = getPageInfo($pdoConn, $id);
+        $info = getPageInfo($pdoConn, $id, $pageStmts);
         $success = file_put_contents($info->record['path'], generateComicpage($info));
         if (!$success) 
             echo "Failed to write page ID {$id} to path {$info->record['path']}\n";
     }
     ob_end_clean();
+
+    return true;
 }

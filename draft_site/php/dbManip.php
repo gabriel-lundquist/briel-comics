@@ -32,9 +32,73 @@ const PAGEINSERTCOLUMNS = [ "title",
                             "path",
                             "imagedesc",
                             "spreadid",
-                            "stylepath" ];
+                            "colorstyleid", 
+                            "note" ];
 
 const TEXTMATCHTHRESHOLD = 0.1;
+
+class ComicPageStatements {
+    public \PDO $pdoConnection;
+    public \PDOStatement $getPageRecord;
+    public \PDOStatement $getPrevPageID;
+    public \PDOStatement $getNextPageID;
+    public \PDOStatement $getPrevUpdateID;
+    public \PDOStatement $getNextUpdateID;
+    public \PDOStatement $getPageFromUpdateID;
+    public \PDOStatement $getUpdateFromPageID;
+    public \PDOStatement $getImgRecords;
+    public \PDOStatement $getThumbnailRecords;
+    public \PDOStatement $getTags;
+    public \PDOStatement $getCWs;
+    public \PDOStatement $getSpreadType;
+    public \PDOStatement $getStylePath;
+    public function __construct(    \PDO $pdoConn, 
+                                    ?\PDOStatement $getPageRecord = null, 
+                                    ?\PDOStatement $getPrevPageID = null,
+                                    ?\PDOStatement $getNextPageID = null,
+                                    ?\PDOStatement $getPrevUpdateID = null,
+                                    ?\PDOStatement $getNextUpdateID = null,
+                                    ?\PDOStatement $getPageFromUpdateID = null,
+                                    ?\PDOStatement $getUpdateFromPageID = null, 
+                                    ?\PDOStatement $getImgRecords = null,
+                                    ?\PDOStatement $getThumbnailRecords = null,
+                                    ?\PDOStatement $getTags = null,
+                                    ?\PDOStatement $getCWs = null,
+                                    ?\PDOStatement $getSpreadType = null, 
+                                    ?\PDOStatement $getStylePath = null,    ) {
+        $this->pdoConnection = $pdoConn;
+        $this->getPageRecord = $getPageRecord ?? getPageRecordFromIDStmt($pdoConn);
+        $this->getPrevPageID = $getPrevPageID ?? getPrevPageFromIDStmt($pdoConn);
+        $this->getNextPageID = $getNextPageID ?? getNextPageFromIDStmt($pdoConn);
+        $this->getPrevUpdateID = $getPrevUpdateID ?? getPrevUpdateFromIDStmt($pdoConn);
+        $this->getNextUpdateID = $getNextUpdateID ?? getNextUpdateFromIDStmt($pdoConn);
+        $this->getPageFromUpdateID = $getPageFromUpdateID ?? getPageIDsFromUpdateIDStmt($pdoConn);
+        $this->getUpdateFromPageID = $getUpdateFromPageID ?? getUpdateIDFromPageIDStmt($pdoConn);
+        $this->getImgRecords = $getImgRecords ?? getPageImgRecordsFromIDStmt($pdoConn);
+        $this->getThumbnailRecords = $getThumbnailRecords ?? getThumbnailRecordsFromIDStmt($pdoConn);
+        $this->getTags = $getTags ?? getTagsFromPageIDStmt($pdoConn);
+        $this->getCWs = $getCWs ?? getCWsFromPageIDStmt($pdoConn);
+        $this->getSpreadType = $getSpreadType ?? getSpreadTypeFromSpreadIDStmt($pdoConn);
+        $this->getStylePath = $getStylePath ?? getStylePathFromColorstyleIDStmt($pdoConn);
+    }
+
+    public function executePageIDStmts(int $pageID) {
+        foreach ([  $this->getPageRecord, 
+                    $this->getPrevPageID, 
+                    $this->getNextPageID, 
+                    $this->getImgRecords, 
+                    $this->getThumbnailRecords, 
+                    $this->getTags, 
+                    $this->getCWs     ] as $getStatement) {
+            // this works the way you'd hope it would!
+            $getStatement->execute([$pageID]);
+        }
+    }
+
+    // public function executeUpdateIDStmts(int $updateID) {
+    //     foreach ([  $this->])
+    // }
+}
 
 /**
  * Summary of Briel\promptInput
@@ -100,12 +164,18 @@ function dumpQuery(string $query, \PDO $pdoConn) {
     var_dump($pdoConn->query($query)->fetchAll(\PDO::FETCH_ASSOC));
 }
 
+/**
+ * Summary of Briel\tryBeginTransaction
+ * Attempts to ensure that the connection is in a transaction by the time it returns.
+ * @param \PDO|bool $pdoConn
+ * @return bool `true` when in a transaction by the end of execution, `false` otherwise.
+ */
 function tryBeginTransaction(\PDO|bool $pdoConn) {
     if (!$pdoConn) {
         echo "Connection to SQL server doesn't exist.";
         return false;
     }
-    if ($pdoConn->inTransaction()) {
+    if (!$pdoConn->inTransaction()) {
         try {
             $pdoConn->beginTransaction();
         } catch (\PDOException $e) {
@@ -643,15 +713,7 @@ function isFilePath(string $str, string $fileExt = ".+") {
     return preg_match('(.*[\\\/].+\.' . "$fileExt)", $str);
 }
 
-/**
- * Summary of Briel\generatePageRecordInteractive
- * @param \PDO $pdoConn
- * @return array
- */
-function generatePageRecordInteractive(\PDO $pdoConn) {
-    echo "Generating new page record...\n";
-    
-    // Set title
+function getPageTitleInteractive(\PDO $pdoConn) {
     $title = promptInput("Enter title: > ");
     $findFileFromTitle = $pdoConn->prepare("SELECT path FROM page WHERE title = ?;");
     $existingTitle = $pdoConn->prepare(
@@ -665,8 +727,11 @@ function generatePageRecordInteractive(\PDO $pdoConn) {
             $useAnyway = true;
         } else $title = promptInput("Enter title: > ");
     }
-    
-    // Set path
+
+    return $title;
+}
+
+function getPagePathInteractive(\PDO $pdoConn) {
     $useAnyway = false;
     $path = promptPathHTML();
     while (!isFilePath($path, "html") 
@@ -681,34 +746,111 @@ function generatePageRecordInteractive(\PDO $pdoConn) {
             } else $path = promptPathHTML();
         }
     }
+    return $path;
+}
 
-    // Get image description
+function getImgDescInteractive(\PDO $pdoConn) {
     $imageDesc = promptInput("Enter comic page description (or a path to it):\n> ");
     if (is_readable($imageDesc)) {
         $imageDesc = file_get_contents($imageDesc);
     }
+    return $imageDesc;
+}
 
-    // Get spread ID
+function getSpreadIDInteractive(\PDO $pdoConn) {
     $getSpreadID = $pdoConn->prepare("SELECT spreadid FROM spread WHERE spreadtype = ?;");
     $spreadID = executeAndFetchScalar(
             $getSpreadID, 
             (promptInput("Double spread? (y/n) > ") == "y") ? "double" : "normal"
     );
+    return $spreadID;
+}
 
-    // Get path of a special style (if present)
-    $stylePath = promptInput("Enter path to special style (or 'n' if none):\n> ");
-    while (!isFilePath($stylePath, "css") AND $stylePath != "n") {
-        echo "Error: $stylePath not a css file.\n";
-        $stylePath = promptInput("Enter path to special style (or 'n' if none):\n> ");
+function getColorStyleInteractive(\PDO $pdoConn) {
+    $colorStyleID = $pdoConn->query("SELECT MIN(colorstyleid) FROM colorstyle;")
+                            ->fetch()[0];
+    if (promptInput("Add non-default reading colors? (y/n) >") == "y") {
+        echo "Existing color styles:\n";
+        $styles = $pdoConn->query("SELECT colorstyleid, colorstyledesc FROM colorstyle;")
+                          ->fetchAll(\PDO::FETCH_ASSOC);
+        echo attributeTableStr(
+                $styles, 
+                "colorstyle", 
+                "colorstyleid", 
+                "colorstyledesc"
+        );
+        $select = promptInput("Enter the ID of the style you want to select,"
+                                . " or 'n' if you don't want any of these.\n> ");
+        if (\in_array($select, array_column($styles, 'colorstyleid'))) {
+            $colorStyleID = $select;
+        } elseif ($select == 'n') {
+            if (promptInput("Would you like to add a custom css file? (y/n) > ") 
+                    == "y") {
+                $path = promptInput("Enter path to CSS file.\n> ");
+                while (!isFilePath($path, ".css") AND $path != 'n') {
+                    $path = promptInput(
+                            "Not a valid path to a CSS file. "
+                            . "Enter path (or 'n' to cancel).\n> ");
+                }
+
+                if (isFilePath($path, ".css")) {
+                    insertColorStyleRecord( $pdoConn, 
+                                            promptInput("Enter a short description.\n> "), 
+                                            $path   );
+                    $colorStyleID = $pdoConn
+                            ->query("SELECT MAX(colorstyleid) FROM colorstyle;")
+                            ->fetch()[0];
+                }
+            }
+        } else {
+            echo "Okay, sticking with default style $colorStyleID. Moving on...\n";
+        }
     }
-    if ($stylePath == "n") $stylePath = null;
+
+    return $colorStyleID;
+}
+
+function getNoteInteractive(\PDO $pdoConn) {
+    if (($note = promptInput(
+                "Enter text you'd like to add as a note on this page, or 'n' for none.\n> "))
+            != 'n') {
+        return $note;
+    } else return null;
+}
+
+/**
+ * Summary of Briel\generatePageRecordInteractive
+ * @param \PDO $pdoConn
+ * @return array
+ */
+function generatePageRecordInteractive(\PDO $pdoConn) {
+    echo "Generating new page record...\n";
+    
+    // Set title
+    $title = getPageTitleInteractive($pdoConn);
+    
+    // Set path
+    $path = getPagePathInteractive($pdoConn);
+
+    // Get image description
+    $imageDesc = getImgDescInteractive($pdoConn);
+
+    // Get spread ID
+    $spreadID = getSpreadIDInteractive($pdoConn);
+
+    // Get colors
+    $colorStyleID = getColorStyleInteractive($pdoConn);
+
+    // Get note
+    $note = getNoteInteractive($pdoConn);
 
     // pageid is automatically generated upon inserting these values.
     return array_combine(PAGEINSERTCOLUMNS, [   $title, 
                                                 $path, 
                                                 $imageDesc, 
                                                 $spreadID, 
-                                                $stylePath  ]);
+                                                $colorStyleID, 
+                                                $note   ]);
 }
 
 function orderContinues(array $record, string $key) {
@@ -787,7 +929,7 @@ function getFirstPageID(\PDO $pdoConn,
     $getSource->execute([$firstID]);
     for (   $source = $getSource->fetch(\PDO::FETCH_ASSOC); 
             !empty($pageIDs) AND prevOrderContinues($source); 
-            $getSource->execute([$source]), 
+            $getSource->execute([$source['sourceid']]), 
                     $source = $getSource->fetch(\PDO::FETCH_ASSOC)) {
 
         if (($index = array_search($source['sourceid'], $pageIDs)) !== false) {
@@ -808,7 +950,7 @@ function getLastPageID( \PDO $pdoConn,
     $getTarget->execute([$lastID]);
     for (   $target = $getTarget->fetch(\PDO::FETCH_ASSOC); 
             !empty($pageIDs) AND nextOrderContinues($target); 
-            $getTarget->execute([$target]), 
+            $getTarget->execute([$target['targetid']]), 
                     $target = $getTarget->fetch(\PDO::FETCH_ASSOC)) {
 
         if (($index = array_search($target['targetid'], $pageIDs)) !== false) {
@@ -845,7 +987,8 @@ function orderPageRecords(  \PDO $pdoConn,
     $getSource->execute([$initRecord['pageid']]);
     for (   $source = $getSource->fetch(\PDO::FETCH_ASSOC); 
             !empty($pageRecords) AND prevOrderContinues($source); 
-            $getSource->execute([$source]), $source = $getSource->fetch(\PDO::FETCH_ASSOC)  ) {
+            $getSource->execute([$source['sourceid']]), 
+                    $source = $getSource->fetch(\PDO::FETCH_ASSOC)  ) {
 
         if (\array_key_exists($source['sourceid'], $pageRecords)) {
             $pageRecordsOrdered = [$pageRecords[$source['sourceid']], ...$pageRecordsOrdered];
@@ -859,7 +1002,7 @@ function orderPageRecords(  \PDO $pdoConn,
     $getTarget->execute([$initID]);
     for (   $target = $getTarget->fetch(\PDO::FETCH_ASSOC); 
             !empty($pageRecords) AND nextOrderContinues($target); 
-            $getTarget->execute([$target]), 
+            $getTarget->execute([$target['targetid']]), 
                     $target = $getTarget->fetch(\PDO::FETCH_ASSOC)  ) {
 
         if (\array_key_exists($target['targetid'], $pageRecords)) {
@@ -2266,6 +2409,10 @@ function getPageIDsFromUpdateIDStmt(\PDO $pdoConn) {
     return $pdoConn->prepare("SELECT pageid FROM comicupdatepage WHERE updateid = ?;");
 }
 
+function getUpdateIDFromPageIDStmt(\PDO $pdoConn) {
+    return $pdoConn->prepare("SELECT updateid FROM comicupdatepage WHERE pageid = ?;");
+}
+
 function getFirstPageIDOfUpdateFromID(  \PDO $pdoConn, 
                                         int $updateID, 
                                         ?\PDOStatement $getPageFromUpdateID = null, 
@@ -2427,6 +2574,16 @@ function getThumbnailRecordsFromIDStmt(\PDO $pdoConn) {
             STMT); // `purposeid` of 2 corresponds to page thumbnails
 }
 
+function getSpreadTypeFromSpreadIDStmt(\PDO $pdoConn) {
+    return $pdoConn->prepare(
+            "SELECT spreadtype FROM spread WHERE spreadid = ?;");
+}
+
+function getStylePathFromColorstyleIDStmt(\PDO $pdoConn) {
+    return $pdoConn->prepare(
+            "SELECT path FROM colorstyle WHERE colorstyleid = ?");
+}
+
 /**
  * Summary of Briel\backupSearchData
  * @param \PDO $pdoConn [optional]
@@ -2458,5 +2615,23 @@ function backupSearchData(  \PDO $pdoConn,
                                     $searchDesc ? CHECKBOXON : '', 
                                     $matchExactly ? CHECKBOXON : '' ]);
     }
+}
+
+function isColorHexcode(string $input) {
+    return preg_match('/^[0-9A-Fa-f]{6}$/', $input);
+}
+
+function insertColorStyleRecord(\PDO $pdoConn, 
+                                string $description, 
+                                string $path, 
+                                bool $promptToCommit = true, 
+                                string $promptCommitMessage = '') {
+
+    return queryInsertRecords(  $pdoConn, 
+                                'colorstyle', 
+                                ['colorstyledesc', 'path'], 
+                                [[$description, $path]], 
+                                $promptToCommit, 
+                                $promptCommitMessage    );
 }
 ?>

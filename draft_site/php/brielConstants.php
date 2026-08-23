@@ -38,6 +38,9 @@ const ARCHIVEDIRPATH = SITEROOT . "archive/";
 const ARCHIVESTARTPATH = ARCHIVEDIRPATH . 'archive_p1.html';
 const FONTFACESPATH = SITEROOT . 'styles/briel_font-faces.css';
 const SITEICONPATH = SITEROOT . 'images/smileicon.ico';
+const READINGCOLORDIRPATH = SITEROOT . "styles/reading_colors/";
+const READINGSTYLEPATH = SITEROOT . "styles/reading_page.css";
+const READINGSCRIPTPATH = SITEROOT . "js/reading_page.js";
 
 const FONTFACESCSSNAME = 'briel_font-faces.css';
 

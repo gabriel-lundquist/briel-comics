@@ -27,7 +27,7 @@ default_widths = calc_widths_by_ratios()
 
 def downscale_to_width(img, new_width:int, old_width:int, old_height:int):
     
-    if (old_width / new_width >= 3):
+    if (old_width / new_width >= 2):
         # blur before downscaling to reduce jagged edges
         width_factor = int(old_width / new_width)
         # kernel width must be odd

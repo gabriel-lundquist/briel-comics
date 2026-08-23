@@ -44,7 +44,7 @@ if (!($dbConn = pdoConnect())) {
 
         <link href="./styles/reading_page_style.css" rel="stylesheet">
 
-        <script type="module" src="./js/reading_page_script.js"></script>
+        <script type="module" src="./js/reading_page.js"></script>
     </head>
 
     <body>

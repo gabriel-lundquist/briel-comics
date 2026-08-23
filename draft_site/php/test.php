@@ -3,11 +3,4 @@ namespace Briel;
 
 require_once 'siteOperations.php';
 
-$conn = pdoConnect(echoConnSuccess: LOCALSITE);
-
-foreach ([29, 30, 31, 32] as $id) {
-    $info[$id] = getPageInfo($conn, $id);
-    // have to be careful to always include the full filesystem path when writing to files
-    print_r(file_put_contents(  (LOCALSITE ? '' : FILEFOLDER) . $info[$id]->record['path'], 
-                                generateComicpage($info[$id])       ));
-}
+echo file_get_contents('C:\Users\gabri\Code\Briel comics website\briel-comics\draft_site\images\user_interface\2026-08-03NextArrow_transparent.svg');

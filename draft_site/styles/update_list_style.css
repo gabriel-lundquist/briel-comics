@@ -4,9 +4,9 @@ html {
 
     --bg-color: hsl(42, 100%, 89%);
     --title-color: hsl(6, 100%, 23%);
-    --text-color: hsl(350, 100%, 12%);
+    --ui-prime-color: hsl(350, 100%, 12%);
     --link-color: hsl(345, 71%, 50%);
-    --visited-color: hsl(355, 47%, 42%);
+    --deemphasize-color: hsl(355, 47%, 42%);
     --hilite-color: hsl(30, 100%, 78%);
     --button-color: hsl(52, 96%, 90%);
     /* --button-light-emboss-color: hsl(54, 47%, 77%); */
@@ -16,7 +16,7 @@ html {
 
     --thumbnail-size: 100px;
 
-    color: var(--text-color);
+    color: var(--ui-prime-color);
     background-color: var(--bg-color);
     background: var(--bg-gradient);
     background-repeat: no-repeat;
@@ -151,7 +151,7 @@ a:hover {
 }
 
 a:visited {
-    color: var(--visited-color);
+    color: var(--deemphasize-color);
 }
 
 .archive-entry,
