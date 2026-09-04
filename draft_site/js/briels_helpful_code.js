@@ -174,7 +174,8 @@ export function getNavLinks(readPageDocument,
 }
 
 export function getLink(document, linkClass) {
-    return document.querySelector(linkClass).href;
+    const linkElement = document.querySelector(linkClass);
+    return linkElement ? linkElement.href : null;
 }
 
 export function resizeNavImageMaps( imgElement, 
@@ -182,9 +183,11 @@ export function resizeNavImageMaps( imgElement,
                                     areaNextElement ) {
     const imgWidth = imgElement.naturalWidth;
     const imgHeight = imgElement.naturalHeight;
-    areaPrevElement.setAttribute("coords", 
+    if (areaPrevElement)
+        areaPrevElement.setAttribute("coords", 
                         `0,0,${Math.ceil(0.25 * imgWidth)},${imgHeight}`);
-    areaNextElement.setAttribute("coords", 
+    if (areaNextElement)
+        areaNextElement.setAttribute("coords", 
                         `${Math.ceil(0.75 * imgWidth)},0,${imgWidth},${imgHeight}`);
 }
 

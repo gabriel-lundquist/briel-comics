@@ -261,7 +261,7 @@ a.text_desc_heading {
     margin-bottom: var(--frame-bottom-width);
     /* Change 8vh for the default preferred top margin  */
     margin-top: calc(clamp(0px, 0.5*(100vw - var(--comic-page-width)), 2em));
-    /* border-image-source: url("/draft_site/images/user_interface/2026-08-12ReadingFrame_White.svg"); */
+    /* border-image-source: url("/draft_site/images/decoration/2026-08-12ReadingFrame_White.svg"); */
     border-image-slice: 220 260 320 315;
     border-image-width: var(--frame-side-width) var(--frame-side-width) var(--frame-bottom-width);
     border-image-outset: var(--frame-side-width) var(--frame-side-width) var(--frame-bottom-width);

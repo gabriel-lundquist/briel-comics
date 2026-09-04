@@ -93,7 +93,7 @@ if (isset($nextUpd8Link)) {
                     </p>
                 </nav>
 
-                <section id="blog_section">
+                <section id="blog-section">
                     <h2>Web log</h2>
                     <br>
                     <?= $blogText ?>

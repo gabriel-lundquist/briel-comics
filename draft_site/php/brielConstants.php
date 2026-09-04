@@ -28,6 +28,9 @@ const PUNCTUATION = '~`!@#$%^&*()_-+=[]{}\\|:;"\'<>,.?/¡¿';
 
 const SEARCHPATH = SITEROOT . 'search.php';
 const HOMEPATH = SITEROOT . 'home.html';
+const HOMEFILEPATH = FILEROOT . 'home.html';
+const STYLEDIR = 'styles/';
+const HOMESTYLEPATH = SITEROOT . STYLEDIR . "home_page.css";
 const COMMENTPATH = SITEROOT . 'comments.php';
 const BLOGARCHIVEPATH = SITEROOT . 'weblog.html';
 const SEARCHCACHEDIR = 'searchcache/';
@@ -37,7 +40,7 @@ const BLANKSEARCHPATH = SITEROOT . BLANKSEARCHFILENAME;
 const ARCHIVEDIRPATH = SITEROOT . "archive/";
 const ARCHIVESTARTPATH = ARCHIVEDIRPATH . 'archive_p1.html';
 const FONTFACESPATH = SITEROOT . 'styles/briel_font-faces.css';
-const SITEICONPATH = SITEROOT . 'images/smileicon.ico';
+const SITEICONPATH = SITEROOT . 'images/decorations/';
 const READINGCOLORDIRPATH = SITEROOT . "styles/reading_colors/";
 const READINGSTYLEPATH = SITEROOT . "styles/reading_page.css";
 const READINGSCRIPTPATH = SITEROOT . "js/reading_page.js";

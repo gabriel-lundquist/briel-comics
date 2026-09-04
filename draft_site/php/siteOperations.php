@@ -175,10 +175,10 @@ function regenerateArchivePages(?\PDO $pdoConn = null, array $paths = []) {
  * Summary of Briel\regenerateHomepage
  * Updates the home page to feature the first page of the most recently posted update.
  * @param mixed $pdoConn
- * @param mixed $stylePath
+ * @param mixed $addlStylePath
  * @return bool|string
  */
-function regenerateHomepage(?\PDO $pdoConn = null, ?string $stylePath = null) {
+function regenerateHomepage(?\PDO $pdoConn = null, ?string $addlStylePath = null) {
     if (!tryPDOConnect($pdoConn)) {
         echo "Could not continue/create database connection. Aborting...";
         return false;
@@ -190,8 +190,8 @@ function regenerateHomepage(?\PDO $pdoConn = null, ?string $stylePath = null) {
     generateHomepage(   new BlogInfo(   $mostRecentBlog['blogtext'], 
                                         $mostRecentBlog['postdate'] ), 
                         getPageInfo($pdoConn, $pageID), 
-                        stylePath: $stylePath   );
-    file_put_contents(HOMEPATH, ob_get_contents());
+                        addlStylePath: $addlStylePath   );
+    file_put_contents(HOMEFILEPATH, ob_get_contents());
     return ob_get_clean();
 }
 
@@ -262,11 +262,6 @@ function redoCachedSearches(\PDO $pdoConn) {
         SELECT * FROM searchcache 
         WHERE search = :search AND matchexactly = :exact AND searchimgdesc = :desc
             AND resultpageindex = :pageindex;
-        STMT);
-    $getSearchNotLessThanIndex = $pdoConn->prepare(<<<STMT
-        SELECT * FROM searchcache 
-        WHERE search = :search AND matchexactly = :exact AND searchimgdesc = :desc
-            AND resultpageindex >= :minpageindex;
         STMT);
     $deleteSearchNotLessThanIndex = $pdoConn->prepare(<<<STMT
         DELETE FROM searchcache WHERE 
@@ -380,6 +375,7 @@ function redoCachedSearches(\PDO $pdoConn) {
                 }
             }
 
+            // Delete old records for indices that no longer exist
             // You better have backed up previous searches!
             $deleteSearchNotLessThanIndex->execute([':search' => $search['search'], 
                                                     ':desc' => $search['searchimgdesc'], 
@@ -389,6 +385,7 @@ function redoCachedSearches(\PDO $pdoConn) {
         } 
     }
     
+    // Insert new search indices into database if necessary
     if ($insertStmt != '') {
         tryBeginTransaction($pdoConn);
         // insert the records from assembled statement
@@ -469,10 +466,8 @@ function postUpdate(?\PDO $pdoConn = null) {
     regenerateArchivePages($pdoConn, $archivePagePaths);
 
     // backup and delete/regenerate affected searches
-    // TODO: edit this to regenerate searches!
     backupSearchData($pdoConn);
-    
-    $pdoConn->exec("DELETE FROM searchcache;");
+    redoCachedSearches($pdoConn);
     if (promptInput("Would you like to delete the cached search page HTML files?\n(y/n) > ")
             == "y") {
         foreach (glob(SEARCHCACHEDIRPATH . "?*.{HTML,html}", GLOB_BRACE) as $path) {

@@ -30,7 +30,7 @@ body {
     but they do affect the text section sizes*/
 @media screen and (min-width: 1921px) {
     html {
-        font-size: xx-large;
+        font-size: 4vh;
     }
 
     body {
@@ -61,7 +61,8 @@ footer {
 }
 
 /* Selects the big navigation buttons to the side of the page */
-body > a.nav-button {
+body > a.nav-button, 
+body > div.separator {
     width: max(0px, 0.25 * (100vw - var(--comic-page-width)));
     max-height: 100%;
 }
@@ -91,7 +92,7 @@ h2 {
     border-image-outset: 1.2em 2.2vw 1.8em;
     margin-top: 1.2em;
     margin-bottom: 2.5em;
-    max-width: calc(var(--comic-page-width));
+    max-width: var(--comic-page-width);
 }
 
 #cw_section, 
@@ -178,7 +179,6 @@ nav {
     /* border-left: 0.3em solid var(--deemphasize-color);
     border-right: 0.3em solid var(--ui-prime-color);
     border-radius: 0.2em; */
-
 }
 
 a:link {
@@ -303,7 +303,8 @@ a:visited svg.ui {
 
 .nav-line a.prev-upd8-button span.button-text, 
 .nav-line a.home-button span.button-text, 
-.nav-line a.next-upd8-button span.button-text {
+.nav-line a.next-upd8-button span.button-text, 
+.nav-line a.random-button span.button-text {
     font-size: smaller;
 }
 
@@ -329,13 +330,10 @@ a:visited svg.ui {
     /* right: min(0.8em, calc((50vw - 4em) / 15 - 0.1em)); */
 }
 
-.nav-line a.home-button {
+.nav-line a.home-button, 
+.nav-line a.random-button {
     position: relative;
     justify-content: center;
-    /* border-top-left-radius: 50% 13%;
-    border-top-right-radius: 50% 13%;
-    border-bottom-left-radius: 50% 13%;
-    border-bottom-right-radius: 50% 13%; */
     height: min(var(--nav-max-height), 15vw);
     border-radius: 5%;
 }
@@ -345,6 +343,11 @@ a:visited svg.ui {
     max-width: calc(1.5 * (50vw - 4em));
 }
 
+/* .nav-line a.random-button svg.ui {
+    max-width: calc(2 * (50vw - 4em));
+    flex: 2;
+}  */
+
 .nav-line a.home-button span.button-text {
     position: absolute;
     top: 29%;
@@ -352,6 +355,10 @@ a:visited svg.ui {
     font-size: smaller;
     /* background-color: var(--bg-color); */
     /* border-radius: 10%; */
+}
+
+.nav-line a.random-button span.button-text {
+    /* flex: 1; */
 }
 
 .nav-line a.next-upd8-button {
@@ -375,6 +382,7 @@ a:visited svg.ui {
 .nav-line a.archive-button {
     display: flex;
     font-size:inherit;
+    height: min(var(--nav-max-height), 18vw)
 }
 
 .nav-line a.archive-button .separator {
@@ -401,7 +409,7 @@ a:visited svg.ui {
     margin-bottom: var(--frame-bottom-width);
     /* Change 8vh for the default preferred top margin  */
     margin-top: calc(clamp(0px, 0.5*(100vw - var(--comic-page-width)), 2em));
-    /* border-image-source: url("/draft_site/images/user_interface/2026-08-12ReadingFrame_White.svg"); */
+    /* border-image-source: url("/draft_site/images/decoration/2026-08-12ReadingFrame_White.svg"); */
     border-image-slice: 220 260 320 315;
     border-image-width: var(--frame-side-width) var(--frame-side-width) var(--frame-bottom-width);
     border-image-outset: var(--frame-side-width) var(--frame-side-width) var(--frame-bottom-width);
