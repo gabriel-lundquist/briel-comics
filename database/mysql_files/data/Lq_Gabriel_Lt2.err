@@ -487,3 +487,16 @@
 2026-08-23T18:19:13.227846Z 0 [System] [MY-013602] [Server] Channel mysql_main configured to support TLS. Encrypted connections are now supported for this channel.
 2026-08-23T18:19:13.326626Z 0 [System] [MY-011323] [Server] X Plugin ready for connections. Bind-address: '::' port: 33060
 2026-08-23T18:19:13.326911Z 0 [System] [MY-010931] [Server] C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe: ready for connections. Version: '8.4.8'  socket: ''  port: 3307  MySQL Community Server - GPL.
+2026-09-04T20:01:14.158642Z 0 [System] [MY-015015] [Server] MySQL Server - start.
+2026-09-04T20:01:14.338207Z 0 [System] [MY-010116] [Server] C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe (mysqld 8.4.8) starting as process 23772
+2026-09-04T20:01:14.385799Z 1 [System] [MY-013576] [InnoDB] InnoDB initialization has started.
+2026-09-04T20:01:15.124813Z 1 [System] [MY-013577] [InnoDB] InnoDB initialization has ended.
+2026-09-04T20:01:15.508630Z 0 [System] [MY-010229] [Server] Starting XA crash recovery...
+2026-09-04T20:01:15.518011Z 0 [System] [MY-010232] [Server] XA crash recovery finished.
+2026-09-04T20:01:15.648065Z 0 [Warning] [MY-010068] [Server] CA certificate ca.pem is self signed.
+2026-09-04T20:01:15.648573Z 0 [System] [MY-013602] [Server] Channel mysql_main configured to support TLS. Encrypted connections are now supported for this channel.
+2026-09-04T20:01:15.698543Z 0 [System] [MY-011323] [Server] X Plugin ready for connections. Bind-address: '::' port: 33060
+2026-09-04T20:01:15.698870Z 0 [System] [MY-010931] [Server] C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe: ready for connections. Version: '8.4.8'  socket: ''  port: 3307  MySQL Community Server - GPL.
+2026-09-04T20:13:04.331510Z 0 [System] [MY-013105] [Server] C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe: Normal shutdown.
+2026-09-04T20:13:06.278385Z 0 [System] [MY-010910] [Server] C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe: Shutdown complete (mysqld 8.4.8)  MySQL Community Server - GPL.
+2026-09-04T20:13:06.280241Z 0 [System] [MY-015016] [Server] MySQL Server - end.
