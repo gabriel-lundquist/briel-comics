@@ -37,6 +37,26 @@ const PAGEINSERTCOLUMNS = [ "title",
 
 const TEXTMATCHTHRESHOLD = 0.1;
 
+class DatabaseStatements {
+    public function __construct(    
+            public \PDO $db, 
+            public ?\PDOStatement $getPageRecord = null, 
+            public ?\PDOStatement $getPrevPageID = null, 
+            public ?\PDOStatement $getNextPageID = null, 
+            public ?\PDOStatement $getPrevUpdateID = null, 
+            public ?\PDOStatement $getNextUpdateID = null, 
+            public ?\PDOStatement $getPageFromUpdateID = null, 
+            public ?\PDOStatement $getUpdateFromPageID = null, 
+            public ?\PDOStatement $getImgRecords = null, 
+            public ?\PDOStatement $getThumbnailRecords = null, 
+            public ?\PDOStatement $getTags = null, 
+            public ?\PDOStatement $getCWs = null, 
+            public ?\PDOStatement $getSpreadType = null, 
+            public ?\PDOStatement $getStylePath = null) {
+
+    }
+}
+
 class ComicPageStatements {
     public \PDO $pdoConnection;
     public \PDOStatement $getPageRecord;
@@ -52,7 +72,7 @@ class ComicPageStatements {
     public \PDOStatement $getCWs;
     public \PDOStatement $getSpreadType;
     public \PDOStatement $getStylePath;
-    public function __construct(    \PDO $pdoConn, 
+    public function __construct(    public \PDO $pdoConn, 
                                     ?\PDOStatement $getPageRecord = null, 
                                     ?\PDOStatement $getPrevPageID = null,
                                     ?\PDOStatement $getNextPageID = null,
@@ -95,9 +115,6 @@ class ComicPageStatements {
         }
     }
 
-    // public function executeUpdateIDStmts(int $updateID) {
-    //     foreach ([  $this->])
-    // }
 }
 
 /**
@@ -274,6 +291,7 @@ function attributeTableStr( array $records,
             . "\n" . str_repeat('_', $tableSpacerLen) . "\n";
 }
 
+// DEFUNCT
 function getNoninteractiveFileRecordParts(  string $filePath, 
                                             \PDO $pdoConn, 
                                             array $incompleteRecord = []) {
@@ -295,6 +313,7 @@ function getNoninteractiveFileRecordParts(  string $filePath,
             'filesize' => $fileSizeKB];
 }
 
+// DEFUNCT
 function getInteractiveFileRecordParts( \PDO $pdoConn, 
                                         array $incompleteRecord = [],
                                         ?string $ratioStr = null, 
@@ -654,8 +673,7 @@ function insertNewTags( array $tags,
     
     $tags = array_unique($tags);
     $matchExistingTags = 
-            $pdoConn->prepare("SELECT * FROM tag
-                                WHERE name IN "
+            $pdoConn->prepare("SELECT * FROM tag WHERE name IN "
                                 . rowPlaceholder(\count($tags))
                                 . ";");
     $matchExistingTags->execute($tags);
@@ -717,7 +735,7 @@ function getPageTitleInteractive(\PDO $pdoConn) {
     $title = promptInput("Enter title: > ");
     $findFileFromTitle = $pdoConn->prepare("SELECT path FROM page WHERE title = ?;");
     $existingTitle = $pdoConn->prepare(
-            "SELECT EXISTS(SELECT title FROM page WHERE title = ?);");                                 
+            "SELECT EXISTS(SELECT NULL FROM page WHERE title = ?);");                                 
     $useAnyway = false;
     while (executeAndFetchScalar($existingTitle, $title) != 0 AND !$useAnyway) {
         echo "Warning: `$title` already exists in page at "
@@ -2356,7 +2374,7 @@ function getTagsFromPageIDStmt(\PDO $pdoConn) {
 
 function getTagsFromMultiplePageIDsStmt(array $numIDs, \PDO $pdoConn) {
     return $pdoConn->prepare(
-            "SELECT name FROM tagpage INNER JOIN tag USING (tagid) WHERE pageid IN"
+            "SELECT DISTINCT name FROM tagpage INNER JOIN tag USING (tagid) WHERE pageid IN"
                 . rowPlaceholder(\count($numIDs))
                 . ";"
     );
@@ -2372,7 +2390,7 @@ function getCWsFromPageIDStmt(\PDO $pdoConn) {
 
 function getCWsFromMultiplePageIDsStmt(array $numIDs, \PDO $pdoConn) {
     $stmtPrefix = <<<STMT
-            SELECT name FROM contwarningpage INNER JOIN contwarning USING (contwarningid) 
+            SELECT DISTINCT name FROM contwarningpage INNER JOIN contwarning USING (contwarningid) 
                 WHERE pageid IN
             STMT;
     return $pdoConn->prepare($stmtPrefix . rowPlaceholder(\count($numIDs)) . ";");
@@ -2582,6 +2600,32 @@ function getSpreadTypeFromSpreadIDStmt(\PDO $pdoConn) {
 function getStylePathFromColorstyleIDStmt(\PDO $pdoConn) {
     return $pdoConn->prepare(
             "SELECT path FROM colorstyle WHERE colorstyleid = ?");
+}
+
+function getPrevSearchStmt(\PDO $pdoConn) {
+    return $pdoConn->prepare(<<<STMT
+            SELECT path FROM searchcache 
+            WHERE search = :search AND matchexactly = :exact AND searchimgdesc = :desc
+                AND resultpageindex = :pageindex;
+            STMT);
+}
+
+function updatePrevSearchCountStmt(\PDO $pdoConn) {
+    return $pdoConn->prepare(<<<STMT
+            UPDATE searchcache SET numtimes = numtimes + 1 
+            WHERE search = :search AND matchexactly = :exact AND searchimgdesc = :desc;
+            STMT);
+}
+
+function existsPrevSearchOtherIndexStmt(\PDO $pdoConn) {
+    return $pdoConn->prepare(<<<STMT
+            SELECT EXISTS(
+                SELECT NULL FROM searchcache 
+                WHERE search = :search 
+                    AND matchexactly = :exact 
+                    AND searchimgdesc = :desc
+            );
+            STMT);
 }
 
 /**

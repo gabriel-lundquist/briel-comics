@@ -99,7 +99,7 @@ ob_start();
                     src=""
                     alt=""
                     usemap="#nav-on-comic"
-                    id="single_page"
+                    id="single-page"
                 >
                     <!-- style="display: inline;" -->
                     <!-- width="1080"

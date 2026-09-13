@@ -83,5 +83,5 @@ foreach ($windowWidthsOrder as $maxWidth) {
         src="<?= $filesWidthOrder[$srcWidth]['location'] ?>"
         alt="<?= $filesWidthOrder[$srcWidth]['alttext'] ?>"
         usemap="#nav-on-comic"
-        id="single_page"
+        id="single-page"
 >

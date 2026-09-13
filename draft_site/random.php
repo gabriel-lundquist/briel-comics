@@ -1,9 +1,7 @@
 <?php
 require_once './php/dbManip.php';
 
-ob_start();
-$db = Briel\pdoConnect(); // check for session storage
-ob_end_clean();
+$db = Briel\pdoConnect(echoConnSuccess: false); // check for session storage
 if ($db === false) {
     readfile(Briel\FILEROOT . Briel\BLANKSEARCHFILENAME);
     exit("Ah shit, database connection failed.");

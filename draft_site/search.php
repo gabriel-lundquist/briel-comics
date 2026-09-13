@@ -1,5 +1,10 @@
 <?php
 
+use function Briel\existsPrevSearchOtherIndexStmt;
+use function Briel\getPrevSearchStmt;
+use function Briel\updatePrevSearchCountStmt;
+use const Briel\SEARCHPAGEINDEXKEY;
+
 // A note: this will not return a page in a search until it has a path in the database!
 // DONE!!! A thing to consider: session storage for pdoConnection, limiting searches
 
@@ -12,20 +17,18 @@ if (getenv('DEBUG_SEARCH')) { // an environment variable injected in my VSCode d
     //
 }
 
-if (!key_exists('search', $getParams)) $getParams['search'] = '';
+if (empty($getParams['search'])) $getParams['search'] = '';
 
 foreach (['desc', 'exact'] as $field) {
-    if (!key_exists($field, $getParams) OR $getParams[$field] != Briel\CHECKBOXON) 
+    if (empty($getParams[$field]) OR $getParams[$field] != Briel\CHECKBOXON) 
         $getParams[$field] = '';
 }
 
-if (!key_exists(Briel\SEARCHPAGEINDEXKEY, $getParams)) {
+if (empty($gatParams[Briel\SEARCHPAGEINDEXKEY])) {
     $getParams[Briel\SEARCHPAGEINDEXKEY] = 1;
 }
 
-ob_start();
-$pdoConnection = Briel\pdoConnect(); // check for a cookie? session storage?
-ob_end_clean();
+$pdoConnection = Briel\pdoConnect(echoConnSuccess: false); // check for a cookie? session storage?
 if ($pdoConnection === false) {
     readfile(Briel\FILEROOT . Briel\BLANKSEARCHFILENAME);
     exit("Oh fuck! MySQL connection failed...");
@@ -36,11 +39,7 @@ $prevInTransaction = $pdoConnection->inTransaction();
 
 // first, check if this exact search (with the terms potentially shuffled)
 // has been done before
-$prevSearch = $pdoConnection->prepare(<<<STMT
-    SELECT path FROM searchcache 
-    WHERE search = :search AND matchexactly = :exact AND searchimgdesc = :desc
-        AND resultpageindex = :pageindex;
-    STMT);
+$prevSearch = Briel\getPrevSearchStmt($pdoConnection);
 $searchcacheKey = Briel\searchcacheKeyFromSearchString($getParams['search']);
 $prevSearch->execute([  
         ':search' => $searchcacheKey, 
@@ -58,10 +57,7 @@ if ($prevExists !== false) {
     $isOutputYet = true;
 
     // update the database for logging purposes
-    $update = $pdoConnection->prepare(<<<STMT
-        UPDATE searchcache SET numtimes = numtimes + 1 
-        WHERE search = :search AND matchexactly = :exact AND searchimgdesc = :desc;
-        STMT);
+    $update = Briel\updatePrevSearchCountStmt($pdoConnection);
     $update->execute([  
             ':search' => $searchcacheKey, 
             ':exact' => $getParams['exact'], 
@@ -70,14 +66,7 @@ if ($prevExists !== false) {
 
 } else {
     // the exact index value may not exist, but maybe the search does?
-    $prevSearchOtherIndex = $pdoConnection->prepare(<<<STMT
-            SELECT EXISTS(
-                SELECT NULL FROM searchcache 
-                WHERE search = :search 
-                    AND matchexactly = :exact 
-                    AND searchimgdesc = :desc
-            );
-            STMT);
+    $prevSearchOtherIndex = Briel\existsPrevSearchOtherIndexStmt($pdoConnection);
     $prevSearchOtherIndex->execute([  
             ':search' => $searchcacheKey, 
             ':exact' => $getParams['exact'], 
@@ -90,10 +79,7 @@ if ($prevExists !== false) {
         $isOutputYet = true;
 
         // and update that ofc
-        $update = $pdoConnection->prepare(<<<STMT
-            UPDATE searchcache SET numtimes = numtimes + 1 
-            WHERE search = :search AND matchexactly = :exact AND searchimgdesc = :desc;
-            STMT);
+        $update = Briel\updatePrevSearchCountStmt($pdoConnection);
         $update->execute([  
                 ':search' => $searchcacheKey, 
                 ':exact' => $getParams['exact'], 

@@ -40,6 +40,7 @@ document.addEventListener("keydown", (event) =>
                     getLink(document, ".later1"), 
                     getLink(document, ".earlier1"), 
                     getLink(document, ".later5"), 
-                    getLink(document, ".earlier5")
+                    getLink(document, ".earlier5"), 
+                    ["input[type='search']"]
         )
 );

@@ -155,7 +155,7 @@ a:hover {
     background: var(--hilite-color);
 }
 
-a.text_desc_heading {
+a.text-desc-heading {
     /* Keeps # links from looking like links */
     color: inherit;
     text-decoration: inherit;

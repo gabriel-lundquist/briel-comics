@@ -37,13 +37,17 @@ const SEARCHCACHEDIR = 'searchcache/';
 const SEARCHCACHEDIRPATH = SITEROOT . SEARCHCACHEDIR;
 const BLANKSEARCHFILENAME = 'blank_search.html';
 const BLANKSEARCHPATH = SITEROOT . BLANKSEARCHFILENAME;
-const ARCHIVEDIRPATH = SITEROOT . "archive/";
+const ARCHIVEDIRNAME = "archive/";
+const ARCHIVEDIRPATH = SITEROOT . ARCHIVEDIRNAME;
 const ARCHIVESTARTPATH = ARCHIVEDIRPATH . 'archive_p1.html';
 const FONTFACESPATH = SITEROOT . 'styles/briel_font-faces.css';
 const SITEICONPATH = SITEROOT . 'images/decorations/';
 const READINGCOLORDIRPATH = SITEROOT . "styles/reading_colors/";
 const READINGSTYLEPATH = SITEROOT . "styles/reading_page.css";
 const READINGSCRIPTPATH = SITEROOT . "js/reading_page.js";
+const RANDOMPATH = SITEROOT . 'random.php';
+const IMAGESDIRPATH = SITEROOT . 'images/';
+const DECORATIONDIRPATH = IMAGESDIRPATH . 'decoration/';
 
 const FONTFACESCSSNAME = 'briel_font-faces.css';
 

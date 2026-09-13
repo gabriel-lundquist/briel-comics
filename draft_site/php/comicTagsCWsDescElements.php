@@ -30,7 +30,7 @@ if (!isset($pageRecord)) $pageRecord = ['imagedesc' => UNSETDEFAULT];
 
 <section id="desc_section">
     <h2><a href="#text_description" 
-            class="text_desc_heading">Text Description</a></h2>
+            class="text-desc-heading">Text Description</a></h2>
     <p class="text-desc">
         <?= $pageRecord["imagedesc"] ?>
     </p>

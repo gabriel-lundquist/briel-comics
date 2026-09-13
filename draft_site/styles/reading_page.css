@@ -1,7 +1,6 @@
 html {
 /* These background attributes will change depending on the page */
     /* background-image: url("../600pixel_square.png"); */
-    /* background-size: 100% 100%;  */
     /* To stretch an image to always fit. 
      Remove to make the background image repeat. */
     --bg-color: #491d25;
@@ -10,20 +9,26 @@ html {
     --deemphasize-color: #aaaaaa;
     --bg-gradient: conic-gradient(from 304deg at 12% -10% in hsl shorter hue, rgb(48, 21, 27) 50%, #491d25ff 55%, #230b0dff 73%);
 
-    background-color: var(--bg-color); 
-    background: var(--bg-gradient);
-
     font-family: "Briel Nib Bold", Courier, monospace;
     font-size: x-large;
+
+    height: 100%;
 }
 
 body {
     margin: 0;
 
+    background-color: var(--bg-color); 
+    background: var(--bg-gradient);
+    /* background-size: cover;  */
+    background-repeat: no-repeat;
+
     display: flex;
     justify-content: space-between;
     --comic-page-width: 800px;
     --shrink-factor: 0.95;
+
+    /* height: 100%; */
 }
 
 /* These don't affect image sizes, 
@@ -75,6 +80,10 @@ body > div.separator {
     body > a.nav-button {
         display: none;
     }
+}
+
+main {
+    text-align: center;
 }
 
 h2 {
@@ -199,7 +208,7 @@ a:hover {
     background: var(--hilite-color);
 }
 
-a.text_desc_heading {
+a.text-desc-heading {
     /* Keeps # links from looking like links */
     color: inherit;
     text-decoration: inherit;
@@ -220,26 +229,16 @@ a:visited svg.ui {
     justify-content: center;
     /* max-width: calc(var(--shrink-factor) * var(--comic-page-width)); */
     max-width: var(--comic-page-width);
-    /* width: 0.75 * (100vw - var(--comic-page-width)); */
-    /* border-bottom: 0.1em dotted var(--ui-prime-color);
-    border-radius: 0.5em; */
     margin: 0 auto;
 }
 
 .nav-line a.nav-button {
     display: flex;
     flex: 1 12em;
-    /* padding: 0.5em; */
     border-radius: 5%;
     align-items: center;
-    /* text-align: end; */
     font-size: larger;
-    /* border-left: 0.1em dotted var(--ui-prime-color);
-    border-right: 0.1em dotted var(--ui-prime-color);
-    border-radius: 0.5em; */
-    /* --nav-btn-brdr-radius: 0.7rem; */
     position: relative;
-    /* align-items: left; */
     --nav-max-height: 2.5em;
 }
 
@@ -264,9 +263,7 @@ a:visited svg.ui {
 }
 
 .nav-line a.prev-button svg.ui {
-    /* max-height: 3em; */
     max-width: calc(50vw - 4em);
-    /* display: inline; */
     flex: 1;
 }
 
@@ -420,25 +417,3 @@ a:visited svg.ui {
     max-width: 100%;
     max-height: 100vh;
 }
-
-/* @media screen and (width <= 1080) {
-    .comic-page {
-        margin: 0 auto;
-    }
-} */
-
-/* Change 1000px for the minimum height of the page */
-/* @media screen and (min-height: 1000px) {
-    .page-display img.comic-page {
-        margin: calc(0.5 * (100vh - 1000px)) auto;
-    }
-} */
-
-/* 4k responsive text */
-/* @media screen and (min-width: 1990px) {
-    body, html {font-size: 2vh;}
-} */
-
-/* .description-link {
-    text-align: center;
-} */

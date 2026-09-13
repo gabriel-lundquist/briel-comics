@@ -31,7 +31,7 @@ if (!isset($earliestArchiveLink)) $earliestArchiveLink = UNSETDEFAULT;
         <link href="styles/update_list_style.css" rel="stylesheet" />
         <link href="styles/search_page_style.css" rel="stylesheet" />
         
-        <script type="module" src="js/search_page_script.js"></script>
+        <script type="module" src="js/search_page.js"></script>
     </head>
 
     <body>

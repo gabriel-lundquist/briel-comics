@@ -115,17 +115,6 @@ export function addImageDivToggleListeners( document,
     );  
 }
 
-/**
- * 
- * @param {*} keyEvent 
- * @param {*} window 
- * @param {*} prevKeyCodes 
- * @param {*} nextKeyCodes 
- * @param {*} prevPageLink 
- * @param {*} nextPageLink 
- * @param {*} prevUpdateLink 
- * @param {*} nextUpdateLink 
- */
 export function keyNavigate(keyEvent, 
                             window, 
                             prevKeyCodes, 
@@ -133,18 +122,24 @@ export function keyNavigate(keyEvent,
                             prevPageLink, 
                             nextPageLink, 
                             prevUpdateLink, 
-                            nextUpdateLink) {
-    if (prevKeyCodes.has(keyEvent.key)) {
-        if (keyEvent.shiftKey) {
-            if (prevUpdateLink) window.location.href = prevUpdateLink;
-        } else {
-            if (prevPageLink) window.location.href = prevPageLink;
-        }
-    } else if (nextKeyCodes.has(keyEvent.key)) {
-        if (keyEvent.shiftKey) {
-            if (nextUpdateLink) window.location.href = nextUpdateLink;
-        } else {
-            if (nextPageLink) window.location.href = nextPageLink;
+                            nextUpdateLink, 
+                            noNavWhenFocusedSelectors) {
+    if (!noNavWhenFocusedSelectors.some(
+        (selector) => Array.from(document.querySelectorAll(selector)).some(
+            (elem) => elem == document.activeElement || elem.contains(document.activeElement)
+            ))) {
+        if (prevKeyCodes.has(keyEvent.key)) {
+            if (keyEvent.shiftKey) {
+                if (prevUpdateLink) window.location.href = prevUpdateLink;
+            } else {
+                if (prevPageLink) window.location.href = prevPageLink;
+            }
+        } else if (nextKeyCodes.has(keyEvent.key)) {
+            if (keyEvent.shiftKey) {
+                if (nextUpdateLink) window.location.href = nextUpdateLink;
+            } else {
+                if (nextPageLink) window.location.href = nextPageLink;
+            }
         }
     }
 }

@@ -105,8 +105,8 @@ function getPageInfo(   \PDO $pdoConn,
     );
 }
 
-function getAllUpdateInfo(?\PDO $pdoConn = null) {
-    if (!$pdoConn) $pdoConn = pdoConnect();
+function getAllUpdateInfo(\PDO|bool|null $pdoConn = null) {
+    if (!$pdoConn) if (!tryPDOConnect($pdoConn)) return false;
     $getUpdates = $pdoConn->query(
             "SELECT * FROM comicupdate WHERE postdate IS NOT NULL ORDER BY postdate;");
     $allUpdateInfo = [];
@@ -118,7 +118,7 @@ function getAllUpdateInfo(?\PDO $pdoConn = null) {
                     WHERE updateid = ?;
                 STMT);
         $getPageIDs->execute([$update['updateid']]);
-        $pageIDs = $getPageIDs->fetchAll(\PDO::FETCH_ASSOC);
+        $pageIDs = $getPageIDs->fetchAll(\PDO::FETCH_COLUMN);
         $pageIDsOrdered = orderPageIDs($pageIDs, $pdoConn);
 
         $getPage = $pdoConn->prepare("SELECT * FROM page WHERE pageid = ?;");
@@ -195,6 +195,30 @@ function regenerateHomepage(?\PDO $pdoConn = null, ?string $addlStylePath = null
     return ob_get_clean();
 }
 
+// function regenerateCachedSearchPages(?\PDO $pdoConn = null) {
+//     if (!$pdoConn) $pdoConn = pdoConnect();
+//     $paths = [];
+
+//     // get existing search records
+//     $getSearches = $pdoConn->prepare(
+//             "SELECT DISTINCT search, searchimgdesc, matchexactly FROM searchcache;");
+
+//     // get result info for each existing search in cache
+
+//     // generate page strings from searches
+
+//     // save pages to files
+
+//     // update database in case pages are added (or removed somehow)
+
+
+//     foreach (array_map(null, $paths, $pageStrs) as [$path, $page]) {
+//         file_put_contents($path, $page);
+//     }
+
+//     return $pageStrs;
+// }
+
 function generateInsertUpdateFileRecords(\PDO $pdoConn) {
     $tryAgain = false;
     do {
@@ -266,7 +290,7 @@ function redoCachedSearches(\PDO $pdoConn) {
     $deleteSearchNotLessThanIndex = $pdoConn->prepare(<<<STMT
         DELETE FROM searchcache WHERE 
             search = :search AND matchexactly = :exact AND searchimgdesc = :desc
-            AND resultpageindex >= :minpageindex);
+            AND resultpageindex >= :minpageindex;
         STMT);
     $getTags = getTagsFromPageIDStmt($pdoConn);
     $getCWs = getCWsFromPageIDStmt($pdoConn);
@@ -345,14 +369,15 @@ function redoCachedSearches(\PDO $pdoConn) {
             // save all pages and update cache records
             $i = 1;
             for ($i = 1; $i <= \count($pageStrs); $i++) {
-                $filePath = SEARCHCACHEDIRPATH
+                $filePath = FILEROOT . SEARCHCACHEDIR
                             . implode('_', [    'search', 
                                                 $search['search'], 
                                                 $search['searchimgdesc'], 
                                                 $search['matchexactly'], 
                                                 "p{$i}.html"    ]);
                 // save the file
-                if (file_put_contents($filePath, $pageStrs[$i - 1]) === false) {
+                $successfulSave = file_put_contents($filePath, $pageStrs[$i - 1]);
+                if ($successfulSave === false) {
                     continue;
                     // do NOT update table if we can't write to file
                 }

@@ -22,7 +22,8 @@ document.addEventListener("keydown", (event) =>
                     getLink(document, ".prev-button"), 
                     getLink(document, ".next-button"),
                     getLink(document, ".prev-upd8-button"), 
-                    getLink(document, ".next-upd8-button")
+                    getLink(document, ".next-upd8-button"), 
+                    ["input[type='search']"]
         )
 );
 
@@ -47,7 +48,6 @@ function switchDisplays(element1, element2) {
 interactGraphics.forEach((graphic) => {
         const resting = graphic.querySelector(".resting");
         const interacting = graphic.querySelector(".interacting");
-        const switchBetween = () => switchDisplays(resting, interacting);
         resting.addEventListener("click", () => switchDisplays(resting, interacting));
         resting.addEventListener("mouseenter", () => switchDisplays(resting, interacting));
         resting.addEventListener("mouseleave", () => switchDisplays(resting, interacting));
