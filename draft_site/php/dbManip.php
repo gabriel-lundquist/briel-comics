@@ -37,69 +37,58 @@ const PAGEINSERTCOLUMNS = [ "title",
 
 const TEXTMATCHTHRESHOLD = 0.1;
 
+// class DatabaseStatements {
+//     public function __construct(    
+//             public \PDO $db, 
+//             public ?\PDOStatement $getPageRecord = null, 
+//             public ?\PDOStatement $getPrevPageID = null, 
+//             public ?\PDOStatement $getNextPageID = null, 
+//             public ?\PDOStatement $getPrevUpdateID = null, 
+//             public ?\PDOStatement $getNextUpdateID = null, 
+//             public ?\PDOStatement $getPageFromUpdateID = null, 
+//             public ?\PDOStatement $getUpdateFromPageID = null, 
+//             public ?\PDOStatement $getImgRecords = null, 
+//             public ?\PDOStatement $getThumbnailRecords = null, 
+//             public ?\PDOStatement $getTags = null, 
+//             public ?\PDOStatement $getCWs = null, 
+//             public ?\PDOStatement $getSpreadType = null, 
+//             public ?\PDOStatement $getStylePath = null) {
+
+//     }
+// }
+
 class DatabaseStatements {
-    public function __construct(    
-            public \PDO $db, 
-            public ?\PDOStatement $getPageRecord = null, 
-            public ?\PDOStatement $getPrevPageID = null, 
-            public ?\PDOStatement $getNextPageID = null, 
-            public ?\PDOStatement $getPrevUpdateID = null, 
-            public ?\PDOStatement $getNextUpdateID = null, 
-            public ?\PDOStatement $getPageFromUpdateID = null, 
-            public ?\PDOStatement $getUpdateFromPageID = null, 
-            public ?\PDOStatement $getImgRecords = null, 
-            public ?\PDOStatement $getThumbnailRecords = null, 
-            public ?\PDOStatement $getTags = null, 
-            public ?\PDOStatement $getCWs = null, 
-            public ?\PDOStatement $getSpreadType = null, 
-            public ?\PDOStatement $getStylePath = null) {
-
-    }
-}
-
-class ComicPageStatements {
-    public \PDO $pdoConnection;
-    public \PDOStatement $getPageRecord;
-    public \PDOStatement $getPrevPageID;
-    public \PDOStatement $getNextPageID;
-    public \PDOStatement $getPrevUpdateID;
-    public \PDOStatement $getNextUpdateID;
-    public \PDOStatement $getPageFromUpdateID;
-    public \PDOStatement $getUpdateFromPageID;
-    public \PDOStatement $getImgRecords;
-    public \PDOStatement $getThumbnailRecords;
-    public \PDOStatement $getTags;
-    public \PDOStatement $getCWs;
-    public \PDOStatement $getSpreadType;
-    public \PDOStatement $getStylePath;
     public function __construct(    public \PDO $pdoConn, 
-                                    ?\PDOStatement $getPageRecord = null, 
-                                    ?\PDOStatement $getPrevPageID = null,
-                                    ?\PDOStatement $getNextPageID = null,
-                                    ?\PDOStatement $getPrevUpdateID = null,
-                                    ?\PDOStatement $getNextUpdateID = null,
-                                    ?\PDOStatement $getPageFromUpdateID = null,
-                                    ?\PDOStatement $getUpdateFromPageID = null, 
-                                    ?\PDOStatement $getImgRecords = null,
-                                    ?\PDOStatement $getThumbnailRecords = null,
-                                    ?\PDOStatement $getTags = null,
-                                    ?\PDOStatement $getCWs = null,
-                                    ?\PDOStatement $getSpreadType = null, 
-                                    ?\PDOStatement $getStylePath = null,    ) {
-        $this->pdoConnection = $pdoConn;
-        $this->getPageRecord = $getPageRecord ?? getPageRecordFromIDStmt($pdoConn);
-        $this->getPrevPageID = $getPrevPageID ?? getPrevPageFromIDStmt($pdoConn);
-        $this->getNextPageID = $getNextPageID ?? getNextPageFromIDStmt($pdoConn);
-        $this->getPrevUpdateID = $getPrevUpdateID ?? getPrevUpdateFromIDStmt($pdoConn);
-        $this->getNextUpdateID = $getNextUpdateID ?? getNextUpdateFromIDStmt($pdoConn);
-        $this->getPageFromUpdateID = $getPageFromUpdateID ?? getPageIDsFromUpdateIDStmt($pdoConn);
-        $this->getUpdateFromPageID = $getUpdateFromPageID ?? getUpdateIDFromPageIDStmt($pdoConn);
-        $this->getImgRecords = $getImgRecords ?? getPageImgRecordsFromIDStmt($pdoConn);
-        $this->getThumbnailRecords = $getThumbnailRecords ?? getThumbnailRecordsFromIDStmt($pdoConn);
-        $this->getTags = $getTags ?? getTagsFromPageIDStmt($pdoConn);
-        $this->getCWs = $getCWs ?? getCWsFromPageIDStmt($pdoConn);
-        $this->getSpreadType = $getSpreadType ?? getSpreadTypeFromSpreadIDStmt($pdoConn);
-        $this->getStylePath = $getStylePath ?? getStylePathFromColorstyleIDStmt($pdoConn);
+                                    public ?\PDOStatement $getPageRecord = null, 
+                                    public ?\PDOStatement $getPrevPageID = null,
+                                    public ?\PDOStatement $getNextPageID = null,
+                                    public ?\PDOStatement $getPrevUpdateID = null,
+                                    public ?\PDOStatement $getNextUpdateID = null,
+                                    public ?\PDOStatement $getPageFromUpdateID = null,
+                                    public ?\PDOStatement $getUpdateFromPageID = null, 
+                                    public ?\PDOStatement $getImgRecords = null,
+                                    public ?\PDOStatement $getThumbnailRecords = null, 
+                                    public ?\PDOStatement $getTags = null,
+                                    public ?\PDOStatement $getCWs = null,
+                                    public ?\PDOStatement $getSpreadType = null, 
+                                    public ?\PDOStatement $getStylePath = null,    
+                                    public ?\PDOStatement $getMinSizeFile = null,   
+                                    public ?\PDOStatement $getUpdate = null    ) {
+        $this->getPageRecord ??= getPageRecordFromIDStmt($pdoConn);
+        $this->getPrevPageID ??= getPrevPageFromIDStmt($pdoConn);
+        $this->getNextPageID ??= getNextPageFromIDStmt($pdoConn);
+        $this->getPrevUpdateID ??= getPrevUpdateFromIDStmt($pdoConn);
+        $this->getNextUpdateID ??= getNextUpdateFromIDStmt($pdoConn);
+        $this->getPageFromUpdateID ??= getPageIDsFromUpdateIDStmt($pdoConn);
+        $this->getUpdateFromPageID ??= getUpdateIDFromPageIDStmt($pdoConn);
+        $this->getImgRecords ??= getPageImgRecordsFromIDStmt($pdoConn);
+        $this->getThumbnailRecords ??= getThumbnailFromPageIDStmt($pdoConn);
+        $this->getTags ??= getTagsFromPageIDStmt($pdoConn);
+        $this->getCWs ??= getCWsFromPageIDStmt($pdoConn);
+        $this->getSpreadType ??= getSpreadTypeFromSpreadIDStmt($pdoConn);
+        $this->getStylePath ??= getStylePathFromColorstyleIDStmt($pdoConn);
+        $this->getMinSizeFile ??= getMinSizeFileFromPageIDStmt($pdoConn);
+        $this->getUpdate ??= getUpdateRecordFromIDStmt($pdoConn);
     }
 
     public function executePageIDStmts(int $pageID) {
@@ -109,7 +98,8 @@ class ComicPageStatements {
                     $this->getImgRecords, 
                     $this->getThumbnailRecords, 
                     $this->getTags, 
-                    $this->getCWs     ] as $getStatement) {
+                    $this->getCWs, 
+                    $this->getMinSizeFile   ] as $getStatement) {
             // this works the way you'd hope it would!
             $getStatement->execute([$pageID]);
         }
@@ -2677,5 +2667,64 @@ function insertColorStyleRecord(\PDO $pdoConn,
                                 [[$description, $path]], 
                                 $promptToCommit, 
                                 $promptCommitMessage    );
+}
+
+function orderUnorderablePageIDs(   \PDO $pdoConn, 
+                                    array $pageIDs, 
+                                    ?\PDOStatement $getSource = null, 
+                                    ?\PDOStatement $getTarget = null, 
+                                    ?DatabaseStatements $stmt = null   ) {
+    $stmt ??= new DatabaseStatements($pdoConn);
+    $getSource ??= getPrevPageFromIDStmt($pdoConn);
+    $getTarget ??= getNextPageFromIDStmt($pdoConn);
+
+    $pageOrders = [];
+    $remainingPageIDs = $pageIDs;
+
+    while (!empty($remainingPageIDs)) {
+        $pageOrders[] = [];
+        $i = array_key_last($pageOrders);
+        $initKey = array_key_first($remainingPageIDs);
+        $page = $pageIDs[$initKey];
+
+        $getSource->execute([$page]);
+        for (   $source = $getSource->fetch(\PDO::FETCH_ASSOC); 
+                !empty($remainingPageIDs) AND prevOrderContinues($source); 
+                $getSource->execute([$source['sourceid']]), 
+                        $source = $getSource->fetch(\PDO::FETCH_ASSOC)  ) {
+
+            if (($key = array_search($source['sourceid'], $remainingPageIDs)) !== false) {
+                $pageOrders[$i] = [$source['sourceid'], ...$pageOrders[$i]];
+                unset($remainingPageIDs[$key]);
+            }
+        }
+
+        $pageOrders[$i] = [...$pageOrders[$i], $page];
+        unset($remainingPageIDs[$initKey]);
+
+        $getTarget->execute([$page]);
+        for (   $target = $getTarget->fetch(\PDO::FETCH_ASSOC); 
+                !empty($remainingPageIDs) AND nextOrderContinues($target); 
+                $getTarget->execute([$target['targetid']]), 
+                        $target = $getTarget->fetch(\PDO::FETCH_ASSOC)) {
+
+            if (($key = array_search($target['targetid'], $remainingPageIDs)) !== false) {
+                $pageOrders[$i] = [...$pageOrders[$i], $target['targetid']];
+                unset($remainingPageIDs[$key]);
+            }
+        }
+    }
+    
+    // order by date of last page in order
+    $pageOrdersOrdered = [];
+    foreach ($pageOrders as $order) {
+        $stmt->getPageRecord->execute([array_last($order)]);
+        $lastRecord = $stmt->getPageRecord->fetch(\PDO::FETCH_ASSOC);
+        $pageOrdersOrdered[
+                createDateFromSQLDateTime($lastRecord['postdate'])->getTimestamp()
+        ] = $order;
+    }
+    ksort($pageOrdersOrdered);
+    return array_merge(...array_values($pageOrdersOrdered));
 }
 ?>

@@ -1,6 +1,9 @@
 <?php
 namespace Briel;
 
-require_once 'siteOperations.php';
+require_once('siteOperations.php');
 
-redoCachedSearches(pdoConnect());
+$conn = pdoConnect();
+
+generateViewPage(   [getPageInfo($conn, 31), getPageInfo($conn, 32), getPageInfo($conn, 30)], 
+                    'Wizard and Hero'   );

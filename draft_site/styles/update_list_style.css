@@ -252,7 +252,7 @@ nav p {
     margin: 0.2em auto;
 }
 
-main .nav-line {
+.nav-line {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -260,7 +260,7 @@ main .nav-line {
     /* margin: 0; */
 }
 
-main .nav-line a.nav-button {
+.nav-line a.nav-button {
     display: flex;
     flex: 2;
     border-radius: 5%;

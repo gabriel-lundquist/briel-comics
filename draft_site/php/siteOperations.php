@@ -8,7 +8,7 @@ require_once 'pageGen.php';
 
 function getPageInfo(   \PDO $pdoConn, 
                         int $pageID, 
-                        ?ComicPageStatements $stmt = null, 
+                        ?DatabaseStatements $stmt = null, 
                         ?\PDOStatement $getPageRecord = null, 
                         ?\PDOStatement $getPrevPageID = null, 
                         ?\PDOStatement $getNextPageID = null, 
@@ -22,7 +22,7 @@ function getPageInfo(   \PDO $pdoConn,
                         ?\PDOStatement $getCWs = null, 
                         ?\PDOStatement $getSpreadType = null, 
                         ?\PDOStatement $getStylePath = null ) {
-    if (!$stmt) $stmt = new ComicPageStatements(    $pdoConn, 
+    if (!$stmt) $stmt = new DatabaseStatements(    $pdoConn, 
                                                     $getPageRecord, 
                                                     $getPrevPageID, 
                                                     $getNextPageID, 
@@ -105,54 +105,100 @@ function getPageInfo(   \PDO $pdoConn,
     );
 }
 
-function getAllUpdateInfo(\PDO|bool|null $pdoConn = null) {
+function getUpdateInfo( int $updateID, 
+                        ?DatabaseStatements $stmt = null, 
+                        \PDO|bool|null $pdoConn = null) {
     if (!$pdoConn) if (!tryPDOConnect($pdoConn)) return false;
-    $getUpdates = $pdoConn->query(
-            "SELECT * FROM comicupdate WHERE postdate IS NOT NULL ORDER BY postdate;");
-    $allUpdateInfo = [];
-    for (   $update = $getUpdates->fetch(\PDO::FETCH_ASSOC);
-            $update !== false; 
-            $update = $getUpdates->fetch(\PDO::FETCH_ASSOC)  ) {
-        $getPageIDs = $pdoConn->prepare(<<<STMT
-                SELECT pageid FROM page INNER JOIN comicupdatepage USING (pageid)
-                    WHERE updateid = ?;
-                STMT);
-        $getPageIDs->execute([$update['updateid']]);
-        $pageIDs = $getPageIDs->fetchAll(\PDO::FETCH_COLUMN);
-        $pageIDsOrdered = orderPageIDs($pageIDs, $pdoConn);
+    if (!$stmt) $stmt = new DatabaseStatements($pdoConn);
 
-        $getPage = $pdoConn->prepare("SELECT * FROM page WHERE pageid = ?;");
-        $getThumbnail = getThumbnailFromPageIDStmt($pdoConn);
-        $getThumbnailContingency = getMinSizeFileFromPageIDStmt($pdoConn);
+    $stmt->getPageFromUpdateID->execute([$updateID]);
+    $pageIDs = $stmt->getPageFromUpdateID->fetchAll(\PDO::FETCH_COLUMN);
+    $pageIDsOrdered = orderPageIDs($pageIDs, $pdoConn);
 
-        $pagesOrdered = array_fill(0, \count($pageIDs), []);
-        $thumbnailsOrdered = array_fill(0, \count($pageIDs), []);
-        for ($i = 0; $i < \count($pageIDs); $i++) {
-            $id = $pageIDsOrdered[$i];
-            $getPage->execute([$id]);
-            $pagesOrdered[$i] = $getPage->fetch(\PDO::FETCH_ASSOC);
+    // $getPage = $pdoConn->prepare("SELECT * FROM page WHERE pageid = ?;");
+    // $getThumbnail = getThumbnailFromPageIDStmt($pdoConn);
+    // $getThumbnailContingency = getMinSizeFileFromPageIDStmt($pdoConn);
 
-            $getThumbnail->execute([$id]);
-            $thumbnailsOrdered[$i] = $getThumbnail->fetch(\PDO::FETCH_ASSOC);
-            if ($thumbnailsOrdered[$i] === false) {
-                $getThumbnailContingency->execute([$id]);
-                $thumbnailsOrdered[$i] = $getThumbnailContingency->fetch(\PDO::FETCH_ASSOC);
-            }
+    $pagesOrdered = array_fill(0, \count($pageIDs), []);
+    $thumbnailsOrdered = array_fill(0, \count($pageIDs), []);
+    for ($i = 0; $i < \count($pageIDs); $i++) {
+        $id = $pageIDsOrdered[$i];
+        $stmt->getPageRecord->execute([$id]);
+        $pagesOrdered[$i] = $stmt->getPageRecord->fetch(\PDO::FETCH_ASSOC);
+
+        $stmt->getThumbnailRecords->execute([$id]);
+        $thumbnailsOrdered[$i] = $stmt->getThumbnailRecords->fetch(\PDO::FETCH_ASSOC);
+        if ($thumbnailsOrdered[$i] === false) {
+            $stmt->getMinSizeFile->execute([$id]);
+            $thumbnailsOrdered[$i] = $stmt->getMinSizeFile->fetch(\PDO::FETCH_ASSOC);
         }
+    }
 
-        $getTags = getTagsFromMultiplePageIDsStmt($pageIDs, $pdoConn);
-        $getTags->execute($pageIDs);
-        $tags = $getTags->fetchAll(\PDO::FETCH_COLUMN);
+    $getTags = getTagsFromMultiplePageIDsStmt($pageIDs, $pdoConn);
+    $getTags->execute($pageIDs);
+    $tags = $getTags->fetchAll(\PDO::FETCH_COLUMN);
 
-        $getCWs = getCWsFromMultiplePageIDsStmt($pageIDs, $pdoConn);
-        $getCWs->execute($pageIDs);
-        $cws = $getCWs->fetchAll(\PDO::FETCH_COLUMN);
+    $getCWs = getCWsFromMultiplePageIDsStmt($pageIDs, $pdoConn);
+    $getCWs->execute($pageIDs);
+    $cws = $getCWs->fetchAll(\PDO::FETCH_COLUMN);
 
-        $allUpdateInfo[] = new UpdateInfo(  $update, 
-                                            $pagesOrdered, 
-                                            $thumbnailsOrdered, 
-                                            $tags, 
-                                            $cws    );
+    $stmt->getUpdate->execute([$updateID]);
+    $update = $stmt->getUpdate->fetch();
+    
+    return new UpdateInfo(  $update, 
+                            $pagesOrdered, 
+                            $thumbnailsOrdered, 
+                            $tags, 
+                            $cws    );
+}
+
+function getAllUpdateInfo(  ?DatabaseStatements $stmt = null, 
+                            \PDO|bool|null $pdoConn = null  ) {
+    if (!$pdoConn) if (!tryPDOConnect($pdoConn)) return false;
+    if (!$stmt) $stmt = new DatabaseStatements($pdoConn);
+
+    $getUpdateIDs = $pdoConn->query(
+            "SELECT updateid FROM comicupdate WHERE postdate IS NOT NULL ORDER BY postdate;");
+    $allUpdateInfo = [];
+    for (   $updateID = $getUpdateIDs->fetch(\PDO::FETCH_ASSOC);
+            $updateID !== false; 
+            $updateID = $getUpdateIDs->fetch(\PDO::FETCH_ASSOC)  ) {
+        // $getPageIDs = $pdoConn->prepare(<<<STMT
+        //         SELECT pageid FROM page INNER JOIN comicupdatepage USING (pageid)
+        //             WHERE updateid = ?;
+        //         STMT);
+        // $getPageIDs->execute([$update['updateid']]);
+        // $pageIDs = $getPageIDs->fetchAll(\PDO::FETCH_COLUMN);
+        // $pageIDsOrdered = orderPageIDs($pageIDs, $pdoConn);
+
+        // $getPage = $pdoConn->prepare("SELECT * FROM page WHERE pageid = ?;");
+        // $getThumbnail = getThumbnailFromPageIDStmt($pdoConn);
+        // $getThumbnailContingency = getMinSizeFileFromPageIDStmt($pdoConn);
+
+        // $pagesOrdered = array_fill(0, \count($pageIDs), []);
+        // $thumbnailsOrdered = array_fill(0, \count($pageIDs), []);
+        // for ($i = 0; $i < \count($pageIDs); $i++) {
+        //     $id = $pageIDsOrdered[$i];
+        //     $getPage->execute([$id]);
+        //     $pagesOrdered[$i] = $getPage->fetch(\PDO::FETCH_ASSOC);
+
+        //     $getThumbnail->execute([$id]);
+        //     $thumbnailsOrdered[$i] = $getThumbnail->fetch(\PDO::FETCH_ASSOC);
+        //     if ($thumbnailsOrdered[$i] === false) {
+        //         $getThumbnailContingency->execute([$id]);
+        //         $thumbnailsOrdered[$i] = $getThumbnailContingency->fetch(\PDO::FETCH_ASSOC);
+        //     }
+        // }
+
+        // $getTags = getTagsFromMultiplePageIDsStmt($pageIDs, $pdoConn);
+        // $getTags->execute($pageIDs);
+        // $tags = $getTags->fetchAll(\PDO::FETCH_COLUMN);
+
+        // $getCWs = getCWsFromMultiplePageIDsStmt($pageIDs, $pdoConn);
+        // $getCWs->execute($pageIDs);
+        // $cws = $getCWs->fetchAll(\PDO::FETCH_COLUMN);
+
+        $allUpdateInfo[] = getUpdateInfo($updateID, $stmt, $pdoConn);
     }
 
     return $allUpdateInfo;
@@ -248,7 +294,7 @@ function generateInsertUpdateFileRecords(\PDO $pdoConn) {
 
 function generateSaveUpdatePageFiles(\PDO $pdoConn, array $pageRecords, array $prevUpdatePageIDs) {
     echo "Getting page information for HTML files...\n";
-    $comicPageStmts = new ComicPageStatements($pdoConn);
+    $comicPageStmts = new DatabaseStatements($pdoConn);
 
     $allPageInfo = array_fill(0, \count($pageRecords), null);
     for ($i = 0; $i < \count($allPageInfo); $i++) {
@@ -504,7 +550,7 @@ function postUpdate(?\PDO $pdoConn = null) {
 
 function regenerateComicPages(  array|int $pageIDs, 
                                 ?\PDO $pdoConn = null, 
-                                ?ComicPageStatements $pageStmts = null   ) {
+                                ?DatabaseStatements $pageStmts = null   ) {
     if (!tryPDOConnect($pdoConn)) {
         echo "Couldn't establish/continue SQL server connection. Aborting...\n";
         return false;
@@ -512,7 +558,7 @@ function regenerateComicPages(  array|int $pageIDs,
     if (\is_int($pageIDs)) $pageIDs = [$pageIDs];
 
     echo "Regenerating comic page(s)...\n";
-    $pageStmts ??= new ComicPageStatements($pdoConn);
+    $pageStmts ??= new DatabaseStatements($pdoConn);
 
     ob_start();
     foreach ($pageIDs as $id) {

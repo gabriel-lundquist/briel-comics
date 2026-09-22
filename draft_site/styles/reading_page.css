@@ -239,6 +239,7 @@ a:visited svg.ui {
     align-items: center;
     font-size: larger;
     position: relative;
+    margin: 0;
     --nav-max-height: 2.5em;
 }
 
@@ -275,7 +276,7 @@ a:visited svg.ui {
 .nav-line a.prev-button span.button-text {
     position: relative;
     flex: 1;
-    right: min(0.8em, calc((50vw - 4em) / 15 - 0.1em));
+    right: min(0.8em, 3.3vw - 0.37em);
 }
 
 .nav-line a.next-button {
@@ -295,7 +296,7 @@ a:visited svg.ui {
 .nav-line a.next-button span.button-text {
     position: relative;
     flex: 1;
-    left: min(0.6em, calc((50vw - 4em) / 15));
+    left: min(0.6em, 3.3vw - 0.27em);
 }
 
 .nav-line a.prev-upd8-button span.button-text, 

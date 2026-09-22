@@ -115,26 +115,32 @@ export function addImageDivToggleListeners( document,
     );  
 }
 
+export function noneHaveFocus(selectors) {
+    return !selectors.some(
+            (selector) => Array.from(document.querySelectorAll(selector)).some(
+                    (elem) => elem == document.activeElement 
+                            || elem.contains(document.activeElement)
+                )
+            )
+}
+
 export function keyNavigate(keyEvent, 
                             window, 
-                            prevKeyCodes, 
-                            nextKeyCodes, 
+                            prevKeys, 
+                            nextKeys, 
                             prevPageLink, 
                             nextPageLink, 
                             prevUpdateLink, 
                             nextUpdateLink, 
                             noNavWhenFocusedSelectors) {
-    if (!noNavWhenFocusedSelectors.some(
-        (selector) => Array.from(document.querySelectorAll(selector)).some(
-            (elem) => elem == document.activeElement || elem.contains(document.activeElement)
-            ))) {
-        if (prevKeyCodes.has(keyEvent.key)) {
+    if (noneHaveFocus(noNavWhenFocusedSelectors)) {
+        if (prevKeys.has(keyEvent.key)) {
             if (keyEvent.shiftKey) {
                 if (prevUpdateLink) window.location.href = prevUpdateLink;
             } else {
                 if (prevPageLink) window.location.href = prevPageLink;
             }
-        } else if (nextKeyCodes.has(keyEvent.key)) {
+        } else if (nextKeys.has(keyEvent.key)) {
             if (keyEvent.shiftKey) {
                 if (nextUpdateLink) window.location.href = nextUpdateLink;
             } else {
@@ -168,16 +174,17 @@ export function getNavLinks(readPageDocument,
     return navLinks;
 }
 
-export function getLink(document, linkClass) {
-    const linkElement = document.querySelector(linkClass);
+export function getLink(element, linkClass) {
+    const linkElement = element.querySelector(linkClass);
     return linkElement ? linkElement.href : null;
 }
 
 export function resizeNavImageMaps( imgElement, 
                                     areaPrevElement, 
-                                    areaNextElement ) {
-    const imgWidth = imgElement.naturalWidth;
-    const imgHeight = imgElement.naturalHeight;
+                                    areaNextElement,
+                                    useNaturalDimensions = true ) {
+    const imgWidth = useNaturalDimensions ? imgElement.naturalWidth : imgElement.clientWidth;
+    const imgHeight = useNaturalDimensions ? imgElement.naturalHeight : imgElement.clientHeight;
     if (areaPrevElement)
         areaPrevElement.setAttribute("coords", 
                         `0,0,${Math.ceil(0.25 * imgWidth)},${imgHeight}`);

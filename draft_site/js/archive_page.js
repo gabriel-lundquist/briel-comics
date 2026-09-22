@@ -1,12 +1,12 @@
 
-const nextKeyCodes = new Set(["ArrowRight", 
+const nextKeys = new Set(["ArrowRight", 
                               "6", 
                               "d", 
                               "D",
                               "c", 
                               "C"]);
 
-const prevKeyCodes = new Set(["ArrowLeft", 
+const prevKeys = new Set(["ArrowLeft", 
                               "4", 
                               "a", 
                               "A",
@@ -35,8 +35,8 @@ addImageDivToggleListeners(document,
 document.addEventListener("keydown", (event) =>
         keyNavigate(event, 
                     window, 
-                    prevKeyCodes, 
-                    nextKeyCodes, 
+                    prevKeys, 
+                    nextKeys, 
                     getLink(document, ".later1"), 
                     getLink(document, ".earlier1"), 
                     getLink(document, ".later5"), 

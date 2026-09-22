@@ -136,12 +136,13 @@ class UpdateInfo {
                                 public array $tags = [],
                                 public array $contWarns = []) {
         $this->date = createDateFromSQLDateTime($updateRecord['postdate']);
-        $this->tags = $tags;
+        // $this->tags = $tags;
     }
 }
 
 class PageInfo {
     public array $srcWidthsOrdered; // The display widths the images take up
+    public ?array $defaultFileRecord = null;
     public function __construct(public array $record, 
                                 public string $prevLink, 
                                 public string $nextLink,
@@ -164,6 +165,32 @@ class PageInfo {
                 'double' => array_map(fn($n) => 2 * $n, DEFAULTDISPLAYWIDTHSORDERED),
                 default => DEFAULTDISPLAYWIDTHSORDERED
             }; // window widths stay the same
+        
+        $this->getDefaultFileRecord();
+    }
+
+    public function getDefaultFileRecord() {
+        if (!empty($this->defaultFileRecord)) return $this->defaultFileRecord;
+
+        // create an array of files ordered by width, keyed to width
+        $filesWidthOrder = array_combine(   array_column($this->pageImgRecords, 'width'), 
+                                            $this->pageImgRecords );
+        ksort($filesWidthOrder);
+
+        // attempts to find an image with a width matching the defaults above as the default
+        $srcWidth = null;
+        foreach ($this->srcWidthsOrdered as $width) {
+            if (\array_key_exists($width, $filesWidthOrder)) {
+                $srcWidth = $width;
+                break;
+            }
+        }
+        // if it can't find such an image, it just takes the smallest file provided
+        // for the initial display width of the image
+        $this->defaultFileRecord = $srcWidth === null ?
+                \array_first($filesWidthOrder)
+                : $filesWidthOrder[$srcWidth];
+        return $this->defaultFileRecord;
     }
 }
 
@@ -761,95 +788,107 @@ a.text-desc-heading {
     }
 }
 
+function generateImgNavMap( int $width,
+                            int $height, 
+                            $leftLink, 
+                            $rightLink, 
+                            float $navFraction = 0.33, 
+                            string $name = "nav-on-comic", 
+                            bool $createIDFromName = false, 
+                            string $leftAlt = "Backward", 
+                            string $rightAlt = "Forward") {
+    ob_start(); ?>
+    <map name="<?= $name ?>" 
+        <?= $createIDFromName ? ("id=\"$name\"") : '' ?>
+    ><?php 
+    if ($leftLink) {    ?> 
+        <area
+            shape="rect"
+            coords="0,0,<?= $navFraction * $width ?>,<?= $height ?>"
+            href="<?= $leftLink ?>"
+            alt="<?= $leftAlt ?>"
+            class="nav-button prev-button"
+        /><?php
+    }
+        
+    if ($rightLink) {   ?>
+        <area
+            shape="rect"
+            coords="<?= (1 - $navFraction) * $width ?>,0,<?= $width ?>,<?= $height ?>"
+            href="<?= $rightLink ?>"
+            alt="<?= $rightAlt ?>"
+            class="nav-button next-button"
+        /><?php
+    }   ?>
+    </map>
+    <?php
+    return ob_get_flush();
+}
+
 function generateComicDisplayElements(  PageInfo $page, 
-                                        bool $useImgMapNav = true   ) {
+                                        bool $useImgMapNav = true, 
+                                        bool $generateImgMapNav = true, 
+                                        string $imgMapName = "nav-on-comic",
+                                        bool $useResponsiveSizes = true ) {
     // create an array of files ordered by width, keyed to width
     $filesWidthOrder = array_combine(   array_column($page->pageImgRecords, 'width'), 
                                         $page->pageImgRecords );
     ksort($filesWidthOrder);
 
-    // attempts to find an image with a width matching the defaults above as the default
-    $srcWidth = null;
-    foreach ($page->srcWidthsOrdered as $width) {
-        if (\array_key_exists($width, $filesWidthOrder)) {
-            $srcWidth = $width;
-            break;
-        }
-    }
-    // if it can't find such an image, it just takes the smallest file provided
-    // for the initial display width of the image
-    if ($srcWidth === null) {
-        $srcWidth = \array_key_first($filesWidthOrder);
-    }
-
     ob_start(); 
-    if ($useImgMapNav) { ?>
-    <map name="nav-on-comic">
-        <!-- Left quarter of image goes back -->
-        <!-- Changes with javascript (coords) -->
-        <area
-            shape="rect"
-            coords="0,0,<?= 0.25 * $srcWidth ?>,<?= 
-                    $filesWidthOrder[$srcWidth]['height'] 
-                ?>"
-            href="<?= $page->prevLink ?>"
-            alt="Previous"
-            class="nav-button prev-button"
-        />
-        <!-- Right quarter goes forward -->
-        <!-- To change with javascript (coords) -->
-        <area
-            shape="rect"
-            coords="<?= 0.75 * $srcWidth ?>,0,<?= $srcWidth ?>,<?= 
-                    $filesWidthOrder[$srcWidth]['height'] 
-                    ?>"
-            href="<?= $page->nextLink ?>"
-            alt="Next"
-            class="nav-button next-button"
-        />
-    </map>
-    <?php
-    } ?>
 
+    if ($generateImgMapNav) { 
+        generateImgNavMap(  $page->defaultFileRecord['width'], 
+                            $page->defaultFileRecord['height'], 
+                            $page->prevLink, 
+                            $page->nextLink, 
+                            name: $imgMapName);
+    } ?>
     <img
         class="comic-page<?= ($page->spreadType == 'screenfit') ? ' fit-page' : '' ?>"
         srcset="<?php
         foreach ($filesWidthOrder as $file) {
             echo $file['path'] . ' ' . $file['width'] . "w,\n";
-        }
-            ?>"
+        } ?>"
         sizes = "<?php 
-        switch ($page->spreadType) {
-            case 'normal':
-            case 'double':
-            case 'screenfit':
-            case 'strip':
-            default: 
-                echo "(max-width: " . array_first($page->srcWidthsOrdered) . "px) 100vw,\n";
-                for (   $maxWidth = reset($page->windowWidthsOrdered), 
-                                $displayWidth = reset($page->srcWidthsOrdered); 
-                        $maxWidth !== false AND $displayWidth !== false;
-                        $maxWidth = next($page->windowWidthsOrdered), 
-                                $displayWidth = next($page->srcWidthsOrdered)   ) {
-                    echo "(max-width: {$maxWidth}px) {$displayWidth}px,\n";
-                }
-                echo array_last($page->srcWidthsOrdered) . "px";
-                break;
-        } ?>" 
-        src="<?= $filesWidthOrder[$srcWidth]['path'] ?>"
-        alt="<?= $filesWidthOrder[$srcWidth]['alttext'] ?>"
-        <?= $useImgMapNav ? 'usemap="#nav-on-comic"' : '' ?>
+        if ($useResponsiveSizes) {
+            switch ($page->spreadType) {
+                case 'normal':
+                case 'double':
+                case 'screenfit':
+                case 'strip':
+                default: 
+                    echo "(max-width: " . array_first($page->srcWidthsOrdered) . "px) 100vw,\n";
+                    for (   $maxWidth = reset($page->windowWidthsOrdered), 
+                                    $displayWidth = reset($page->srcWidthsOrdered); 
+                            $maxWidth !== false AND $displayWidth !== false;
+                            $maxWidth = next($page->windowWidthsOrdered), 
+                                    $displayWidth = next($page->srcWidthsOrdered)   ) {
+                        echo "(max-width: {$maxWidth}px) {$displayWidth}px,\n";
+                    }
+                    echo array_last($page->srcWidthsOrdered) . "px";
+                    break;
+            }
+        } else {
+            echo $page->defaultFileRecord['width'] . "px";
+        }
+         ?>" 
+        src="<?= $page->defaultFileRecord['path'] ?>"
+        alt="<?= $page->defaultFileRecord['alttext'] ?>"
+        <?= $useImgMapNav ? ('usemap="#' . $imgMapName . '"') : '' ?>
         id="single-page"
     ><?php 
     return ob_get_flush();
 }
 
 function tagLink($tag, $searchPath = SEARCHPATH) {
-    return "<a href=\"$searchPath?search=" . urlencode("tag:$tag") . "\">$tag</a>";
+    return "<a title=\"Search for pages with the tag $tag\" href=\"$searchPath?search=" 
+            . urlencode("tag:$tag") . "\">$tag</a>";
 }
 
 function cwLink($cw, $searchPath = SEARCHPATH) {
-    return "<a href=\"$searchPath?search=" . urlencode("cw:$cw") . "\">$cw</a>";
+    return "<a title=\"Search for pages WITHOUT the content warning $cw\" "
+            . "href=\"$searchPath?search=" . urlencode("-cw:$cw") . "\">$cw</a>";
 }
 
 function generateReadingAccessoryElements(PageInfo $page) {
@@ -933,7 +972,7 @@ function generateHomepage(  BlogInfo $blogInfo,
         <meta name="description" content="A home page for a comics website.">
         
         <title><?= randomPageTitle() ?> home</title>
-        <link href="<?= SITEICONPATH . SITEICONNAME ?>" rel="icon" type="image/x-icon">
+        <link href="<?= SITEICONPATH ?>" rel="icon" type="image/x-icon">
 
         <link href="<?= FONTFACESPATH ?>" rel="stylesheet">
         <link href="/draft_site/styles/update_list_style.css" rel="stylesheet">
@@ -1009,7 +1048,9 @@ function generateHomepage(  BlogInfo $blogInfo,
             <main> 
                 <!-- Clicking the page takes you to the reading page. -->
                 <a class="whole-page-link" href="<?= $pageInfo->record['path'] ?>">
-                    <?php generateComicDisplayElements($pageInfo, useImgMapNav: false); ?>
+                    <?php generateComicDisplayElements( $pageInfo, 
+                                                        useImgMapNav: false, 
+                                                        generateImgMapNav: false ); ?>
                 </a>
                 <nav>
                     <p class="nav-line">
@@ -1110,18 +1151,19 @@ function generateHomepage(  BlogInfo $blogInfo,
                     <p>This is all handrolled with HTML/CSS/Javascript on the frontend and 
     PHP/MySQL on the backend, served with NGINX. No external libraries or frameworks 
     were used except PHP's
-    MySQL PDO extension, because honestly, fuck React. Fuck web 2.0. Because this is either
+    MySQL PDO extension, because honestly, fuck React. Fuck bloat, fuck web 2.0. 
+    Because this is either
     static or generated from static content, and because backups are kept, the service 
-    provider can break into a million pieces and the site will be back up again with a new 
-    provider in a couple days.
+    provider can break into a million pieces and the site will be back up again in a couple 
+    days.
                     </p>
                     <h3>The author</h3>
                     <p>Breel (any pronouns) is a large mammal living somewhere on 
     <a href="https://en.wikipedia.org/wiki/Abya_Yala">Abya Yala</a>, 
-    prone to fits of panic and madness. Ey started making bad fancomics
+    prone to fits of panic and madness. Xe can be incapacitated by standard methods.
+    Ey started making bad fancomics
     (most of which are here) sometime in the 2010s and everything spiraled
     out of control after that. 
-    Xe can be incapacitated by standard methods.
                     </p>
                 </aside>
             </main>
@@ -1762,7 +1804,7 @@ function generateArchivePage(   array $updateInfos,
         <meta name="description" content="Breel comics archive.">
         
         <title>Archive | <?= randomPageTitle() ?></title>
-        <link rel="icon" href="<?= SITEICONPATH . SITEICONNAME ?>" type="image/x-icon" />
+        <link rel="icon" href="<?= SITEICONPATH ?>" type="image/x-icon" />
 
         <link href="<?= SITEROOT ?>styles/defaults.css" rel="stylesheet" />
         <link href="<?= SITEROOT ?>styles/<?= FONTFACESCSSNAME ?>" rel="stylesheet" />
@@ -1885,6 +1927,125 @@ html {
                                     . "_" . hash("md5", $background_gradient)
                                     . ".css", 
                                 ob_get_flush()  );
+}
+
+function generateViewPage(  array $pageInfos, 
+                            string $viewTitle, 
+                            string $search = '' ) {
+    ob_start(); ?>
+<!doctype html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width">
+
+        <meta name="author" content="Breel">
+        <meta name="description" content="A page displaying many comics.">
+
+        <!-- TODO: mirror in HTTP response headers, too. Warning: infrequently respected. -->
+        <meta name="robots" content="noai, noimageai">
+
+        <title><?= $viewTitle ?> | <?= randomPageTitle() ?> </title>
+        <link rel="icon" href="<?= SITEICONPATH ?>" type="image/x-icon">
+
+        <link href="<?= FONTFACESPATH ?>" rel="stylesheet">
+        <link href="<?= VIEWSTYLEPATH ?>" rel="stylesheet">
+
+        <script type="module" src="<?= VIEWSCRIPTPATH ?>"></script>
+
+        <?php 
+        if ($pageInfos) {
+            $imgMapNamePrefix = 'nav-map-';
+            $imgMapNames = array_map(   fn($i) => $imgMapNamePrefix . $i, 
+                                        range(1, \count($pageInfos))    );
+            // $page = reset($pageInfos);
+            generateImgNavMap(  $pageInfos[0]->defaultFileRecord['width'], 
+                                $pageInfos[0]->defaultFileRecord['height'], 
+                                "#page-1-anchor-next", 
+                                "#page-2-anchor-next", 
+                                name: $imgMapNames[0], 
+                                createIDFromName: true,
+                                leftAlt: "Beginning"    );
+            for (   $i = 1; 
+                    $i < \count($pageInfos) - 1; 
+                    $i++    ) {
+                echo "\n";
+                generateImgNavMap(  $pageInfos[$i]->defaultFileRecord['width'], 
+                                    $pageInfos[$i]->defaultFileRecord['height'], 
+                                    "#page-$i-anchor-prev", 
+                                    "#page-" . ($i + 2) . "-anchor-next", 
+                                    name: $imgMapNames[$i], 
+                                    createIDFromName: true  );
+            }
+            if (\count($pageInfos) > 1) {
+                echo "\n";
+                generateImgNavMap(  \array_last($pageInfos)->defaultFileRecord['width'], 
+                                    \array_last($pageInfos)->defaultFileRecord['height'], 
+                                    "#page-" . (\count($pageInfos) - 1) . "-anchor-prev", 
+                                    "#page-" . (\count($pageInfos)) . "-anchor-prev", 
+                                    name: $imgMapNames[\count($pageInfos) - 1], 
+                                    createIDFromName: true,
+                                    rightAlt: "End" );
+            }
+        }
+        ?>
+    </head>
+
+    <body>
+        <header>
+            <button class="orient">Re-orient</button>
+            <button title="Press = or +" class="larger">Larger</button>
+            <button title="Press -" class="smaller">Smaller</button>
+            <p>Keyboard navigation is enabled.</p>
+            <h1><?= $viewTitle ?></h1>
+        </header>
+
+        <main>
+            <?php
+        for ($i = 0; $i < \count($pageInfos); $i++) {
+            echo '<div class="comic-display">' . "\n"
+                . '<a id="page-' . ($i + 1) . '-anchor-next" class="jump next"></a>' . "\n";
+            generateComicDisplayElements(   $pageInfos[$i], 
+                                            useImgMapNav: true, 
+                                            generateImgMapNav: false, 
+                                            imgMapName: $imgMapNames[$i], 
+                                            useResponsiveSizes: false   );
+            echo "\n" . '<a id="page-' . ($i + 1) . '-anchor-prev" class="jump prev"></a>'
+                . "\n</div>\n\n";
+        }   ?>
+        </main>
+
+        <footer>
+            <div class="bar">
+                <button class="orient">Re-orient</button>
+                <button title="Press = or +" class="larger">Larger</button>
+                <button title="Press -" class="smaller">Smaller</button>
+            </div>
+            <?php  
+            generateSearchForm(searchStr: $search);
+            ?>
+            <nav>
+                <p class="nav-line">
+                    <?php 
+                    generateHomeButton(smallGraphic: true);
+                    echo "\n";
+                    generateArchiveButton();
+                    ?>
+                </p>
+            </nav>
+            <?php include('copyrightElement.php'); ?>
+        </footer>
+    </body>
+</html>
+    <?php
+    if (LOCALSITE) {    
+        return ob_get_flush();
+    } else {    // temporary, until I get NGINX hooked up
+        $pageStr = ob_get_clean();
+        $pageStr = replacePathsForServerSite($pageStr);
+        echo $pageStr;
+        return $pageStr;
+    }
 }
 
 ?>

@@ -1,11 +1,11 @@
-const nextKeyCodes = new Set(["ArrowRight", 
+const nextKeys = new Set(["ArrowRight", 
                               "6", 
                               "d", 
                               "D",
                               "c", 
                               "C"]);
 
-const prevKeyCodes = new Set(["ArrowLeft", 
+const prevKeys = new Set(["ArrowLeft", 
                               "4", 
                               "a", 
                               "A",
@@ -17,8 +17,8 @@ import {getLink, keyNavigate, resizeNavImageMaps} from "./briels_helpful_code.js
 document.addEventListener("keydown", (event) => 
         keyNavigate(event, 
                     window,
-                    prevKeyCodes, 
-                    nextKeyCodes, 
+                    prevKeys, 
+                    nextKeys, 
                     getLink(document, ".prev-button"), 
                     getLink(document, ".next-button"),
                     getLink(document, ".prev-upd8-button"), 

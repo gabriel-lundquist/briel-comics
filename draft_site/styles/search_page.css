@@ -77,11 +77,6 @@ header .bar .container {
     /* max-height: 100%; */
 }
 
-header .archive-button {
-    /* display: flex;
-    align-items: center; */
-}
-
 header .nav-button svg.ui {
     /* max-height: 3em; */
     /* max-width: calc(1.5 * (50vw - 4em)); */
@@ -94,18 +89,10 @@ header .archive-button .button-text {
     margin: auto min(1vw, 0.5em);
 }
 
-header .archive-button svg.ui {
-    /* margin-left: min(1vw, 0.5em); */
-    /* margin-right: min(1vw, 0.5em); */
-}
-
 header .home-button .button-text {
     position: absolute;
     top: 29%;
     left: 46%;
-    /* font-size: smaller; */
-    /* background-color: var(--bg-color); */
-    /* border-radius: 10%; */
 }
 
 footer .nav-button {
@@ -118,14 +105,8 @@ footer .bar {
     grid-template-columns: 1fr 1fr;
 }
 
-footer .home-button {
-    /* grid-column-start: 1; */
-}
-
 footer .nav-line .archive-button {
     border-radius: 5%;
-    /* grid-column-start: 2; */
-    /* justify-content: space-between; */
 }
 
 footer .nav-line .archive-button .button-text {

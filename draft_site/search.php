@@ -6,7 +6,7 @@ use function Briel\updatePrevSearchCountStmt;
 use const Briel\SEARCHPAGEINDEXKEY;
 
 // A note: this will not return a page in a search until it has a path in the database!
-// DONE!!! A thing to consider: session storage for pdoConnection, limiting searches
+// DONE!!! Things to consider: session storage for pdoConnection, limiting searches
 
 require_once './php/dbManip.php';
 require_once './php/pageGen.php';
@@ -24,7 +24,7 @@ foreach (['desc', 'exact'] as $field) {
         $getParams[$field] = '';
 }
 
-if (empty($gatParams[Briel\SEARCHPAGEINDEXKEY])) {
+if (empty($getParams[Briel\SEARCHPAGEINDEXKEY])) {
     $getParams[Briel\SEARCHPAGEINDEXKEY] = 1;
 }
 

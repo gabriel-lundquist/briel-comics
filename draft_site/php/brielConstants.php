@@ -29,8 +29,8 @@ const PUNCTUATION = '~`!@#$%^&*()_-+=[]{}\\|:;"\'<>,.?/¡¿';
 const SEARCHPATH = SITEROOT . 'search.php';
 const HOMEPATH = SITEROOT . 'home.html';
 const HOMEFILEPATH = FILEROOT . 'home.html';
-const STYLEDIR = 'styles/';
-const HOMESTYLEPATH = SITEROOT . STYLEDIR . "home_page.css";
+const STYLEDIRPATH = SITEROOT . 'styles/';
+const HOMESTYLEPATH = SITEROOT . STYLEDIRPATH . "home_page.css";
 const COMMENTPATH = SITEROOT . 'comments.php';
 const BLOGARCHIVEPATH = SITEROOT . 'weblog.html';
 const SEARCHCACHEDIR = 'searchcache/';
@@ -40,18 +40,21 @@ const BLANKSEARCHPATH = SITEROOT . BLANKSEARCHFILENAME;
 const ARCHIVEDIRNAME = "archive/";
 const ARCHIVEDIRPATH = SITEROOT . ARCHIVEDIRNAME;
 const ARCHIVESTARTPATH = ARCHIVEDIRPATH . 'archive_p1.html';
-const FONTFACESPATH = SITEROOT . 'styles/briel_font-faces.css';
-const SITEICONPATH = SITEROOT . 'images/decorations/';
-const READINGCOLORDIRPATH = SITEROOT . "styles/reading_colors/";
-const READINGSTYLEPATH = SITEROOT . "styles/reading_page.css";
+const FONTFACESPATH = STYLEDIRPATH . 'briel_font-faces.css';
+const READINGCOLORDIRPATH = STYLEDIRPATH . "reading_colors/";
+const READINGSTYLEPATH = STYLEDIRPATH . "reading_page.css";
 const READINGSCRIPTPATH = SITEROOT . "js/reading_page.js";
 const RANDOMPATH = SITEROOT . 'random.php';
 const IMAGESDIRPATH = SITEROOT . 'images/';
 const DECORATIONDIRPATH = IMAGESDIRPATH . 'decoration/';
+const SITEICONNAME = 'smileicon.ico';
+const SITEICONPATH = DECORATIONDIRPATH . SITEICONNAME;
+const VIEWSTYLENAME = 'view_page.css';
+const VIEWSTYLEPATH = STYLEDIRPATH . VIEWSTYLENAME;
+const VIEWSCRIPTPATH = SITEROOT . "js/view_page.js";
 
 const FONTFACESCSSNAME = 'briel_font-faces.css';
 
-const SITEICONNAME = 'smileicon.ico';
 
 const SQLDATETIMEFORMAT = 'Y-m-d H:i:s';
 
