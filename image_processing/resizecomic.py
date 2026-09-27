@@ -47,6 +47,7 @@ def write_resized_img(img,
                       is_nail:bool=False):
     path = ''
     if output_path is None:
+        # print(f"outname:{output_name}" + f"\twidth:{new_width}" + "\tisNail:" + ("_nail" if is_nail else "") + f"\toutExtension:{output_ext}")
         path = os.path.join(output_dir, 
                             f"{output_name}_{new_width}w" 
                                     + ("_nail" if is_nail else "") 
@@ -112,8 +113,8 @@ def resize_comics(path:os.PathLike,
 def resize_folder(input_dir:os.PathLike, 
                   output_dir:os.PathLike, 
                   output_ext:str=".png", 
-                  output_widths:tuple=default_widths, 
                   output_nail_ext:str=".jpg", 
+                  output_widths:tuple=default_widths, 
                   output_nail_widths:tuple=default_nail_widths):
     with os.scandir(input_dir) as direntries:
         for entry in direntries:
@@ -148,7 +149,7 @@ in_dir_path = pathlib.Path(unquote(args.indir))
 out_dir_path = pathlib.Path(unquote(args.outdir))
 
 if args.infile is None or args.indir != default_in_dir:
-    resize_folder(in_dir_path, out_dir_path, args.extension, widths, nailwidths)
+    resize_folder(in_dir_path, out_dir_path, output_ext=args.extension, output_widths=widths, output_nail_widths=nailwidths)
 
 for infile, outname in zip(args.infile, args.outname):
     resize_comics(  infile, 

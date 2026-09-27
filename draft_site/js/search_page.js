@@ -4,23 +4,54 @@
 // load them again. To hide images we don't reset their `src` attributes, we 
 // just set the `display` style of the thumbnails div to "none".
 
-import { addImageDivToggleListeners } from "./briels_helpful_code.js";
+import { addElementToggleListeners, addImageDivToggleListeners, toggleElementsVisibilityWithButtonsSelectors, toggleImageDiv } from "./briels_helpful_code.js";
+if (window.sessionStorage.getItem("showThumbnails") === null) window.sessionStorage.setItem("showThumbnails", "on");
+if (window.sessionStorage.getItem("showDescriptions") === null) window.sessionStorage.setItem("showDescriptions", "on");
 
-// Start thumbnails as hidden, images unloaded
-const thumbnailState = { hidden: Boolean(true), loaded: Boolean(false) }
-addImageDivToggleListeners(document, 
-                           thumbnailState, 
-                           ".toggle-nails", 
-                           ".thumbnails-div", 
-                           ".thumbnail", 
-                           "attr-src", 
-                           "--nails-display", 
-                           "--nails-hide-display", 
-                           "Hide thumbnails", 
-                           "Show thumbnails");
+const showThumbnailsSession = Boolean(window.sessionStorage.getItem("showThumbnails"));
+if (!showThumbnailsSession) { // not default
+        toggleImageDiv( {isHidden: false, isLoaded: false}, 
+                        document.querySelectorAll(".toggle-nails"), 
+                        document.querySelectorAll(".thumbnails-div"), 
+                        document.querySelectorAll(".thumbnail"), 
+                        "attr-src", 
+                        "Hide thumbnails", 
+                        "Show thumbnails", 
+                        false
+        );
+}
+const thumbnailVisibilityState = { isHidden: !showThumbnailsSession, isLoaded: showThumbnailsSession };
+addImageDivToggleListeners(     document, 
+                                thumbnailVisibilityState, 
+                                ".toggle-nails", 
+                                ".thumbnails-div", 
+                                ".thumbnail", 
+                                "attr-src", 
+                                "Hide thumbnails", 
+                                "Show thumbnails"       );
 
-document.querySelectorAll(".toggle-nails")
-        .forEach((btn) => btn.textContent = "Show thumbnails");
+// document.querySelectorAll(".toggle-nails")
+//         .forEach((btn) => btn.textContent = "Show thumbnails");
+
+const showDescriptionSession = Boolean(window.sessionStorage.getItem("showDescriptions"));
+const descriptionVisibilityState = { isHidden: !showDescriptionSession };
+addElementToggleListeners(      document, 
+                                descriptionVisibilityState, 
+                                ".toggle-desc", 
+                                ".desc-para", 
+                                "Hide descriptions", 
+                                "Show descriptions", 
+                                "showDescriptions"
+);
+if (!showDescriptionSession) { //not default
+        toggleElementsVisibilityWithButtonsSelectors(   descriptionVisibilityState, 
+                                                        ".desc-para", 
+                                                        ".toggle-desc", 
+                                                        "Hide descriptions", 
+                                                        "Show descriptions", 
+                                                        "showDescriptions", 
+                                                        "showDescriptions"      )
+}
 
 const params = new URLSearchParams(document.location.search);
 const searchText = decodeURIComponent(params.get("search").replace(/\+/g, " "));

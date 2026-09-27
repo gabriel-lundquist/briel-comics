@@ -32,6 +32,44 @@ class ImageSizeInfo {
     }
 }
 
+export function toggleAllElementsVisibility(isHidden, elements, toggleSessionVarName = null) {
+    elements.forEach((el) => el.style.display = (isHidden ? null : "none"));
+    if (toggleSessionVarName) window.sessionStorage.setItem(toggleSessionVarName, isHidden ? "on" : "");
+    return !isHidden;
+}
+
+export function toggleAllElementsVisibilitySelector(isHidden, selector, toggleSessionVarName = null) {
+    return toggleAllElementsVisibility(isHidden, document.querySelectorAll(selector), toggleSessionVarName);
+}
+
+export function toggleElementsVisibilityWithButtons(visibilityState, 
+                                                    elems, 
+                                                    toggleButtons, 
+                                                    hideButtonText, 
+                                                    showButtonText, 
+                                                    toggleSessionVarName = null) {
+    toggleButtons.forEach(
+        (btn) => btn.textContent = (visibilityState.isHidden ? hideButtonText : showButtonText)
+    );
+    visibilityState.isHidden = toggleAllElementsVisibility(visibilityState.isHidden, elems, toggleSessionVarName);
+    return visibilityState.isHidden;   
+}
+
+export function toggleElementsVisibilityWithButtonsSelectors(   visibilityState, 
+                                                                elemSelector, 
+                                                                buttonSelector, 
+                                                                hideButtonText, 
+                                                                showButtonText, 
+                                                                toggleSessionVarName = null ) {
+    return toggleElementsVisibilityWithButtons( visibilityState, 
+                                                document.querySelectorAll(elemSelector), 
+                                                document.querySelectorAll(buttonSelector), 
+                                                hideButtonText, 
+                                                showButtonText, 
+                                                toggleSessionVarName
+    );
+}
+
 /**
  * Intended use is to toggle the visibility of a class of divs which contain images.
  * Expects a custom attribute on the image elements that stores a path to their 
@@ -53,38 +91,63 @@ export function toggleImageDiv( imgState,
                                 imageDivs, 
                                 images, 
                                 imgSrcAttrName, 
-                                dispPropertyName, 
-                                dispHidePropertyName, 
                                 hideButtonText, 
-                                showButtonText  ) {
+                                showButtonText, 
+                                flipSessionVar = true   ) {
 
-    if (imgState.hidden) {
+    if (imgState.isHidden) {
 
-        if (!imgState.loaded) {
-            images.forEach(
-                (img) => img.setAttribute("src", img.getAttribute(imgSrcAttrName))
-            );
-            imgState.loaded = true;
+        if (!imgState.isLoaded) {
+            // images.forEach(
+            //     (img) => img.setAttribute("src", img.getAttribute(imgSrcAttrName))
+            // );
+            imgState.isLoaded = true;
         }
 
-        imageDivs.forEach(
-            (div) => div.style.display = getComputedStyle(div)
-                                            .getPropertyValue(dispPropertyName)
-        );
-
-        toggleButtons.forEach((btn) => btn.textContent = hideButtonText);
-
     } else {
-
-        imageDivs.forEach(
-            (div) => div.style.display = getComputedStyle(div)
-                                            .getPropertyValue(dispHidePropertyName)
-        );
-
-        toggleButtons.forEach((btn) => btn.textContent = showButtonText);
+        
     }
 
-    imgState.hidden = !imgState.hidden;
+    imgState.isHidden = flipSessionVar ? toggleElementsVisibilityWithButtons(   imgState, 
+                                                                                imageDivs, 
+                                                                                toggleButtons, 
+                                                                                hideButtonText, 
+                                                                                showButtonText, 
+                                                                                "showThumbnails"    ) 
+                                        : toggleElementsVisibilityWithButtons(  imgState, 
+                                                                                imageDivs, 
+                                                                                toggleButtons, 
+                                                                                hideButtonText, 
+                                                                                showButtonText  );
+}
+
+export function addElementToggleListeners(  document, 
+                                            visibilityState, 
+                                            toggleBtnSelector, 
+                                            elemSelector, 
+                                            hideButtonText, 
+                                            showButtonText,  
+                                            toggleSessionVarName = null ) {
+    
+    const elems = document.querySelectorAll(elemSelector);
+    const buttons = document.querySelectorAll(toggleBtnSelector);
+    if (visibilityState.isHidden) {
+        toggleElementsVisibilityWithButtons(visibilityState, 
+                                            elems, 
+                                            buttons, 
+                                            hideButtonText, 
+                                            showButtonText, 
+                                            toggleSessionVarName);
+    }
+    buttons.forEach((btn) => btn.addEventListener(  
+            "click", 
+            () => visibilityState.isHidden = toggleElementsVisibilityWithButtons(   visibilityState, 
+                                                                                    elems, 
+                                                                                    buttons, 
+                                                                                    hideButtonText, 
+                                                                                    showButtonText, 
+                                                                                    toggleSessionVarName    )
+    ));
 }
 
 export function addImageDivToggleListeners( document, 
@@ -93,25 +156,32 @@ export function addImageDivToggleListeners( document,
                                             imageDivClass,
                                             imageClass,
                                             imgSrcAttrName, 
-                                            dispPropertyName, 
-                                            dispHidePropertyName, 
                                             hideButtonText, 
                                             showButtonText  ) {
     const toggleButtons = document.querySelectorAll(toggleBtnClass);
     const imageDivs = document.querySelectorAll(imageDivClass);
     const images = document.querySelectorAll(imageClass);
+    // if (thumbnailState.isHidden) {
+    //     toggleImageDiv( thumbnailState,
+    //                     toggleButtons, 
+    //                     imageDivs, 
+    //                     images, 
+    //                     imgSrcAttrName, 
+    //                     hideButtonText, 
+    //                     showButtonText  );
+    // }
     toggleButtons.forEach(
-        (btn) => btn.addEventListener("click", 
-                                      () => toggleImageDiv(thumbnailState,
-                                                           toggleButtons, 
-                                                           imageDivs, 
-                                                           images, 
-                                                           imgSrcAttrName, 
-                                                           dispPropertyName, 
-                                                           dispHidePropertyName, 
-                                                           hideButtonText, 
-                                                           showButtonText)
-                                      )
+        (btn) => btn.addEventListener(  "click", 
+                                        function() {
+                                            toggleImageDiv( thumbnailState,
+                                                            toggleButtons, 
+                                                            imageDivs, 
+                                                            images, 
+                                                            imgSrcAttrName, 
+                                                            hideButtonText, 
+                                                            showButtonText  );
+                                        } 
+                                    )
     );  
 }
 

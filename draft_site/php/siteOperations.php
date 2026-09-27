@@ -480,7 +480,7 @@ function postUpdate(?\PDO $pdoConn = null) {
     echo "Creating update...\n";
     tryBeginTransaction($pdoConn);
 
-    // after file upload, generate file records
+    // after file upload, generate and insert file records
     generateInsertUpdateFileRecords($pdoConn);
     
     // generate update record
@@ -490,7 +490,7 @@ function postUpdate(?\PDO $pdoConn = null) {
     queryInsertRecords($pdoConn, 'comicupdate', ['title', 'updatedesc'], [$updateRecord]);
 
     // only problem is the update's ID is generated when it's inserted.
-    // so here we get updateid generated during insert
+    // so here we get the updateid generated during insert
     $getUpdateID = $pdoConn->prepare(<<<STMT
             SELECT updateid FROM comicupdate 
                 WHERE title = ? AND updatedesc = ? AND postdate IS NULL LIMIT 1;
@@ -538,14 +538,13 @@ function postUpdate(?\PDO $pdoConn = null) {
 
     // backup and delete/regenerate affected searches
     backupSearchData($pdoConn);
-    redoCachedSearches($pdoConn);
     if (promptInput("Would you like to delete the cached search page HTML files?\n(y/n) > ")
             == "y") {
         foreach (glob(SEARCHCACHEDIRPATH . "?*.{HTML,html}", GLOB_BRACE) as $path) {
             unlink($path);
         }
-    }
-    // `search.php` will rewrite anything not in the search cache, so it's not a big deal
+    } // `search.php` will rewrite anything not in the search cache, so it's not a big deal
+    redoCachedSearches($pdoConn);
 }
 
 function regenerateComicPages(  array|int $pageIDs, 

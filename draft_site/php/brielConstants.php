@@ -44,6 +44,7 @@ const FONTFACESPATH = STYLEDIRPATH . 'briel_font-faces.css';
 const READINGCOLORDIRPATH = STYLEDIRPATH . "reading_colors/";
 const READINGSTYLEPATH = STYLEDIRPATH . "reading_page.css";
 const READINGSCRIPTPATH = SITEROOT . "js/reading_page.js";
+const LISTSTYLEPATH = STYLEDIRPATH . "update_list_style.css";
 const RANDOMPATH = SITEROOT . 'random.php';
 const IMAGESDIRPATH = SITEROOT . 'images/';
 const DECORATIONDIRPATH = IMAGESDIRPATH . 'decoration/';

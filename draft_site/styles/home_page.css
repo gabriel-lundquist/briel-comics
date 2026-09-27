@@ -43,6 +43,7 @@ main {
 }
 
 a.whole-page-link {
+    display: block;
     padding: 0;
 }
 
@@ -100,7 +101,7 @@ a.whole-page-link:hover {
     border-image: var(--box-3) 500 600 900 600 / 2.5em 2.2em 3.5em 2em / 2.2em calc(1.5em - 0.5vw) 2.6em calc(1.5em - 1vw);;
     margin: 0 1em 3em;
     --about-side-padding: 1em;
-    padding: 0.5em var(--about-side-padding); 
+    padding: 0.5em var(--about-side-padding) 0.9em; 
     max-width: calc(var(--comic-page-width) - 2 * var(--about-side-padding) - 2 * 1em);
 }
 

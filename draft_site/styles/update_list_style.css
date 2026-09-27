@@ -158,7 +158,8 @@ a:visited {
 .archive-entry,
 .search-entry {
     display: block;
-    text-align: left;
+    text-align: center;
+    /* align-items: center; */
     /* background: conic-gradient(from 200deg at 10% 150% in hsl shorter hue, hsl(18, 73%, 70%) 17%, hsl(42, 100%, 89%) 52%, hsl(10, 71%, 72%) 87%); */
     background-color: var(--bg-color);
     border: 0.14em solid var(--sect-border-color);
@@ -184,8 +185,13 @@ a:visited {
     }
 }
 
+.isHidden {
+    display: none;
+}
+
 .detail-div {
     margin: 0 0.5em;
+    text-align: left;
 }
 
 .archive-entry .detail-div {
@@ -195,33 +201,44 @@ a:visited {
 .thumbnails-div {
     margin: 0 0.3em;
     flex-wrap: wrap;
+    /* align-items: center; */
 }
 
 .search-entry .thumbnails-div {
     max-width: var(--thumbnail-size);
 }
 
-.archive-entry .thumbnails-div {
-    flex: 2;
+.archive-entry .right-div {
+    flex: 3;
+    align-items: center;
 }
 
-.thumbnails-div a {
+/* .archive-entry .right-div:has(.isHidden) {
+    flex: 1;
+} */
+
+.archive-entry .thumbnails-div {
+    /* margin: auto; */
+}
+
+.thumbnails-div a.page-link {
     /* display: inline; */
     /* flex-wrap: wrap; */
+    display: block;
     padding: 0.2em;
     height: var(--thumbnail-size);
     width: var(--thumbnail-size);
     max-width: var(--thumbnail-size);
     max-height: var(--thumbnail-size);
     font-size: small;
-    margin-bottom: 0.5em;
+    /* margin-bottom: 0.5em; */
 }
 
 /* .thumbnails-div av img {
     
 } */
 
-.archive-entry .thumbnails-div a {
+.archive-entry .thumbnails-div a.page-link {
     flex: 1;
 }
 
@@ -238,6 +255,10 @@ a:visited {
 
 .copyright {
     padding: 0.5em;
+}
+
+.bar {
+    display: flex;
 }
 
 svg.ui {
@@ -280,6 +301,25 @@ main .nav-line button {
 
 .nav-button svg.ui {
     max-height: 2em;
+}
+
+.view-button {
+    justify-self: right;
+    display: inline grid;
+    grid-template-rows: 1fr 3fr 1fr;
+    text-align: center;
+    max-width: min-content;
+    height: 5.4em;
+    padding: 0.1em 0.5em;
+    margin-left: auto;
+}
+
+.view-button span {
+    /* display: block; */
+}
+
+.view-button svg.ui {
+    max-height: 4em;
 }
 
 footer .nav-line {

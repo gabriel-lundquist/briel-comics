@@ -9,10 +9,14 @@ html {
     --deemphasize-color: #aaaaaa;
     --bg-gradient: conic-gradient(from 304deg at 12% -10% in hsl shorter hue, rgb(48, 21, 27) 50%, #491d25ff 55%, #230b0dff 73%);
 
+    background-color: var(--bg-color); 
+    background: var(--bg-gradient);
+    background-size: cover; 
+
     font-family: "Briel Nib Bold", Courier, monospace;
     font-size: x-large;
 
-    height: 100%;
+    /* height: 100%; */
 }
 
 body {
@@ -20,8 +24,9 @@ body {
 
     background-color: var(--bg-color); 
     background: var(--bg-gradient);
-    /* background-size: cover;  */
-    background-repeat: no-repeat;
+    background-size: cover; 
+    /* background-repeat: no-repeat; */
+    /* background-attachment: fixed; */
 
     display: flex;
     justify-content: space-between;

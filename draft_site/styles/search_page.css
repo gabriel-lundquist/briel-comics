@@ -1,7 +1,5 @@
 .thumbnails-div {
-    --nails-display: flex;
-    --nails-hide-display: none;
-    display: var(--nails-hide-display); /* Thumbnails start as hidden */
+    --nails-hide-display: none; 
 }
 
 aside {
@@ -21,9 +19,6 @@ header {
 }
 
 header .bar {
-    /* display: flex;
-    align-items: center;
-    justify-content: space-around; */
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
 }
@@ -93,6 +88,36 @@ header .home-button .button-text {
     position: absolute;
     top: 29%;
     left: 46%;
+}
+
+main .bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    justify-content: center;
+    margin-top: max(-0.25em, -5vw + 1em);
+    margin-bottom: max(-0.25em, -5vw + 0.5em);
+}
+
+.bar .container {
+    margin: auto 0.2em;
+}
+
+main .view-button {
+    display: grid;
+    grid-template-columns: 1fr minmax(1em, 1fr) 1fr;
+    grid-template-rows: 1fr;
+    justify-self: auto;
+    max-width:fit-content;
+    height:min-content;
+    padding: 0;
+    width: max-content;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.view-button svg.ui {
+    /* flex: 1 1em; */
 }
 
 footer .nav-button {

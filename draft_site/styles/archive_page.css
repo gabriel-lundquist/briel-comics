@@ -1,6 +1,5 @@
 .thumbnails-div {
     --nails-display: flex;
-    --nails-hide-display: none;
     display: var(--nails-display); /* Thumbnails start as showing */
 }
 
@@ -14,6 +13,11 @@ header {
 header img {
     height: 4em;
     /* max-height: min(1, 20vh - ); */
+}
+
+main .nav-line {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
 }
 
 footer nav {
