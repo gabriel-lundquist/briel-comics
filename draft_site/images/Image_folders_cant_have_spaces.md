@@ -1,0 +1,1 @@
+...because whitespace in a URL fucks up `srcset`. 

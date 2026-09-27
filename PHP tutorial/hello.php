@@ -8,7 +8,7 @@ Hello World!
 
 <?php
 
-// phpinfo();
+phpinfo();
 // echo '<p><e>User agent:</e> ' . $_SERVER['HTTP_USER_AGENT'] . '</p>';
 
 ?>

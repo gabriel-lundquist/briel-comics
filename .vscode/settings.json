@@ -1,0 +1,4 @@
+{
+    "dictation.enabled": false,
+    "dictation.experimental.llmCleanup": false
+}
