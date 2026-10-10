@@ -39,6 +39,8 @@ if (getenv('DEBUG_VIEW')) { // an environment variable injected in my VSCode deb
 $pageInfosOrdered = [];
 $search = '';
 $viewTitle = '';
+$prevUpdateID = null;
+$nextUpdateID = null;
 
 $db = Briel\pdoConnect();
 if ($db !== false) {
@@ -57,10 +59,16 @@ if ($db !== false) {
                     fn($page) => Briel\getPageInfo($db, $page['pageid'], $stmt), 
                     $update->pageRecordsOrdered 
             );
+
+            $prevUpdateID = executeAndFetchScalar(  $stmt->getPrevUpdateID, 
+                                                    $get['updateid']    )   ?: null;
+            $nextUpdateID = executeAndFetchScalar(  $stmt->getNextUpdateID, 
+                                                    $get['updateid']    )   ?: null;
+
         } else if (!empty($get['search'])) {    // update doesn't exist... try search
             [$pageInfosOrdered, $search, $viewTitle] = searchForView($get, $db);
         }
     }
 }
 
-Briel\generateViewPage($pageInfosOrdered, $viewTitle, $search);
+Briel\generateViewPage($pageInfosOrdered, $viewTitle, $search, $prevUpdateID, $nextUpdateID);

@@ -1,0 +1,136 @@
+nav {
+    /* Make font size of text in the nav pane (previous, next, etc.) 2 
+    points bigger than the inherited size */
+    font-size: calc(1em + 3pt);
+}
+
+.nav-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: var(--comic-page-width);
+    margin: 0 auto;
+}
+
+.nav-line a.nav-button {
+    font-family: "Briel Nib Bold", Courier, monospace;
+    flex: 1;
+    border-radius: 5%;
+    position: relative;
+    margin: 0;
+    min-width: min-content;
+    min-height: min-content;
+    --nav-max-height: 2.2em;
+    height: var(--nav-max-height);
+    
+    display: grid;
+    grid-template-columns: max-content max-content;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-line a.nav-button svg.ui {
+    height: 100%;
+}
+
+.nav-line a.prev-button, 
+.nav-line a.next-button {
+    column-gap: max(0.1em, 5vw - 1.5em);
+}
+    
+.nav-line a.prev-button span.button-text, 
+.nav-line a.next-button span.button-text {
+    position: relative;
+    top: 0.1em;
+}
+
+.nav-line a.prev-button {
+    border-top-left-radius: 50% 10%;
+    border-bottom-left-radius: 40% 30%;
+    border-top-right-radius: 50% 10%;
+    border-bottom-right-radius: 5%;
+}
+
+.nav-line a.next-button {
+    border-top-left-radius: 50% 10%;
+    border-bottom-left-radius: 5%;
+    border-top-right-radius: 50% 10%;
+    border-bottom-right-radius: 40% 30%;
+}
+
+.nav-line a.prev-upd8-button, 
+.nav-line a.next-upd8-button, 
+.nav-line a.random-button {
+    column-gap: max(0.1em, 5vw - 1.5em);
+}
+
+.nav-line a.prev-upd8-button {
+    border-top-left-radius: 40% 15%;
+    border-bottom-left-radius: 70% 50%;
+    border-top-right-radius: 5%;
+    border-bottom-right-radius: 20% 10%;
+    grid-template-columns: max-content min(4em, 11vw);
+
+    flex: 3;
+}
+
+.nav-line a.home-button, 
+.nav-line a.random-button {
+    position: relative;
+    justify-content: center;
+    border-radius: 5%;
+}
+
+.nav-line a.home-button {
+    display: block;
+}
+
+.nav-line a.home-button span.button-text {
+    position: absolute;
+    top: 28%;
+    left: calc(30% + 1.8vw);
+    font-size: smaller;
+}
+
+.nav-line a.prev-upd8-button + a.home-button {
+    flex: 2;
+} 
+
+.nav-line a.prev-upd8-button + a.random-button {
+    flex: 3;
+} 
+
+.nav-line a.next-upd8-button {
+    border-top-left-radius: 5%;
+    border-bottom-left-radius: 20% 10%;
+    border-top-right-radius: 40% 8%;
+    border-bottom-right-radius: 70% 50%;
+    grid-template-columns: min(4.3em, 13.5vw) max-content;
+}
+
+.nav-line a.home-button + a.next-upd8-button {
+    flex: 3;
+}
+
+.nav-line a.archive-button {
+    display: grid;
+    grid-template-columns: 1fr 3fr 2fr 3fr 1fr;
+    justify-content: center;
+    text-align: center;
+}
+
+.nav-line a.archive-button svg.ui {
+    grid-column-start: 2;
+    margin-left: auto;
+}
+
+.nav-line a.archive-button span.button-text + svg.ui {
+    grid-column-start: 4;
+    margin-left: 0;
+    margin-right: auto;
+}
+
+.nav-line a.view-button {
+    grid-template-columns: max-content max-content max-content;
+    column-gap: 0.3em;
+}

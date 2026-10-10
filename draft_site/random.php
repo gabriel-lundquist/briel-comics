@@ -2,7 +2,7 @@
 require_once './php/dbManip.php';
 require_once './php/pageGen.php';
 
-$db = Briel\pdoConnect(echoConnSuccess: false); // check for session storage
+$db = Briel\pdoConnect(echoConnSuccess: false); // check for session storage?
 if ($db === false) {
     readfile(Briel\FILEROOT . Briel\BLANKSEARCHFILENAME);
     exit("Ah shit, database connection failed.");
@@ -24,7 +24,5 @@ if (Briel\LOCALSITE) {
     ob_end_flush();
 } else {    // temporary, until I get NGINX hooked up
     $pageStr = ob_get_clean();
-    $pageStr = Briel\replacePathsForServerSite($pageStr);
-    echo $pageStr;
-    return $pageStr;
+    echo Briel\replacePathsForServerSite($pageStr);
 }

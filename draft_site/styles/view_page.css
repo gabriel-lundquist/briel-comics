@@ -33,7 +33,9 @@ header {
 
 .horizontal main {
     display: grid;
-    grid-template-columns: min-content min-content min-content;
+    grid-template-rows: 1fr;
+    grid-auto-columns: min-content;
+    grid-auto-flow: column;
 }
 
 p {
@@ -52,10 +54,12 @@ h1 {
 
 .horizontal h1 {
     position: absolute;
-    rotate: -90deg;
     width: var(--page-height);
-    right: -195%;
-    top: 3.5em;
+    /* margin: 0; */
+    text-align: right;
+    left: -2.8em;
+    top: 7.9em;
+    rotate: -90deg;
 }
 
 .comic-display {

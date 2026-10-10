@@ -1,0 +1,37 @@
+@font-face {
+  font-family: "Briel Fixed Width";
+  src:
+    url("../../font/BreelFixedWidth-Regular.woff2") format("woff2"),
+    url("../../font/BreelFixedWidth-Regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Briel Fixed Width Bold";
+  src:
+    url("../../font/BreelFixedWidth-Bold.woff2") format("woff2"),
+    url("../../font/BreelFixedWidth-Bold.woff") format("woff");
+  font-style: bold;
+} 
+
+@font-face {
+  font-family: "Briel Nib";
+  src:
+    url("../../font/BreelNib-Regular.woff2") format("woff2"),
+    url("../../font/BreelNib-Regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "Briel Nib Bold";
+  src:
+    url("../../font/BreelNib-Bold.woff2") format("woff2"),
+    url("../../font/BreelNib-Bold.woff") format("woff");
+  font-style: bold;
+}
+
+
+@font-face {
+  font-family: "Briel Marker";
+  src:
+    url("../../font/BreelMarker-Regular.woff2") format("woff2"),
+    url("../../font/BreelMarker-Regular.woff") format("woff");
+}

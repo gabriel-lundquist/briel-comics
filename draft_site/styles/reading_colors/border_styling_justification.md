@@ -1,0 +1,1 @@
+Basically, you can't use any of the nice recoloring or sprite sheet stuff you get from SVGs with border images. It just pulls straight from a URL. Rather than having a new, separate set of files for every coloring, instead I inline the SVGs as data URLs, and then at least I can quickly access the little part of the URL that colors the fill.

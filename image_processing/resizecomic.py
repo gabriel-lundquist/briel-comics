@@ -2,6 +2,7 @@ import cv2 as cv
 import os
 import argparse
 import pathlib
+import json
 
 image_exts = (".png", ".jpg", ".jpeg", ".tiff")
 default_pixel_ratios = (1, 1.25, 1.5, 1.75, 2, 3)
@@ -9,8 +10,8 @@ default_display_widths = (800, 1400, 2100)
 default_nail_widths = (100, 200)
 default_in_dir = "."
 
-def calc_widths_by_ratios(display_width:tuple|int=default_display_widths, 
-                          pixel_ratio:tuple|float|int=default_pixel_ratios):
+def calc_widths_by_ratios(  display_width:tuple|int=default_display_widths, 
+                            pixel_ratio:tuple|float|int=default_pixel_ratios    ):
     if isinstance(display_width, int):
         if isinstance(pixel_ratio, (int, float)):
             return display_width * pixel_ratio
@@ -23,7 +24,8 @@ def calc_widths_by_ratios(display_width:tuple|int=default_display_widths,
             return {int(ratio * width)  for width in display_width 
                                         for ratio in pixel_ratio}
 
-default_widths = calc_widths_by_ratios()
+# default_widths = calc_widths_by_ratios()
+default_widths = (800, 1000, 1200, 1400, 1600, 2000, 2400, 2800)
 
 def downscale_to_width(img, new_width:int, old_width:int, old_height:int):
     
@@ -34,20 +36,19 @@ def downscale_to_width(img, new_width:int, old_width:int, old_height:int):
         kwidth = max(3, width_factor + (1 - (width_factor % 2))) 
         img = cv.GaussianBlur(img, (kwidth, kwidth), 0)
 
-    return cv.resize(img, 
-                     (new_width, (old_height * new_width) // old_width), 
-                     cv.INTER_AREA)
+    return cv.resize(   img, 
+                        (new_width, (old_height * new_width) // old_width), 
+                        cv.INTER_AREA   )
 
-def write_resized_img(img, 
-                      new_width:int, 
-                      output_dir:os.PathLike = None, 
-                      output_name:str = None, 
-                      output_ext:str=".png", 
-                      output_path:os.PathLike = None,
-                      is_nail:bool=False):
+def write_resized_img(  img, 
+                        new_width:int, 
+                        output_dir:os.PathLike = None, 
+                        output_name:str = None, 
+                        output_ext:str=".png", 
+                        output_path:os.PathLike = None,
+                        is_nail:bool=False  ):
     path = ''
     if output_path is None:
-        # print(f"outname:{output_name}" + f"\twidth:{new_width}" + "\tisNail:" + ("_nail" if is_nail else "") + f"\toutExtension:{output_ext}")
         path = os.path.join(output_dir, 
                             f"{output_name}_{new_width}w" 
                                     + ("_nail" if is_nail else "") 
@@ -69,31 +70,62 @@ def write_downscale(img,
                     output_name:str, 
                     output_ext:str=".png", 
                     is_nail:bool=False):
-    return write_resized_img(downscale_to_width(img, new_width, old_width, old_height), 
-                             new_width=new_width, 
-                             output_dir=output_dir, 
-                             output_name=output_name, 
-                             output_ext=output_ext, 
-                             is_nail=is_nail)
+    return write_resized_img(   downscale_to_width(img, new_width, old_width, old_height), 
+                                new_width=new_width, 
+                                output_dir=output_dir, 
+                                output_name=output_name, 
+                                output_ext=output_ext, 
+                                is_nail=is_nail )
 
-def resize_comics(path:os.PathLike, 
-                  output_dir:os.PathLike, 
-                  output_name:str, 
-                  output_ext:str=".png", 
-                  output_nail_ext:str=".jpg", 
-                  output_widths=default_widths, 
-                  output_nail_widths=default_nail_widths):
+def resize_comics(  path:os.PathLike, 
+                    output_dir:os.PathLike, 
+                    output_name:str, 
+                    output_ext:str=".png", 
+                    output_nail_ext:str=".jpg", 
+                    output_widths=default_widths, 
+                    output_nail_widths=default_nail_widths, 
+                    use_separate_directories=True, 
+                    make_img_metadata=True):
     img = cv.imread(path)
     assert img is not None, path + " could not be read."
 
-    height, width = img.shape[:2]
+    if use_separate_directories:
+        img_dir = pathlib.Path(output_dir) / output_name
+        reading_img_dir = img_dir / 'reading'
+        nail_img_dir = img_dir / 'nail'
+        for dir in [img_dir, reading_img_dir, nail_img_dir]:
+            if not dir.exists(): dir.mkdir()
+
+        if make_img_metadata:
+            reading_img_metadata = {
+                    "alttext": input(f"Enter comic image alt text for {output_name}.\n> "), 
+                    "ratio": input("Enter comic aspect ratio (format `width:height`) > "), 
+                    "purpose": "page"
+            }
+            with open(reading_img_dir / 'metadata.json', mode='w', encoding='utf_8') \
+                    as fp:
+                json.dump(reading_img_metadata, fp)
+
+            nail_img_metadata = {
+                    "alttext": input(f"Enter thumbnail alt text for {output_name}.\n> "), 
+                    "ratio": "1:1", 
+                    "purpose": "thumbnail"
+            }
+            with open(nail_img_dir / 'metadata.json', mode='w', encoding='utf_8')  \
+                    as fp:
+                json.dump(nail_img_metadata, fp)
+
+    else: 
+        reading_img_dir = nail_img_dir = output_dir
+
+    height, width = img.shape[:2] # cv2 uses matrix notation where height is first
     for new_width in output_widths:
         if new_width <= width:
             write_downscale(img, 
                             new_width, 
                             width, 
                             height, 
-                            output_dir, 
+                            reading_img_dir, 
                             output_name, 
                             output_ext=output_ext)
         else: print(f"Didn't downscale to {new_width}px since {os.path.basename(path)} "
@@ -101,11 +133,18 @@ def resize_comics(path:os.PathLike,
 
     # TODO: condition for landscape images
     for nail_width in output_nail_widths:
-        nail_img = downscale_to_width(img, nail_width, width, height)
-        nail_img_crop = nail_img[0:nail_width, :] # height, then width
+        nail_img = None
+        nail_img_crop = None
+        if height > width:
+            nail_img = downscale_to_width(img, nail_width, width, height)
+            nail_img_crop = nail_img[0:nail_width, :] # [y, x]
+        else:
+            nail_img = downscale_to_width(img, nail_width * (width // height), width, height)
+            nail_img_crop = nail_img[:, 0:nail_width] # [y, x]
+
         write_resized_img(nail_img_crop, 
                           new_width=nail_width, 
-                          output_dir=output_dir, 
+                          output_dir=nail_img_dir, 
                           output_name=output_name, 
                           output_ext=output_nail_ext, 
                           is_nail=True)
@@ -130,7 +169,7 @@ def resize_folder(input_dir:os.PathLike,
                 )
 
 def unquote(s:str):
-    return s.strip("'\"\\")
+    return s.rstrip("'\"\\")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-d", "--indir", default=default_in_dir, type=str)
@@ -145,15 +184,20 @@ parser.add_argument("-s", "--spread", choices=["normal", "double"], default="nor
 args = parser.parse_args()
 widths = args.width if args.width is not None else default_widths
 nailwidths = args.nailwidth if args.nailwidth is not None else default_nail_widths
-in_dir_path = pathlib.Path(unquote(args.indir))
-out_dir_path = pathlib.Path(unquote(args.outdir))
+in_dir_path = pathlib.Path(unquote(args.indir)).absolute()
+out_dir_path = pathlib.Path(unquote(args.outdir)).absolute()
+if not out_dir_path.exists(): out_dir_path.mkdir()
 
 if args.infile is None or args.indir != default_in_dir:
-    resize_folder(in_dir_path, out_dir_path, output_ext=args.extension, output_widths=widths, output_nail_widths=nailwidths)
+    resize_folder(  in_dir_path, 
+                    out_dir_path, 
+                    output_ext=args.extension, 
+                    output_widths=widths, 
+                    output_nail_widths=nailwidths   )
 
 for infile, outname in zip(args.infile, args.outname):
     resize_comics(  infile, 
-                    args.outdir, 
+                    out_dir_path, 
                     outname, 
                     output_ext=args.extension, 
                     output_widths=widths, 
@@ -161,7 +205,7 @@ for infile, outname in zip(args.infile, args.outname):
 for infile in args.infile[len(args.outname):]:
     outname = os.path.splitext(os.path.basename(infile))[0]
     resize_comics(  infile, 
-                    args.outdir, 
+                    out_dir_path, 
                     outname, 
                     output_ext=args.extension, 
                     output_widths=widths, 

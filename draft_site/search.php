@@ -143,18 +143,18 @@ if ($prevExists !== false) {
             // first, prep the info we'll need
             $getTags = Briel\getTagsFromPageIDStmt($pdoConnection);
             $getCWs = Briel\getCWsFromPageIDStmt($pdoConnection);
-            $getThumbnail = Briel\getThumbnailFromPageIDStmt($pdoConnection);
+            $getThumbnails = Briel\getThumbnailFromPageIDStmt($pdoConnection);
             $getThumbnailContingency = Briel\getMinSizeFileFromPageIDStmt($pdoConnection);
             
             // next, get the info for each page (lists of tags, cws, thumbnails)
             $resultInfos = array_fill(0, count($results), null);
             for ($i = 0; $i < count($results); $i++) {
-                $getThumbnail->execute([$results[$i]['pageid']]);
-                $thumbnailRecord = null;
-                if (($thumbnailRecord = $getThumbnail->fetch(PDO::FETCH_ASSOC)) === false) {
+                $getThumbnails->execute([$results[$i]['pageid']]);
+                $thumbnailRecords = [];
+                if (($thumbnailRecords = $getThumbnails->fetchAll(PDO::FETCH_ASSOC)) == []) {
                     $getThumbnailContingency->execute([$results[$i]['pageid']]);
                     // If this also returns false, there are no associated files.
-                    $thumbnailRecord = $getThumbnailContingency->fetch(PDO::FETCH_ASSOC);
+                    $thumbnailRecords = [$getThumbnailContingency->fetch(PDO::FETCH_ASSOC)];
                 } 
                 
                 $getTags->execute([$results[$i]['pageid']]);
@@ -165,7 +165,7 @@ if ($prevExists !== false) {
                         $execList, 
                         $getTags->fetchAll(PDO::FETCH_COLUMN), 
                         $getCWs->fetchAll(PDO::FETCH_COLUMN), 
-                        $thumbnailRecord, 
+                        $thumbnailRecords, 
                         $getParams['exact'] == Briel\CHECKBOXON
                 );
             }

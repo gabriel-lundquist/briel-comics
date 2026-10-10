@@ -17,25 +17,25 @@ const THUMBNAILWIDTH = '100px';
 
 const DEFAULTWINDOWWIDTHS = [DISPLAYWIDTH1, DISPLAYWIDTH2];
 const DEFAULTDISPLAYWIDTHSORDERED = [800, 1400, 2100];
-const DEFAULTFILEWIDTHSORDERED = [  800, 
-                                    1000, 
-                                    1200, 
-                                    1400, 
-                                    1600, 
-                                    1750, 
-                                    2100, 
-                                    2400, 
-                                    2625, 
-                                    2800, 
-                                    3150, 
-                                    3675, 
-                                    4200,
-                                    6300    ];
+// const DEFAULTFILEWIDTHSORDERED = [  800, 
+//                                     1000, 
+//                                     1200, 
+//                                     1400, 
+//                                     1600, 
+//                                     1750, 
+//                                     2100, 
+//                                     2400, 
+//                                     2625, 
+//                                     2800, 
+//                                     3150, 
+//                                     3675, 
+//                                     4200,
+//                                     6300    ];
 
-const DEFAULTPREVLINK = HOMEPATH;
-const DEFAULTNEXTLINK = COMMENTPATH;
+const DEFAULTPREVLINK = "";
+const DEFAULTNEXTLINK = "";
 const DEFAULTPREVUPDATELINK = HOMEPATH;
-const DEFAULTNEXTUPDATELINK = HOMEPATH;
+const DEFAULTNEXTUPDATELINK = COMMENTPATH;
 const DEFAULTNEXTLINKS = [DEFAULTNEXTLINK, DEFAULTNEXTUPDATELINK];
 const DEFAULTPREVLINKS = [DEFAULTPREVLINK, DEFAULTPREVUPDATELINK];
 
@@ -54,7 +54,7 @@ class SearchResultInfo {
                                 public array $tokenExecList, 
                                 public array $pageTags, 
                                 public array $pageContWarns, 
-                                public array $thumbnailRecord, 
+                                public array $thumbnailRecords, 
                                 public bool $isExact) {
         $this->date = createDateFromSQLDateTime($searchRecord['postdate']);
     }
@@ -156,6 +156,9 @@ class PageInfo {
                                 public array $contWarns, 
                                 public string $spreadType, 
                                 public string $stylePath, 
+                                public bool $isFirstOfUpd8, 
+                                public string $firstOfUpd8Link, 
+                                public string $updateTitle, 
                                 ?array $srcWidthsOrdered = null, 
                                 public array $windowWidthsOrdered = DEFAULTWINDOWWIDTHS) {
                                     // ^ breakpoints
@@ -289,6 +292,14 @@ function longRightArrowSVG(string $svgTags = "") {
     return ob_get_flush();
 }
 
+/**
+ * Summary of Briel\bedSVG
+ * Outputs the inline HTML SVG code for the bed graphic. Starts an output buffer and 
+ * flushes to output.
+ * @param string $svgTags
+ * @param bool $simplify
+ * @return bool|string What's returned by `ob_get_flush()`.
+ */
 function bedSVG(string $svgTags = "", bool $simplify = false) { 
     ob_start();
     if ($simplify) { ?>
@@ -351,14 +362,15 @@ function shortVerticalLineSVG(string $svgTags = "") {
 function generatePrevButton($prevLink, 
                             bool $smallGraphic = false, 
                             string $buttonText = 'Backward', 
-                            string $labelID = 'prev-label') { 
+                            string $labelID = 'prev-label', 
+                            bool $includeIcon = true) { 
     ob_start(); ?>
     <a href="<?= $prevLink ?>" 
         class="nav-button prev-button"
         title="Press Z, A, or left arrow"
         aria-labelledby="<?= $labelID ?>"><?php 
-        leftArrowSVG('class="ui"', simplify: $smallGraphic); 
-        ?><span id="<?= $labelID ?>" class="button-text"><?= $buttonText ?></span>
+        if ($includeIcon) leftArrowSVG('class="ui"', simplify: $smallGraphic); 
+        ?><span id="<?= $labelID ?>" class="button-text"><?= htmlSpecialChars($buttonText) ?></span>
     </a>
     <?php
     return ob_get_flush();
@@ -367,14 +379,15 @@ function generatePrevButton($prevLink,
 function generateNextButton($nextLink, 
                             bool $smallGraphic = false, 
                             string $buttonText = 'Forward', 
-                            string $labelID = 'next-label') { 
+                            string $labelID = 'next-label',
+                            bool $includeIcon = true) { 
     ob_start(); ?>
     <a href="<?= $nextLink ?>" 
         class="nav-button next-button"
         title="Press D, C, or right arrow"
         aria-labelledby="<?= $labelID ?>">
-        <span id="<?= $labelID ?>" class="button-text"><?= $buttonText ?></span><?php 
-        rightArrowSVG('class="ui"', simplify: $smallGraphic); ?>
+        <span id="<?= $labelID ?>" class="button-text"><?= htmlSpecialChars($buttonText) ?></span><?php 
+        if ($includeIcon) rightArrowSVG('class="ui"', simplify: $smallGraphic); ?>
     </a>
     <?php
     return ob_get_flush();
@@ -388,7 +401,8 @@ function generateSkipBackButton($skipBackLink,
         class="nav-button prev-upd8-button"
         title="Hold shift and press A, Z, or left arrow"
         aria-labelledby="<?= $labelID ?>"><?php longLeftArrowSVG('class="ui"'); 
-        ?><span id="<?= $labelID ?>" class="button-text"><?= $buttonText ?></span>
+        ?><span id="<?= $labelID ?>" 
+                class="button-text"><?= htmlSpecialChars($buttonText) ?></span>
     </a>
     <?php
     return ob_get_flush();
@@ -402,13 +416,22 @@ function generateSkipForthButton(   $nextUpd8Link,
         class="nav-button next-upd8-button"
         title="Hold shift and press D, C, or right arrow"
         aria-labelledby="<?= $labelID ?>">
-        <span id="<?= $labelID ?>" class="button-text"><?= $buttonText ?></span><?php 
+        <span id="<?= $labelID ?>" 
+                class="button-text"><?= htmlSpecialChars($buttonText) ?></span><?php 
         longRightArrowSVG('class="ui"'); ?>
     </a>
     <?php
     return ob_get_flush();
 }
 
+/**
+ * Summary of Briel\generateHomeButton
+ * @param bool $smallGraphic Uses a smaller graphic.
+ * @param string $labelID An ARIA label.
+ * @param bool $textFirst If `true`, the button text (`Home`) is output before the 
+ * graphic. If `false`, it's output after.
+ * @return bool|string
+ */
 function generateHomeButton(bool $smallGraphic = false, 
                             string $labelID = 'home-label', 
                             bool $textFirst = false) { 
@@ -434,13 +457,11 @@ function generateArchiveButton( string $labelID = 'archive-label',
         class="nav-button archive-button"
         aria-labelledby="<?= $labelID ?>"><?php 
     if ($leftGraphic) {
-        ?><span class="separator"> <!-- Sorry, bad HTML practice --></span><?php
         archiveLeftSVG('class="ui"');
     }
         ?><span id="<?= $labelID ?>" class="button-text">Archive</span><?php
     if ($rightGraphic) {
         archiveRightSVG('class="ui"');
-        ?><span class="separator"> <!-- Sorry, bad HTML practice --></span><?php
     } 
     ?></a>
     <?php
@@ -475,10 +496,13 @@ function generateRandomButton(  bool $smallGraphic = false,
 }
 
 function generateViewButton(string $whatsBeingViewed, 
-                            string $getSuffix, 
+                            array $getParams, 
                             string $titleText = "") {
     ob_start(); ?>
-    <a class="nav-button view-button" href="/draft_site/view.php?<?= $getSuffix ?>" title="<?= $titleText ?>">
+    <a  class="nav-button view-button" 
+        href="<?= SITEROOT ?>view.php<?= formatGETParameters($getParams) ?>" 
+        title="<?= htmlspecialchars($titleText) ?>"
+    >
         <span class="button-text">View</span>
         <svg class="ui" viewbox="0 0 1152 1374" version="1.1" xmlns="http://www.w3.org/2000/svg">
             <g>
@@ -503,27 +527,32 @@ function generateViewButton(string $whatsBeingViewed,
                 <path d="m792 218c-0.504 11-13.1 20.7-20.7 25.2-4.37-8.27 6.9-24.6 16.8-26l1.95 0.183z"/>
             </g>
         </svg>
-        <span class="button-text"><?= $whatsBeingViewed ?></span>
+        <span class="button-text"><?= htmlSpecialChars($whatsBeingViewed) ?></span>
     </a>
     <?php
     return ob_get_flush();
 }
 
 function generateViewUpdateButton(int $updateID) {
-    return generateViewButton('update', "updateid=$updateID", 'View the whole update on one webpage');
+    return generateViewButton('update', 
+                              ['updateid' => $updateID], 
+                              'View the whole update on one webpage');
 }
 
 function generateViewSearchButton(array $getParams) {
-    return generateViewButton('search', formatGETParameters($getParams), 'View all results on one webpage');
+    return generateViewButton('search', $getParams, 'View all results on one webpage');
 }
 
-/**
- * Summary of Briel\generateComicpage
- * @param PageInfo $page
- * @return array|bool|string|null
- */
-function generateComicpage(PageInfo $page) {
-    $searchPath = SEARCHPATH;
+function isDefaultPrevLink(string $link) {
+    return \in_array($link, DEFAULTPREVLINKS);
+}
+
+function isDefaultNextLink(string $link) {
+    return \in_array($link, DEFAULTNEXTLINKS);
+}
+
+function generateComicpage( PageInfo $page, 
+                            $searchPath = SEARCHPATH    ) {
     ob_start(); 
 ?>
 <!doctype html>
@@ -546,31 +575,55 @@ function generateComicpage(PageInfo $page) {
 
         <link href="<?= FONTFACESPATH ?>" rel="stylesheet">
         <link href="<?= READINGSTYLEPATH ?>" rel="stylesheet">
+        <link href="<?= NAVBUTTONSTYLEPATH ?>" rel="stylesheet">
         <link href="<?= $page->stylePath ?>" rel="stylesheet" id="color-style">
 
         <script type="module" src="<?= READINGSCRIPTPATH ?>"></script>
     </head>
 
     <body>
+        <?php 
+        if ($page->prevLink) {  ?>
         <a href="<?= $page->prevLink ?>" class="nav-button prev-button" title="Backward"></a>
-
-        <article class="page-display">
+<?php   } else {    ?>
+        <div class="separator"> </div>
+<?php   }
+        ?>
+        <article class="page-display"> 
             <main> 
+                <h1><?= 
+                    ($page->isFirstOfUpd8 ? 
+                            ""
+                            : "<a href=\"{$page->firstOfUpd8Link}\" 
+                                title=\"Return to the first page of {$page->updateTitle}\"
+                                >")
+                    . $page->record['title'] 
+                    . ($page->isFirstOfUpd8 ? "" : "</a>")?></h1>
                 <?php generateComicDisplayElements($page); ?>
                 <nav>
                     <p class="nav-line">
                         <?php 
-                        generatePrevButton($page->prevLink);
+                        if (isDefaultPrevLink($page->prevLink)) {
+                            generatePrevButton(
+                                    $page->prevLink, 
+                                    buttonText: "This the very start! :O", 
+                                    includeIcon: false);
+                        } else generatePrevButton($page->prevLink);
                         echo "\n";
-                        generateNextButton($page->nextLink);
+                        if (isDefaultNextLink($page->nextLink)) {
+                            generateNextButton(
+                                    $page->nextLink, 
+                                    buttonText: "More to come :)", 
+                                    includeIcon: false);
+                        } else generateNextButton($page->nextLink);
                         ?>
                     </p>
                     <p class="nav-line">
                         <?php 
                         generateSkipBackButton(
                                 $page->skipBackLink, 
-                                \in_array($page->skipBackLink, DEFAULTPREVLINKS) ? 
-                                        "More" : 
+                                buttonText: isDefaultPrevLink($page->skipBackLink) ? 
+                                        "Home" : 
                                         "Skip back"
                         );
                         echo "\n";
@@ -578,14 +631,21 @@ function generateComicpage(PageInfo $page) {
                         echo "\n";
                         generateSkipForthButton(
                                 $page->nextUpd8Link, 
-                                \in_array($page->nextUpd8Link, DEFAULTNEXTLINKS) ? 
-                                        "More" : 
+                                buttonText: isDefaultNextLink($page->nextUpd8Link) ? 
+                                        "Extra" : 
                                         "Skip forth"
                         );
                         ?>
                     </p>
                     <p class="nav-line">
                         <?php generateArchiveButton(); ?>
+                    </p>
+                    <p class="nav-line">
+                        <?php
+                        generateRandomButton();
+                        echo "\n";
+                        generateViewUpdateButton($page->updateID);
+                        ?>
                     </p>
                 </nav>
                 <?php generateReadingAccessoryElements($page); ?>
@@ -596,20 +656,20 @@ function generateComicpage(PageInfo $page) {
             </footer>
 
         </article>  
-        
+        <?php 
+        if ($page->nextLink) {  ?>
         <a href="<?= $page->nextLink ?>" class="nav-button next-button" title="Forward"></a>
+<?php   } else {    ?>
+        <div class="separator"> </div>
+<?php   }
+        ?>
     </body>
 </html>
 
 <?php
-    if (LOCALSITE) {
-        return ob_get_flush();
-    } else {    // temporary, until I get NGINX hooked up
-        $pageStr = ob_get_clean();
-        $pageStr = replacePathsForServerSite($pageStr);
-        echo $pageStr;
-        return $pageStr;
-    }
+    $pageStr = ensureServerPaths(ob_get_clean());
+    echo $pageStr;
+    return $pageStr;
 }
 
 function generateReadingStyle(  $bgColor, 
@@ -822,13 +882,9 @@ a.text-desc-heading {
 }
 
 <?php
-    if (LOCALSITE) {    
-        return ob_get_flush();
-    } else {    // temporary, until I get NGINX hooked up
-        $sheetStr = replacePathsForServerSite(ob_get_clean());
-        echo $sheetStr;
-        return $sheetStr;
-    }
+    $pageStr = ensureServerPaths(ob_get_clean());
+    echo $pageStr;
+    return $pageStr;
 }
 
 function generateImgNavMap( int $width,
@@ -841,7 +897,7 @@ function generateImgNavMap( int $width,
                             string $leftAlt = "Backward", 
                             string $rightAlt = "Forward") {
     ob_start(); ?>
-    <map name="<?= $name ?>" 
+    <map name="<?= htmlspecialchars($name) ?>" 
         <?= $createIDFromName ? ("id=\"$name\"") : '' ?>
     ><?php 
     if ($leftLink) {    ?> 
@@ -849,7 +905,7 @@ function generateImgNavMap( int $width,
             shape="rect"
             coords="0,0,<?= $navFraction * $width ?>,<?= $height ?>"
             href="<?= $leftLink ?>"
-            alt="<?= $leftAlt ?>"
+            alt="<?= htmlspecialchars($leftAlt) ?>"
             class="nav-button prev-button"
         /><?php
     }
@@ -859,7 +915,7 @@ function generateImgNavMap( int $width,
             shape="rect"
             coords="<?= (1 - $navFraction) * $width ?>,0,<?= $width ?>,<?= $height ?>"
             href="<?= $rightLink ?>"
-            alt="<?= $rightAlt ?>"
+            alt="<?= htmlspecialchars($rightAlt) ?>"
             class="nav-button next-button"
         /><?php
     }   ?>
@@ -872,7 +928,8 @@ function generateComicDisplayElements(  PageInfo $page,
                                         bool $useImgMapNav = true, 
                                         bool $generateImgMapNav = true, 
                                         string $imgMapName = "nav-on-comic",
-                                        bool $useResponsiveSizes = true ) {
+                                        bool $useResponsiveSizes = true,
+                                        string $titleText = ""  ) {
     // create an array of files ordered by width, keyed to width
     $filesWidthOrder = array_combine(   array_column($page->pageImgRecords, 'width'), 
                                         $page->pageImgRecords );
@@ -889,9 +946,10 @@ function generateComicDisplayElements(  PageInfo $page,
     } ?>
     <img
         class="comic-page<?= ($page->spreadType == 'screenfit') ? ' fit-page' : '' ?>"
+        <?= $titleText ? "title=\"$titleText\"" : "" ?>
         srcset="<?php
         foreach ($filesWidthOrder as $file) {
-            echo $file['path'] . ' ' . $file['width'] . "w,\n";
+            echo "{$file['path']} {$file['width']}w,\n";
         } ?>"
         sizes = "<?php 
         if ($useResponsiveSizes) {
@@ -917,7 +975,7 @@ function generateComicDisplayElements(  PageInfo $page,
         }
          ?>" 
         src="<?= $page->defaultFileRecord['path'] ?>"
-        alt="<?= $page->defaultFileRecord['alttext'] ?>"
+        alt="<?= htmlspecialchars($page->defaultFileRecord['alttext']) ?>"
         <?= $useImgMapNav ? ('usemap="#' . $imgMapName . '"') : '' ?>
         id="single-page"
     ><?php 
@@ -997,9 +1055,10 @@ function generateBlogEntryElements(BlogInfo $blog) {
 
 function generateHomepage(  BlogInfo $blogInfo, 
                             PageInfo $pageInfo, 
+                            string $updateTitle, 
                             string $searchPath = SEARCHPATH, 
-                            ?string $addlStylePath = null, 
-                            ?string $scriptPath = null  ) {
+                            string $addlStylePath = "", 
+                            string $scriptPath = ""  ) {
     ob_start();
 ?>
 <!doctype html>
@@ -1014,12 +1073,13 @@ function generateHomepage(  BlogInfo $blogInfo,
         <meta name="author" content="Breel">
         <meta name="description" content="A home page for a comics website.">
         
-        <title><?= randomPageTitle() ?> home</title>
+        <title><?= randomPageTitle() ?></title>
         <link href="<?= SITEICONPATH ?>" rel="icon" type="image/x-icon">
 
         <link href="<?= FONTFACESPATH ?>" rel="stylesheet">
-        <link href="/draft_site/styles/update_list_style.css" rel="stylesheet">
+        <link href="<?= LISTSTYLEPATH ?>" rel="stylesheet">
         <link href="<?= READINGSTYLEPATH ?>" rel="stylesheet">
+        <link href="<?= NAVBUTTONSTYLEPATH ?>" rel="stylesheet">
         <link href="<?= $pageInfo->stylePath ?>" rel="stylesheet" id="color-style">
         <link href="<?= HOMESTYLEPATH ?>" rel="stylesheet" id="home-style">
 <?php   if ($addlStylePath) { ?>
@@ -1033,11 +1093,7 @@ function generateHomepage(  BlogInfo $blogInfo,
     </head>
 
     <body>
-<?php   if ($pageInfo->prevLink AND !\in_array($pageInfo->prevLink, DEFAULTPREVLINKS)) { ?>
-        <a href="<?= $pageInfo->prevLink ?>" class="nav-button prev-button" title="Backward"></a>
-<?php   } else { ?> 
         <div class="separator"> </div> <!-- Bad HTML practice, sorry -->
-<?php   } ?>
         
         <article class="page-display">         
             <header class="interactive-graphic">
@@ -1065,12 +1121,12 @@ function generateHomepage(  BlogInfo $blogInfo,
     foreach ([500, 800, 1100, 1400, 1700, 2000] as $width) {
         echo SITEROOT . "images/decoration/{$bannerFileStem}_{$width}w.{$restExt} {$width}w,\n";
     } ?>"
-                    src="<?= SITEROOT ?>images/decoration/<?= $bannerFileStem ?>_800w.<?= $restExt ?>"
+                    src="<?= DECORATIONDIRPATH . $bannerFileStem ?>_800w.<?= $restExt ?>"
                     sizes="(max-width: 800px) 100vw, 
                            (max-width: 1920px) 800px, 
                            (max-width: 3000px) 1400px, 
                            2000px"
-                    alt="<?= $bannerAlt ?>";
+                    alt="<?= htmlspecialchars($bannerAlt) ?>";
                 >
                 <img 
                     id="banner-interacting"
@@ -1079,21 +1135,23 @@ function generateHomepage(  BlogInfo $blogInfo,
     foreach ([500, 800, 1100, 1400, 1700, 2000] as $width) {
         echo "\n" . SITEROOT . "images/decoration/{$interactBannerFileStem}_{$width}w.{$interactExt} {$width}w,";
     } ?>"
-                    src="<?= SITEROOT ?>images/decoration/<?= $interactBannerFileStem ?>_800w.<?= $interactExt ?>"
+                    src="<?= DECORATIONDIRPATH . $interactBannerFileStem ?>_800w.<?= $interactExt ?>"
                     sizes="(max-width: 800px) 90vw, 
                            (max-width: 1920px) 800px, 
                            (max-width: 3000px) 1400px, 
                            2000px"
-                    alt="<?= $bannerAlt ?>"
+                    alt="<?= htmlspecialchars($bannerAlt) ?>"
                 >
             </header>
 
             <main> 
                 <!-- Clicking the page takes you to the reading page. -->
                 <a class="whole-page-link" href="<?= $pageInfo->record['path'] ?>">
-                    <?php generateComicDisplayElements( $pageInfo, 
-                                                        useImgMapNav: false, 
-                                                        generateImgMapNav: false ); ?>
+                    <?php generateComicDisplayElements( 
+                            $pageInfo, 
+                            useImgMapNav: false, 
+                            generateImgMapNav: false, 
+                            titleText: "Click to read $updateTitle"); ?>
                 </a>
                 <nav>
                     <p class="nav-line">
@@ -1110,14 +1168,19 @@ function generateHomepage(  BlogInfo $blogInfo,
     if ($pageInfo->skipBackLink AND !\in_array($pageInfo->skipBackLink, DEFAULTPREVLINKS)) 
         generateSkipBackButton($pageInfo->skipBackLink); 
     echo "\n";
-    generateRandomButton();
-    echo "\n";
     if ($pageInfo->nextUpd8Link AND !\in_array($pageInfo->nextUpd8Link, DEFAULTNEXTLINKS)) 
         generateSkipForthButton($pageInfo->nextUpd8Link);
                         ?>
                     </p>
                     <p class="nav-line">
                         <?php generateArchiveButton(); ?>
+                    </p>
+                    <p class="nav-line">
+                        <?php 
+    generateRandomButton();
+    echo "\n";
+    generateViewUpdateButton($pageInfo->updateID);
+                        ?>
                     </p>
                 </nav>
 
@@ -1180,7 +1243,7 @@ function generateHomepage(  BlogInfo $blogInfo,
                             Blegh.</li>
                         <li><a href="https://www.reddit.com/u/frig_darns_revenge/">u/frig_darns_revenge 
                             on reddit</a> I guess. Should I make a subreddit?</li>
-                        <li>I'm also figuring out how to do an email list. Stay tuned.</li>
+                        <li>An RSS feed and an email list are priorities. Stay tuned.</li>
                     </ul>
                 </aside>
 
@@ -1188,10 +1251,13 @@ function generateHomepage(  BlogInfo $blogInfo,
                     <h2>About</h2>
                     <h3>The comics</h3>
                     <p>Mostly these are made with technical pens and a nib pen on bristol. 
-    They're traced from projections made by a bio-optical clairvoyance platform of 
-    anachronistic design.</p>
+    Each page and update is tagged with content warnings which may include gore and sex. 
+    If you're a teen and you find 
+    yourself deeply relating to any characters, please be careful, because bad things will
+    happen to them.</p>
                     <h3>The website</h3>
-                    <p>This is all handrolled with HTML/CSS/Javascript on the frontend and 
+                    <p>This is all handrolled (no AI) with HTML/CSS/Javascript on the 
+    frontend and 
     PHP/MySQL on the backend, served with NGINX. No external libraries or frameworks 
     were used except PHP's
     MySQL PDO extension, because honestly, fuck React. Fuck bloat, fuck web 2.0. 
@@ -1203,7 +1269,7 @@ function generateHomepage(  BlogInfo $blogInfo,
                     <h3>The author</h3>
                     <p>Breel (any pronouns) is a large mammal living somewhere on 
     <a href="https://en.wikipedia.org/wiki/Abya_Yala">Abya Yala</a>, 
-    prone to fits of panic and madness. Xe can be incapacitated by standard methods.
+    prone to fits of panic and madness. 
     Ey started making bad fancomics
     (most of which are here) sometime in the 2010s and everything spiraled
     out of control after that. 
@@ -1220,24 +1286,15 @@ function generateHomepage(  BlogInfo $blogInfo,
             </footer>
 
         </article>  
-        <?php 
-        if ($pageInfo->nextLink AND !\in_array($pageInfo->nextLink, DEFAULTNEXTLINKS)) { ?>
-        <a href="<?= $pageInfo->nextLink ?>" class="nav-button next-button" title="Forward"></a>
-<?php   } else { ?> 
+
         <div class="separator"> </div> <!-- Bad HTML practice, sorry -->
-<?php   } ?>
     </body>
 </html>
 
 <?php
-    if (LOCALSITE) {    
-        return ob_get_flush();
-    } else {    // temporary, until I get NGINX hooked up
-        $pageStr = ob_get_clean();
-        $pageStr = replacePathsForServerSite($pageStr);
-        echo $pageStr;
-        return $pageStr;
-    }
+    $pageStr = ensureServerPaths(ob_get_clean());
+    echo $pageStr;
+    return $pageStr;
 }
 
 /**
@@ -1277,9 +1334,10 @@ function randomPageTitle() {
  * Summary of Briel\generateNav
  * Does flush element to output. Start a buffer to prevent this.
  * @param int $totalPageCount
- * @param int $pageOneIndex 1-indexed page index
- * @param array $allLinks
- * @param bool $includeHomeButton Whether to include the home button below, default false
+ * @param int $pageOneIndex 1-indexed page index.
+ * @param array $allLinks The 1-indexed array of archive page links.
+ * @param bool $includeHomeButton Whether to include the home button below, default 
+ * `false`.
  * @return bool|string
  */
 function generateNav(   int $totalPageCount, 
@@ -1450,27 +1508,8 @@ function generateSearchEntry(SearchResultInfo $result) {
     ob_start();
 ?>
 <article class="search-entry">
-    <div class="detail-div">
-        
-        <div class="desc-para"><h4>Description:</h4>
-            Panel 1: Zissel meets Ayotli's gaze, expression concerned but frank. Zissel: "I also want to say that the administration is kind of stretched thin because of this whole situation, which, by the way, is the only reason I CAN say this to you without being reprimanded." Panel 2: A dark crack begins to shatter a grid. Ayotli looks on, holding her arms against each other. Zissel: "Normally the high shamans have these planned out years in advance but this one caught us by surprise and we haven't been able to be as rigorous as we should be." Panel 3: Zissel almost looks angry, jabbing a thumb at herself. Zissel: "So... our information-gathering isn't very rigorous. Our mapping isn't very rigorous. Our selection of advisor--read, ME--wasn't very rigorous." Panel 4: Ayotli stands and listens, surrounded by the chaos of the workshop. Zissel: "And our selection of hero--read, YOU--was even less so." Panel 5: Zissel is bent over in her chair, so now Ayotli has to look slightly down at her. The workshop disappears, and it's just the two of them, Zissel's words against Ayotli's expression--something subtle, something sad and concerned but not denying hope. Zissel: "We're playing it by ear." Panel 6: The workshop returns. Ayotli looks up and away, wondering. Ayotli: "Will we be okay?" Zissel looks down and away. Zissel: "Hm. We'll see." A darkness forebodes.        </div>
-    </div> <!-- class detail-div -->
-</article>
-
-<article class="search-entry">
     <div class="thumbnails-div">
-        <a href="<?= $result->searchRecord['path'] ?>" 
-           class="page-link">
-            <img
-                class="thumbnail"
-                attr-src="<?= $result->thumbnailRecord['path'] ?>"
-                src=""
-                alt="<?= $result->thumbnailRecord['alttext'] ?>"
-                width="<?= $result->thumbnailRecord['width'] ?>px"
-                height="<?= $result->thumbnailRecord['height'] ?>px"
-                loading="lazy"
-            >
-        </a> 
+        <?php generateThumbnail($result->thumbnailRecords, $result->searchRecord['path']); ?>
     </div>
     <div class="detail-div">
         <h3><a href="<?= $result->searchRecord['path'] ?>" class="page-link"><?= 
@@ -1653,9 +1692,11 @@ function generateSearchPage(string $searchStr,
 
         <link href="<?= FONTFACESPATH ?>" rel="stylesheet" />
         <link href="<?= LISTSTYLEPATH ?>" rel="stylesheet" />
+        <link href="<?= HEADERNAVSTYLEPATH ?>" rel="stylesheet" />
+        <link href="<?= NAVBUTTONSTYLEPATH ?>" rel="stylesheet">
         <link href="<?= STYLEDIRPATH ?>search_page.css" rel="stylesheet" />
         
-        <script type="module" src="<?= SITEROOT ?>js/search_page.js"></script>
+        <script type="module" src="<?= SEARCHSCRIPTPATH ?>"></script>
     </head>
 
     <body>
@@ -1690,7 +1731,6 @@ function generateSearchPage(string $searchStr,
                 </div>  
                 <?php generateViewSearchButton($getParams) ?>
             </div>
-            <button class="toggle-nails">Hide thumbnails</button>
             <?php
     foreach ($searchResultInfos as $result) {
         generateSearchEntry($result);
@@ -1716,14 +1756,9 @@ function generateSearchPage(string $searchStr,
 
 </html>
 <?php
-    if (LOCALSITE) {    
-        return ob_get_flush();
-    } else {    // temporary, until I get NGINX hooked up
-        $pageStr = ob_get_clean();
-        $pageStr = replacePathsForServerSite($pageStr);
-        echo $pageStr;
-        return $pageStr;
-    }
+    $pageStr = ensureServerPaths(ob_get_clean());
+    echo $pageStr;
+    return $pageStr;
 }
 
 /**
@@ -1765,7 +1800,42 @@ function generateAllSearchPages(string $searchStr,
     return $pageStrs; 
 }
 
-function generateArchiveEntry($updateInfo) {
+function generateThumbnail(array $thumbnailRecords, $linkPath = '') {
+    ob_start(); ?>
+    <a href="<?= $linkPath ?>" 
+        class="page-link">
+        <img
+            class="thumbnail"
+            attr-src="<?= $thumbnailRecords[0]['path'] ?>"
+            src="<?= $thumbnailRecords[0]['path'] ?>"
+            alt="<?= htmlspecialchars($thumbnailRecords[0]['alttext']) ?>"
+            srcset="<?php 
+            foreach ($thumbnailRecords as $nail) {
+                echo $nail['path'] . ' ' . $nail['width'] . "w,\n";
+            } ?>"
+            sizes="<?php 
+            for ($i = 0; $i < \count($thumbnailRecords) - 1; $i++) {
+                if ($i >= \count(DEFAULTWINDOWWIDTHS)) break;
+
+                echo "(max-width: " . DEFAULTWINDOWWIDTHS[$i] . "px) {$thumbnailRecords[$i]['width']}px,\n";
+            }
+            echo array_last($thumbnailRecords)['width'] . "px";
+            ?>"
+            loading="lazy"
+        >
+    </a> 
+    <?php
+    return ob_get_flush();
+}
+
+/**
+ * Summary of Briel\generateArchiveEntry
+ * Generates a single entry for an archive page. 
+ * Starts an output buffer and flushes to output.
+ * @param UpdateInfo $updateInfo
+ * @return bool|string
+ */
+function generateArchiveEntry(UpdateInfo $updateInfo) {
     ob_start();
 ?>
 <article class="archive-entry">
@@ -1820,19 +1890,8 @@ function generateArchiveEntry($updateInfo) {
         foreach (   array_map(  null, 
                                 $updateInfo->thumbnailRecordsOrdered, 
                                 $updateInfo->pageRecordsOrdered ) // zips them together
-                    as [$thumbnail, $page]  ) {     ?> 
-            <a href="<?= $page['path'] ?>" class="page-link">
-                <img
-                    class="thumbnail"
-                    attr-src="<?= $thumbnail['path'] ?>"
-                    src="<?= $thumbnail['path'] ?>"
-                    alt="<?= $thumbnail['alttext'] ?>"
-                    width="<?= THUMBNAILWIDTH ?>"
-                    height="<?= THUMBNAILWIDTH ?>"
-                    loading="lazy"
-                >
-            </a>
-            <?php
+                    as [$thumbnails, $page]  ) {        
+            generateThumbnail($thumbnails, $page['path']);
         }   ?>
         </div>
         <?php generateViewUpdateButton($updateInfo->updateRecord['updateid']) ?>
@@ -1844,11 +1903,12 @@ function generateArchiveEntry($updateInfo) {
 
 /**
  * Summary of Briel\generateArchivePage
- * @param array $updateInfos
- * @param int $pageIndex 1-indexed page index
+ * Generates an archive page. Starts an output buffer and flushes it.
+ * @param array $updateInfos `UpdateInfo` objects on this archive page.
+ * @param int $pageIndex 1-indexed archive page index.
  * @param int $totalPageCount
- * @param array $archivePagePaths
- * @return bool|string
+ * @param array $archivePagePaths Passed to `generateNav`.
+ * @return bool|string The return value of `ob_get_flush()`.
  */
 function generateArchivePage(   array $updateInfos, 
                                 int $pageIndex, 
@@ -1868,10 +1928,10 @@ function generateArchivePage(   array $updateInfos,
         <title>Archive | <?= randomPageTitle() ?></title>
         <link rel="icon" href="<?= SITEICONPATH ?>" type="image/x-icon" />
 
-        <link href="<?= SITEROOT ?>styles/defaults.css" rel="stylesheet" />
-        <link href="<?= SITEROOT ?>styles/<?= FONTFACESCSSNAME ?>" rel="stylesheet" />
-        <link href="<?= SITEROOT ?>styles/update_list_style.css" rel="stylesheet" />
-        <link href="<?= SITEROOT ?>styles/archive_page.css" rel="stylesheet" />
+        <link href="<?= FONTFACESPATH ?>" rel="stylesheet" />
+        <link href="<?= STYLEDIRPATH ?>entry_list_page.css" rel="stylesheet" />
+        <link href="<?= NAVBUTTONSTYLEPATH ?>" rel="stylesheet">
+        <link href="<?= STYLEDIRPATH ?>archive_page.css" rel="stylesheet" />
         
         <script type="module" src="<?= SITEROOT ?>js/archive_page.js"></script>
     </head>
@@ -1918,27 +1978,30 @@ function generateArchivePage(   array $updateInfos,
                         $archivePagePaths, 
                         includeHomeButton: true);
 
-            include 'copyrightElement.php';
+            include('copyrightElement.php');
             ?>
         </footer>
     </body>
 </html>
 <?php
-    if (LOCALSITE) {    
-        return ob_get_flush();
-    } else {    // temporary, until I get NGINX hooked up
-        $pageStr = ob_get_clean();
-        $pageStr = replacePathsForServerSite($pageStr);
-        echo $pageStr;
-        return $pageStr;
-    }
+    $pageStr = ensureServerPaths(ob_get_clean());
+    echo $pageStr;
+    return $pageStr;
 }
 
 /**
  * Summary of Briel\generateAllArchivePages
- * @param array<UpdateInfo> $allUpdateInfos
- * @param array $paths A reference, modified if an empty array
- * @return array 1-indexed array of strings, each being a full HTML page
+ * Given what is assumed to be the ordered `UpdateInfo` objects for every update, 
+ * generates the html pages for the entire archive. Starts an output buffer but does 
+ * *not* flush to output.
+ * @param array<UpdateInfo> $allUpdateInfos Assumed to be *all* updates
+ * @param array $paths A reference, replaced outright if an empty array, and added to
+ * if it has fewer entries than `$allUpdateInfos`. If it has more, the extra paths at 
+ * the end of the array beyond the length of `$allUpdateInfos` are ignored. If not 
+ * given, the paths are saved in the filesystem version of the archive folder 
+ * (referencing the `ARCHIVEDIRNAME` constant) with the name `archive_p<n>.html` 
+ * where `<n>` is replaced with a *1-indexed* index.
+ * @return array *1-indexed* array of strings, each being a full HTML page
  */
 function generateAllArchivePages(array $allUpdateInfos, array &$paths = []) {
     $infosOnPage = array_chunk($allUpdateInfos, RESULTSPERPAGE);
@@ -1995,7 +2058,9 @@ html {
 
 function generateViewPage(  array $pageInfos, 
                             string $viewTitle, 
-                            string $search = '' ) {
+                            string $search = '', 
+                            ?int $prevUpdateID = null, 
+                            ?int $nextUpdateID = null) {
     ob_start(); ?>
 <!doctype html>
 <html lang="en-US">
@@ -2017,42 +2082,6 @@ function generateViewPage(  array $pageInfos,
 
         <script type="module" src="<?= VIEWSCRIPTPATH ?>"></script>
 
-        <?php 
-        if ($pageInfos) {
-            $imgMapNamePrefix = 'nav-map-';
-            $imgMapNames = array_map(   fn($i) => $imgMapNamePrefix . $i, 
-                                        range(1, \count($pageInfos))    );
-            // $page = reset($pageInfos);
-            generateImgNavMap(  $pageInfos[0]->defaultFileRecord['width'], 
-                                $pageInfos[0]->defaultFileRecord['height'], 
-                                "#page-1-anchor-next", 
-                                "#page-2-anchor-next", 
-                                name: $imgMapNames[0], 
-                                createIDFromName: true,
-                                leftAlt: "Beginning"    );
-            for (   $i = 1; 
-                    $i < \count($pageInfos) - 1; 
-                    $i++    ) {
-                echo "\n";
-                generateImgNavMap(  $pageInfos[$i]->defaultFileRecord['width'], 
-                                    $pageInfos[$i]->defaultFileRecord['height'], 
-                                    "#page-$i-anchor-prev", 
-                                    "#page-" . ($i + 2) . "-anchor-next", 
-                                    name: $imgMapNames[$i], 
-                                    createIDFromName: true  );
-            }
-            if (\count($pageInfos) > 1) {
-                echo "\n";
-                generateImgNavMap(  \array_last($pageInfos)->defaultFileRecord['width'], 
-                                    \array_last($pageInfos)->defaultFileRecord['height'], 
-                                    "#page-" . (\count($pageInfos) - 1) . "-anchor-prev", 
-                                    "#page-" . (\count($pageInfos)) . "-anchor-prev", 
-                                    name: $imgMapNames[\count($pageInfos) - 1], 
-                                    createIDFromName: true,
-                                    rightAlt: "End" );
-            }
-        }
-        ?>
     </head>
 
     <body>
@@ -2062,6 +2091,42 @@ function generateViewPage(  array $pageInfos,
             <button title="Press -" class="smaller">Smaller</button>
             <p>Keyboard navigation is enabled.</p>
             <h1><?= $viewTitle ?></h1>
+            <?php 
+            if ($pageInfos) {
+                $imgMapNamePrefix = 'nav-map-';
+                $imgMapNames = array_map(   fn($i) => $imgMapNamePrefix . $i, 
+                                            range(1, \count($pageInfos))    );
+                // $page = reset($pageInfos);
+                generateImgNavMap(  $pageInfos[0]->defaultFileRecord['width'], 
+                                    $pageInfos[0]->defaultFileRecord['height'], 
+                                    "#page-1-anchor-next", 
+                                    "#page-2-anchor-next", 
+                                    name: $imgMapNames[0], 
+                                    createIDFromName: true,
+                                    leftAlt: "Beginning"    );
+                for (   $i = 1; 
+                        $i < \count($pageInfos) - 1; 
+                        $i++    ) {
+                    echo "\n";
+                    generateImgNavMap(  $pageInfos[$i]->defaultFileRecord['width'], 
+                                        $pageInfos[$i]->defaultFileRecord['height'], 
+                                        "#page-$i-anchor-prev", 
+                                        "#page-" . ($i + 2) . "-anchor-next", 
+                                        name: $imgMapNames[$i], 
+                                        createIDFromName: true  );
+                }
+                if (\count($pageInfos) > 1) {
+                    echo "\n";
+                    generateImgNavMap(  \array_last($pageInfos)->defaultFileRecord['width'], 
+                                        \array_last($pageInfos)->defaultFileRecord['height'], 
+                                        "#page-" . (\count($pageInfos) - 1) . "-anchor-prev", 
+                                        "#page-" . (\count($pageInfos)) . "-anchor-prev", 
+                                        name: $imgMapNames[\count($pageInfos) - 1], 
+                                        createIDFromName: true,
+                                        rightAlt: "End" );
+                }
+            }
+            ?>
         </header>
 
         <main>
@@ -2090,6 +2155,22 @@ function generateViewPage(  array $pageInfos,
             ?>
             <nav>
                 <p class="nav-line">
+                    <?php
+                    if ($prevUpdateID !== null) {
+                        generateSkipBackButton(
+                                SITEROOT . 'view.php' 
+                                . formatGETParameters(['updateid' => $prevUpdateID])
+                        );
+                    }
+                    if ($nextUpdateID !== null) {
+                        generateSkipForthButton(
+                                SITEROOT . 'view.php'
+                                . formatGETParameters(['updateid' => $nextUpdateID])
+                        );
+                    }
+                    ?>
+                </p>
+                <p class="nav-line">
                     <?php 
                     generateHomeButton(smallGraphic: true);
                     echo "\n";
@@ -2102,14 +2183,19 @@ function generateViewPage(  array $pageInfos,
     </body>
 </html>
     <?php
-    if (LOCALSITE) {    
-        return ob_get_flush();
-    } else {    // temporary, until I get NGINX hooked up
-        $pageStr = ob_get_clean();
-        $pageStr = replacePathsForServerSite($pageStr);
-        echo $pageStr;
-        return $pageStr;
-    }
+    $pageStr = ensureServerPaths(ob_get_clean());
+    echo $pageStr;
+    return $pageStr;
+}
+
+/**
+ * Summary of Briel\ensureServerPaths
+ * If a local site, this flushes 
+ * @param mixed $pageStr
+ * @return array|bool|string|null
+ */
+function ensureServerPaths($pageStr) {
+    return LOCALSITE ? $pageStr : replacePathsForServerSite($pageStr);
 }
 
 ?>

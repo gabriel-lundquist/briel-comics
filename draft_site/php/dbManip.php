@@ -133,6 +133,7 @@ function promptPathHTML() {
  * @param int $dbport
  * @param bool $enterPassword
  * @param bool $echoConnSuccess
+ * @param string $passwordEnvVarName
  * @return bool|\PDO
  */
 function pdoConnect(string $dbhost = 'localhost', 
@@ -140,14 +141,15 @@ function pdoConnect(string $dbhost = 'localhost',
                     string $dbname = 'briel_comics_test', 
                     int $dbport = 3307, 
                     bool $enterPassword = false,
-                    bool $echoConnSuccess = false   ) {
+                    bool $echoConnSuccess = false,
+                    string $passwordEnvVarName = 'COMIC_DB_PASSWORD') {
     try {
-        $conn = new \PDO("mysql:host=$dbhost;
-                          dbname=$dbname;
-                          port=$dbport", 
-                         $dbuser, 
-                         $enterPassword ? 
-                            promptInput("Enter password: ") : getenv('COMIC_DB_PASSWORD'));
+        $conn = new \PDO(   "mysql:host=$dbhost; dbname=$dbname; port=$dbport", 
+                            $dbuser, 
+                            $enterPassword ? 
+                                    promptInput("Enter password. > ") 
+                                    : getenv($passwordEnvVarName)
+                        );
         $conn->setAttribute(\PDO::ATTR_ERRMODE, 
                             \PDO::ERRMODE_EXCEPTION);
         if ( $echoConnSuccess ) echo "Connected successfully.\n";
@@ -158,13 +160,21 @@ function pdoConnect(string $dbhost = 'localhost',
     }
 }
 
+/**
+ * Summary of Briel\tryPDOConnect
+ * Attempts to establish that `$pdoConn` is a working database connection.
+ * Returns `false` if it is falsy and `pdoConnect()` also returns a falsy value.
+ * Otherwise returns `true`, i.e. `$pdoConn` (which is a reference) is a working 
+ * connection.
+ * @param mixed $pdoConn
+ * @return bool
+ */
 function tryPDOConnect(&$pdoConn) {
     if (!$pdoConn) {
         $pdoConn = pdoConnect();
         if (!$pdoConn) return false;
         else return true;
     } else return true;
-
 }
 
 function dumpQuery(string $query, \PDO $pdoConn) {
@@ -303,34 +313,28 @@ function getNoninteractiveFileRecordParts(  string $filePath,
             'filesize' => $fileSizeKB];
 }
 
-// DEFUNCT
-function getInteractiveFileRecordParts( \PDO $pdoConn, 
-                                        array $incompleteRecord = [],
-                                        ?string $ratioStr = null, 
-                                        ?\PDOStatement $ratioStatement = null   ) {
-    $alttext = promptInput("Enter alt text (or a path to it):\n> ");
-    if (is_readable($alttext)) {
-        $alttext = file_get_contents($alttext) ?: "";
-    }
-
-    if (!$ratioStatement) $ratioStatement = $pdoConn->prepare(
-            "SELECT ratioid FROM aspectratio WHERE ratio = ?;");
+function getAspectRatioIDInteractive( \PDO $pdoConn, 
+                                    ?\PDOStatement $ratioStatement = null, 
+                                    string $ratioStr = "") {
+    $ratioStatement ??= $pdoConn->prepare("SELECT ratioid FROM aspectratio WHERE ratio = ?;");
     $fetchedRow = null;
-    if (!$ratioStr) {
-        $ratioStr = promptInput("Enter aspect ratio (format width:height)\n> ");
-    }
+    if (!$ratioStr) $ratioStr = promptInput("Enter aspect ratio (format width:height)\n> ");
     // if execution is unsuccessful or there is no row in the selection
     while (    !($ratioStatement->execute([$ratioStr]))
             or !($fetchedRow = $ratioStatement->fetch(\PDO::FETCH_ASSOC))   ) {
-        $ratioStr = promptInput(<<<STR
-                                $ratioStr not a valid ratio.
-                                Enter aspect ratio (format width:height).
-                                > 
-                                STR);
+        $ratioStr = promptInput("$ratioStr not a valid ratio. Valid ratios:\n"
+                                . \implode( ', ', 
+                                            $pdoConn->query("SELECT ratio FROM aspectratio;")
+                                                    ->fetchAll(\PDO::FETCH_COLUMN)
+                                            )
+                                . "\nEnter aspect ratio (format width:height).\n> ");
     }
-    $ratioID = $fetchedRow['ratioid'];
 
-    $getPurposeID = $pdoConn->prepare(
+    return $fetchedRow['ratioid'];
+}
+
+function getPurposeIDInteractive(\PDO $pdoConn, ?\PDOStatement $purposeStatement = null) {
+    $getPurposeID = $purposeStatement ?? $pdoConn->prepare(
             "SELECT purposeid FROM filepurpose WHERE purpose = ?;");
     if (promptInput(
                 "Is this file a whole page, to be displayed for reading? (y/n) > "
@@ -344,7 +348,30 @@ function getInteractiveFileRecordParts( \PDO $pdoConn,
         echo "Okay, for now it's classified as 'other'.\n";
         $getPurposeID->execute(['other']);
     }
-    $purposeID = $getPurposeID->fetch()[0];
+
+    return $getPurposeID->fetch()[0];
+}
+
+/**
+ * Summary of Briel\getInteractiveFileRecordParts
+ * @param \PDO $pdoConn
+ * @param array $incompleteRecord
+ * @param string $ratioStr
+ * @param \PDOStatement|null $ratioStatement
+ * @return array{alttext: bool|string, purposeid: mixed, ratioid: mixed}
+ */
+function getInteractiveFileRecordParts( \PDO $pdoConn, 
+                                        array $incompleteRecord = [],
+                                        string $ratioStr = "", 
+                                        ?\PDOStatement $ratioStatement = null   ) {
+    $alttext = promptInput("Enter alt text (or a path to it):\n> ");
+    if (is_readable($alttext)) {
+        $alttext = file_get_contents($alttext) ?: $alttext;
+    }
+
+    $ratioID = getAspectRatioIDInteractive($pdoConn, $ratioStatement, $ratioStr);
+
+    $purposeID = getPurposeIDInteractive($pdoConn);
 
     return [...$incompleteRecord, 
             'alttext' => $alttext, 
@@ -352,11 +379,169 @@ function getInteractiveFileRecordParts( \PDO $pdoConn,
             'purposeid' => $purposeID];
 }
 
+function fileListStr(   array $paths    ) {
+    return "ID\tPath\n" 
+            . implode("\n", array_map(  fn($key, $val) => "$key\t" . basename($val), 
+                                        array_keys($paths), 
+                                        array_values($paths)    ))
+            . "\n";
+}
+
+function generateFileRecordsFromFolderWithMetadata( string $dirPath,
+                                                    \PDO $pdoConn, 
+                                                    ?\PDOStatement $ratioStatement = null, 
+                                                    ?\PDOStatement $purposeStatement = null ) {
+    $dirPath = endDirectoryPathWithSlash($dirPath);
+
+    if (!is_dir($dirPath)) {
+        echo "$dirPath is not an existing folder. Returning...\n";
+        return false;
+    } 
+    
+    if (!file_exists("$dirPath/metadata.json")) {
+        echo "metadata.json does not exist in $dirPath. Returning...\n";
+        return false;
+    }
+
+    $interactiveRecordParts = json_decode(  file_get_contents("$dirPath/metadata.json"), 
+                                            associative: true   );
+    
+    $ratioStatement ??= $pdoConn->prepare("SELECT ratioid FROM aspectratio WHERE ratio = ?;");
+
+    if (!$ratioStatement->execute([$interactiveRecordParts['ratio']])
+            OR !($row = $ratioStatement->fetch(\PDO::FETCH_ASSOC))) {
+        echo "Metadata provided aspect ratio {$interactiveRecordParts['ratio']} " 
+            . "which doesn't match one that we can find.";
+        $interactiveRecordParts['ratioid'] = getAspectRatioIDInteractive($pdoConn, $ratioStatement);
+    } else {
+        $interactiveRecordParts['ratioid'] = $row['ratioid'];
+    }
+    unset($interactiveRecordParts['ratio']);
+    
+    $purposeStatement ??= $pdoConn->prepare("SELECT purposeid FROM filepurpose WHERE purpose = ?;");
+    if (!$purposeStatement->execute([$interactiveRecordParts['purpose']])
+            OR !($row = $purposeStatement->fetch(\PDO::FETCH_ASSOC))) {
+        echo "Metadata provided purpose {$interactiveRecordParts['purpose']} " 
+            . "which doesn't match one that we can find.";
+        $interactiveRecordParts['purposeid'] = getPurposeIDInteractive($pdoConn, $ratioStatement);
+    } else {
+        $interactiveRecordParts['purposeid'] = $row['purposeid'];
+    }
+    unset($interactiveRecordParts['purpose']);
+
+    $records = [];
+    foreach (scandir($dirPath) as $entry) {
+        $path = $dirPath . $entry;
+        if (!preg_match('(image/.*)', mime_content_type($path))) continue;
+        $records[] = [  ...getNoninteractiveFileRecordParts($path, $pdoConn), 
+                        ...$interactiveRecordParts ];
+    }
+
+    return $records;
+}
+
+function orderArrayByOrderedKeys(   array $orderedKeys, 
+                                    array $toOrder  ) {
+    return array_combine($orderedKeys, array_map(fn($key) => $toOrder[$key], $orderedKeys));
+}
+
+function generateFileRecordsFromFolderInteractive(  string $dirPath, 
+                                                    \PDO $pdoConn, 
+                                                    ?\PDOStatement $ratioStatement = null   ) {
+    echo "Generating records from `" . basename($dirPath) . "`...\n";
+    if (!is_dir($dirPath)) {
+        echo "$dirPath is not an existing folder. Aborting record generation...\n";
+        return false;
+    }
+
+    $records = [];
+    $dirPath = endDirectoryPathWithSlash($dirPath);
+    $dirEntries = scandir($dirPath);
+    $paths = array_filter(
+            array_map(fn($entry) => $dirPath . $entry, $dirEntries), 
+            fn($path) => preg_match('(image/.*)', mime_content_type($path))
+    );
+    echo "Image files found in `$dirPath`:\n" . fileListStr($paths);
+    
+    $keepGenerating = true;
+    while ($paths AND $keepGenerating) {
+        $id = promptInput(
+                "Enter ID of file to generate a record for it, or `n` to exit.\n> ");
+        while (!\in_array($id, array_keys($paths)) AND $id != 'n') {
+            $id = promptInput(<<<PROMPT
+                    $id not a valid ID.
+                    Enter ID of file to generate a record for, or `n` to exit. > 
+                    PROMPT);
+        }
+        if ($id != 'n') {
+            $constantFields = getInteractiveFileRecordParts(
+                    $pdoConn, ratioStatement: $ratioStatement);
+
+            $idsToRecord = [$id];
+            // unset($paths[$id]);
+
+            $tryAgain = false;
+
+            do {
+                $idPrompt = promptInput(
+                        fileListStr(array_diff($paths, [$paths[$id]]))
+                        . "Would you like to associate any other files here with this same "
+                        . "information?\n"
+                        . "Enter the ID(s) or `n` to exit.\n> "
+                );
+                
+                if ($idPrompt != 'n') { 
+                    $ids = null;
+                    preg_match_all('/[0-9]+/', $idPrompt, $ids);
+                    $ids = array_intersect(array_diff($ids[0], $idsToRecord), array_keys($paths));
+                    if ($ids) {
+                        echo "Associating files with IDs " . \implode(', ', $ids) . "...\n";
+                        $idsToRecord = [  
+                            ...$idsToRecord, 
+                            ...$ids
+                        ];
+                        $tryAgain = 
+                            (promptInput("Would you like to associate more? (y/n) > ") == 'y');
+                        // foreach ($ids as $id) unset($paths[$id]);
+                    } else {
+                        echo "No matched IDs that weren't already entered.\n";
+                        $tryAgain = true;
+                    }
+                } else {
+                    $tryAgain = false;
+                }
+            } while ($tryAgain);
+
+            if (promptInput(fileListStr($paths) 
+                            . "Okay to record all these IDs below as having the same alt text, "
+                            . "aspect ratio, and purpose? (y/n)\n" 
+                            . \implode(', ', $idsToRecord) . "\n> ") 
+                    == "y") {
+                foreach ($idsToRecord as $id) {
+                    $records[] = [
+                            ...getNoninteractiveFileRecordParts($paths[$id], $pdoConn), 
+                            ...$constantFields
+                    ];
+                    unset($paths[$id]);
+                }
+            }
+        }
+
+        $keepGenerating = (promptInput(  "Remaining, unrecorded files:\n" 
+                                        . fileListStr($paths)
+                                        . "Continue matching? (y/n) > " ) == 'y');
+    }
+
+    echo "Either we're out of files to record or you've chosen to stop! Ciao.\n";
+
+    return $records;
+}
+
 function generateFileRecordInteractive( string $filePath, 
                                         \PDO $pdoConn, 
-                                        ?string $ratioStr = null, 
+                                        string $ratioStr = "", 
                                         ?\PDOStatement $ratioStatement = null   ) {
-    echo "Generating record for `" . basename($filePath) . '`...';
+    echo "Generating record for `" . basename($filePath) . "`...\n";
     if (!is_file($filePath)) {
         echo "$filePath is not an existing file. Aborting record generation...\n";
         return false;
@@ -365,105 +550,112 @@ function generateFileRecordInteractive( string $filePath,
     return [...getNoninteractiveFileRecordParts($filePath, $pdoConn), 
             ...getInteractiveFileRecordParts(   $pdoConn, 
                                                 ratioStr: $ratioStr, 
-                                                ratioStatement: $ratioStatement)];
+                                                ratioStatement: $ratioStatement )];
 }
 
-function generateInsertFileRecords(?\PDO $pdoConn = null) {
-    if (!tryPDOConnect($pdoConn)) {
-        echo "Couldn't establish/continue SQL server connection. Aborting...\n";
-        return false;
-    }
-    tryBeginTransaction($pdoConn);
+// // defunct
+// function generateInsertFileRecords(?\PDO $pdoConn = null) {
+//     if (!tryPDOConnect($pdoConn)) {
+//         echo "Couldn't establish/continue SQL server connection. Aborting...\n";
+//         return false;
+//     }
+//     tryBeginTransaction($pdoConn);
 
-    // after file upload, generate file records
-    $tryAgain = false;
-    $fileRecords = null;
-    do {
-        $fileRecords = [];
-        for ($numFiles = 1; promptInput("Add a file? (y/n) > ") == 'y'; $numFiles++) {
-            $fileRecords[] = generateFileRecordInteractive(
-                    str_replace('\\', '/', promptInput("Enter path for file $numFiles: > ")), 
-                    $pdoConn);
-        }
-        if ($numFiles > 1) {
-            echo ($numFiles - 1) . " file records generated:\n";
-            print_r($fileRecords);
-            // insert file records
-            if (promptinput("Insert these into the database? (y/n) > ") == "y") {
-                insertFileRecords($fileRecords, $pdoConn, promptCommitMessage: "Okay...");
-                echo "...done!\n";
-                $tryAgain = false;
-            } elseif (promptInput(
-                        "Okay. Wanna try again at adding files? (y/n) > ") == "y") {
-                $tryAgain = true;
-            } else {
-                echo "Okay, moving on...\n";
-                $tryAgain = false;
-            }
-        }
-    } while ($tryAgain);
+//     // after file upload, generate file records
+//     $tryAgain = false;
+//     $fileRecords = null;
+//     do {
+//         $fileRecords = [];
+//         for ($numFiles = 1; promptInput("Add a file? (y/n) > ") == 'y'; $numFiles++) {
+//             $fileRecords[] = generateFileRecordInteractive(
+//                     str_replace('\\', '/', promptInput("Enter path for file $numFiles: > ")), 
+//                     $pdoConn);
+//         }
+//         if ($numFiles > 1) {
+//             echo ($numFiles - 1) . " file records generated:\n";
+//             print_r($fileRecords);
+//             // insert file records
+//             if (promptinput("Insert these into the database? (y/n) > ") == "y") {
+//                 insertFileRecords($fileRecords, $pdoConn, promptCommitMessage: "Okay...");
+//                 echo "...done!\n";
+//                 $tryAgain = false;
+//             } elseif (promptInput(
+//                         "Okay. Wanna try again at adding files? (y/n) > ") == "y") {
+//                 $tryAgain = true;
+//             } else {
+//                 echo "Okay, moving on...\n";
+//                 $tryAgain = false;
+//             }
+//         }
+//     } while ($tryAgain);
 
-    return $fileRecords;
+//     return $fileRecords;
+// }
+
+function endDirectoryPathWithSlash( string $dirPath ) {
+    if (!str_ends_with($dirPath, '/') AND !str_ends_with($dirPath, '\\')) $dirPath .= '/';
+    return $dirPath;
 }
 
-function generateInsertFileRecordsForPage(  int $pageID, 
-                                            ?\PDO $pdoConn = null, 
-                                            string $folder = "" ) {
-    echo "Generating file records for page $pageID...\n";
-    if (!tryPDOConnect($pdoConn)) {
-        echo "Couldn't establish/continue SQL server connection. Aborting...\n";
-        return false;
-    }
-    tryBeginTransaction($pdoConn);
+// DEFUNCT
+// function generateInsertFileRecordsForPage(  int $pageID, 
+//                                             ?\PDO $pdoConn = null, 
+//                                             string $folder = "" ) {
+//     echo "Generating file records for page $pageID...\n";
+//     if (!tryPDOConnect($pdoConn)) {
+//         echo "Couldn't establish/continue SQL server connection. Aborting...\n";
+//         return false;
+//     }
+//     tryBeginTransaction($pdoConn);
 
-    $paths = [];
-    if (is_dir($folder)) {
-        if (!str_ends_with($folder, '/') AND !str_ends_with($folder, '\\')) $folder .= '/';
-        echo "Image files found in `$folder`:\n";
-        $paths = array_map(fn($entry) => $folder . $entry, scandir($folder));
-        $paths = array_filter(  
-                $paths, 
-                fn($p) => preg_match('(image/.*)', mime_content_type($p))
-        );
-        echo \implode("\n", $paths) . "\n";
+//     $paths = [];
+//     if (is_dir($folder)) {
+//         if (!str_ends_with($folder, '/') AND !str_ends_with($folder, '\\')) $folder .= '/';
+//         echo "Image files found in `$folder`:\n";
+//         $paths = array_map(fn($entry) => $folder . $entry, scandir($folder));
+//         $paths = array_filter(  
+//                 $paths, 
+//                 fn($p) => preg_match('(image/.*)', mime_content_type($p))
+//         );
+//         echo \implode("\n", $paths) . "\n";
 
-    } else {
-        echo "Enter paths for files, pressing `Enter` after each. Enter `n` to stop.\n";
-        for ($path = promptInput('> '); $path != 'n'; $path = promptInput('> ')) {
-            if (is_file($path)) $paths[] = $path;
-            else echo "Not a file. Enter `n` to stop.\n";
-        }
-    }
+//     } else {
+//         echo "Enter paths for files, pressing `Enter` after each. Enter `n` to stop.\n";
+//         for ($path = promptInput('> '); $path != 'n'; $path = promptInput('> ')) {
+//             if (is_file($path)) $paths[] = $path;
+//             else echo "Not a file. Enter `n` to stop.\n";
+//         }
+//     }
 
-    $constantFields = getInteractiveFileRecordParts($pdoConn);
-    $records = [];
-    foreach ($paths as $path) {
-        $records[] = [
-                'pageid' => $pageID, 
-                ...$constantFields,
-                ...getNoninteractiveFileRecordParts($path, $pdoConn)
-        ]; 
-    }
+//     $constantFields = getInteractiveFileRecordParts($pdoConn);
+//     $records = [];
+//     foreach ($paths as $path) {
+//         $records[] = [
+//                 'pageid' => $pageID, 
+//                 ...$constantFields,
+//                 ...getNoninteractiveFileRecordParts($path, $pdoConn)
+//         ]; 
+//     }
 
-    echo "\nGenerated records:\n";
-    print_r($records);
-    // insert file records
-    if (promptinput("Insert these into the database? (y/n) > ") == "y") {
-        queryInsertRecords($pdoConn, 'file', array_keys($records[0]), $records);
-        echo "...done!\n";
-        return true;
-    } else {
-        echo "Okay, moving on...\n";
-        return false;
-    }
-}
+//     echo "\nGenerated records:\n";
+//     print_r($records);
+//     // insert file records
+//     if (promptinput("Insert these into the database? (y/n) > ") == "y") {
+//         queryInsertRecords($pdoConn, 'file', array_keys($records[0]), $records);
+//         echo "...done!\n";
+//         return true;
+//     } else {
+//         echo "Okay, moving on...\n";
+//         return false;
+//     }
+// }
 
 /**
  * Summary of Briel\prepareInsertRecords
  * @param \PDO $pdoConn An existing PDO object.
  * @param string $tableName String containing name of the table in the database
  * @param array<string> $insertColumns Array of strings with titles of columns
- * @param array<array> $records 2D array, indexed by record then by column
+ * @param array<array> $records 2D array, indexed by record then by column. 
  * Fuck! This messes up given that individual records are *also* arrays. 
  * Make sure to always put the records in an array, even if there's just one.
  */
@@ -472,7 +664,7 @@ function prepareInsertRecords(  \PDO $pdoConn,
                                 array $insertColumns, 
                                 array $records    ) {
     $row = rowPlaceholder(\is_array($insertColumns) ? \count($insertColumns) : 1);
-    $allPlaceholderStr = \is_array($records) ? 
+    $allPlaceholderStr = \is_array(array_first($records)) ? 
             \implode(",\n", array_fill(0, \count($records), $row))
             : $row;
     
@@ -499,6 +691,9 @@ function executeInsertRecords(  \PDO $pdoConn,
                                 string $promptCommitMessage = ''   ) {
                                     
     if (!tryBeginTransaction($pdoConn)) return false;
+
+    echo "Records: ";
+    var_export($records);
 
     if (\is_array($records)) {
         for ($placeIdx = 1, $i = 0; $i < \count($records); $i++) {
@@ -542,6 +737,8 @@ function queryInsertRecords(\PDO $pdoConn,
                                             $tableName, 
                                             $insertColumns, 
                                             $records);
+    // echo "Insert statement: ";
+    // var_export($insertStatement);
     if (executeInsertRecords(   $pdoConn, 
                                 $insertStatement, 
                                 $records, 
@@ -565,6 +762,9 @@ function insertFileRecords( array $records,
                             \PDO $pdoConn, 
                             bool $promptToCommit = true, 
                             string $promptCommitMessage = '' ) {
+    for ($i = 0; $i < \count($records); $i++) {
+        $records[$i] = orderArrayByOrderedKeys(FILEINSERTCOLUMNS, $records[$i]);
+    }
 
     $queryResult = queryInsertRecords(  $pdoConn, 
                                         "file", 
@@ -637,6 +837,10 @@ function insertPageRecords( array $records,
                             string $promptCommitMessage = ''    ) {
     if (!tryBeginTransaction($pdoConn)) return false;
 
+    for ($i = 0; $i < \count($records); $i++) {
+        $records[$i] = orderArrayByOrderedKeys(PAGEINSERTCOLUMNS, $records[$i]);
+    }
+
     $queryResult = queryInsertRecords(  $pdoConn, 
                                         'page',
                                         PAGEINSERTCOLUMNS, 
@@ -647,48 +851,67 @@ function insertPageRecords( array $records,
     return $queryResult;
 }
 
-/**
- * Summary of Briel\insertNewTags
- * @param array $tags
- * @param \PDO $pdoConn
- * @param bool $promptToCommit
- * @param string $promptCommitMessage
- * @return bool|\PDOStatement
- */
-function insertNewTags( array $tags, 
-                        \PDO $pdoConn, 
-                        bool $promptToCommit = true, 
-                        string $promptCommitMessage = '') {
+function insertNewLeaves(   string $leafTableName, 
+                            array $leaves, 
+                            \PDO $pdoConn, 
+                            bool $promptToCommit = true, 
+                            string $promptCommitMessage = ''    ) {
     if (!tryBeginTransaction($pdoConn)) return false;
-    
-    $tags = array_unique($tags);
-    $matchExistingTags = 
-            $pdoConn->prepare("SELECT * FROM tag WHERE name IN "
-                                . rowPlaceholder(\count($tags))
-                                . ";");
-    $matchExistingTags->execute($tags);
-    $existingTags = $matchExistingTags->fetchAll(\PDO::FETCH_ASSOC);
-    echo attributeTableStr( $existingTags, 
-                            "These tags are already present:", 
-                            'tagid', 
-                            'name'  );
-    if (!(promptInput("Add repeat tags anyway? (y/n) > ") == 'y')) {
-        $tags = array_diff( $tags, 
-                            array_column($existingTags, 'name') );
+    $idName = '';
+    switch ($leafTableName) {
+        case 'tag':
+            $idName = 'tagid';
+            break;
+        case 'contwarning':
+            $idName = 'contwarningid';
+            break;
+        default: 
+            echo "`$leafTableName` not a valid table for inserting these. Returning...\n";
+            return false;
     }
-
-    echo "Inserting new tags:\n" . implode(', ', $tags) . "\n";
+    
+    $leaves = array_unique($leaves);
+    $matchExistingLeaves = 
+            $pdoConn->prepare("SELECT * FROM $leafTableName WHERE name IN "
+                                . rowPlaceholder(\count($leaves))
+                                . ";");
+    $matchExistingLeaves->execute($leaves);
+    $existingLeaves = $matchExistingLeaves->fetchAll(\PDO::FETCH_ASSOC);
+    if ($existingLeaves) {
+        echo attributeTableStr( $existingLeaves, 
+                                "These {$leafTableName}s are already present:", 
+                                $idName, 
+                                'name'  );
+        if (promptInput("Add repeat {$leafTableName}s anyway? (y/n) > ") != 'y') {
+            $leaves = array_diff($leaves, array_column($existingLeaves, 'name'));
+        }
+    }
+    
+    echo "Inserting new {$leafTableName}s:\n" . implode(', ', $leaves) . "\n";
 
     $queryResult = queryInsertRecords(  $pdoConn,
-                                        'tag', 
+                                        $leafTableName, 
                                         ['name'], 
-                                        array_map(  fn($tag) => [$tag], 
-                                                    $tags   ), 
+                                        array_map(fn($leaf) => [$leaf], $leaves), 
                                         $promptToCommit, 
                                         $promptCommitMessage
     );
     // queryInsertRecords() already checks for commit.
     return $queryResult;
+}
+
+function insertNewTags( array $tags, 
+                        \PDO $pdoConn, 
+                        bool $promptToCommit = true, 
+                        string $promptCommitMessage = '') {
+    return insertNewLeaves('tag', $tags, $pdoConn, $promptToCommit, $promptCommitMessage);
+}
+
+function insertNewCWs( array $cws, 
+                        \PDO $pdoConn, 
+                        bool $promptToCommit = true, 
+                        string $promptCommitMessage = '') {
+    return insertNewLeaves('contwarning', $cws, $pdoConn, $promptToCommit, $promptCommitMessage);
 }
 
 /**
@@ -754,7 +977,9 @@ function getPagePathInteractive(\PDO $pdoConn) {
             } else $path = promptPathHTML();
         }
     }
-    return $path;
+
+    if (!file_exists($path)) file_put_contents($path, '');
+    return realpath($path);
 }
 
 function getImgDescInteractive(\PDO $pdoConn) {
@@ -777,7 +1002,7 @@ function getSpreadIDInteractive(\PDO $pdoConn) {
 function getColorStyleInteractive(\PDO $pdoConn) {
     $colorStyleID = $pdoConn->query("SELECT MIN(colorstyleid) FROM colorstyle;")
                             ->fetch()[0];
-    if (promptInput("Add non-default reading colors? (y/n) >") == "y") {
+    if (promptInput("Add non-default reading colors? (y/n) > ") == "y") {
         echo "Existing color styles:\n";
         $styles = $pdoConn->query("SELECT colorstyleid, colorstyledesc FROM colorstyle;")
                           ->fetchAll(\PDO::FETCH_ASSOC);
@@ -1342,6 +1567,39 @@ function appendPages(   array $pageIDs,
                                 $promptCommitMessage    );
 }
 
+function nameNewLeavesInteractive(  string $leafTableName, 
+                                    \PDO $pdoConn, 
+                                    bool $promptToCommit = true, 
+                                    string $promptCommitMessage = ''    ) {
+    if (!\in_array($leafTableName, ['tag', 'contwarning'])) return false;
+
+    $names = [];
+    $tryAgain = false;
+    do {
+        $submittedNames = preg_split(
+                '/[,\s]+/', 
+                promptInput("Enter {$leafTableName}s separated by commas or spaces.\n> "), 
+                flags: PREG_SPLIT_NO_EMPTY
+        );
+        $invalidNames = array_filter($submittedNames, fn($name) => !preg_match('/^\w+$/', $name));
+        $validNames = array_unique(array_diff($submittedNames, $invalidNames));
+        if ($invalidNames) {
+            echo \implode(', ', $invalidNames) . " are not valid names because "
+                . "{$leafTableName}s can only have letters, numbers, and underscores.\n";
+        }
+        if (promptInput("Okay to add these {$leafTableName}s?\n" . \implode(', ', $validNames) 
+                            . "\n(y/n) > ") == 'y') {
+            $names = [...$names, ...$validNames];
+        }
+        
+        $tryAgain = (promptInput("Currently you're adding these {$leafTableName}s:\n"
+                                    . \implode(', ', $names)
+                                    . "\nWant to add any more? (y/n) > ") == 'y');
+    } while ($tryAgain);
+
+    return insertNewLeaves($leafTableName, $names, $pdoConn, $promptToCommit, $promptCommitMessage);
+}
+
 /**
  * Summary of Briel\associateInteractive
  * 
@@ -1366,6 +1624,7 @@ function associateInteractive(  array $record,
     $rootName = null;
     $rootIDName = null;
     $rootTableName = null;
+    $insertLeavesFn = null;
     switch ($leafTableType) {
         case 'tag': 
         case 'contwarning':
@@ -1374,6 +1633,10 @@ function associateInteractive(  array $record,
             $rootName = 'title';
             $rootIDName = 'pageid';
             $rootTableName = 'page';
+            $insertLeavesFn = (fn() => nameNewLeavesInteractive($leafTableType, 
+                                                                $pdoConn, 
+                                                                $promptToCommit, 
+                                                                $promptCommitMessage));
             break;
         case 'file':
             $leafName = 'path';
@@ -1381,6 +1644,7 @@ function associateInteractive(  array $record,
             $rootName = 'title';
             $rootIDName = 'pageid';
             $rootTableName = 'page';
+            $insertLeavesFn = (fn() => generateInsertUpdateFileRecords($pdoConn));
             break;
         case 'page':
             $leafName = 'title';
@@ -1390,135 +1654,165 @@ function associateInteractive(  array $record,
             $rootTableName = 'comicupdate';
             break;
         default: 
-            echo "`$leafTableType` isn't associatable data. 
-                    Aborting association.\n";
+            echo "`$leafTableType` isn't associatable data. Returning...\n";
             return false;
     }
 
-    $recsToStrs = fn($recs) => 
-            array_map(  fn($rec) => str_pad($rec[$leafIDName], 8, '_') . $rec[$leafName], 
-                        $recs   )
-    ;
+    $recsToStrs = fn($recs) => array_map(  
+            fn($rec) => str_pad($rec[$leafIDName], 8, '_') . $rec[$leafName], 
+            $recs
+    );
     $leaves = $pdoConn->query("SELECT $leafIDName, $leafName FROM $leafTableType;")
                       ->fetchAll(\PDO::FETCH_ASSOC);
-
-    echo attributeTableStr( $leaves, 
-                            "$leafTableType list:", 
-                            $leafIDName, 
-                            $leafName   );
     
-    $pdoConn->exec(
-        "CREATE TEMPORARY TABLE associd ($leafIDName int unsigned);"
-    );
-    $inputStr = promptInput("Enter $leafTableType IDs separated by commas, "
-                            . "or a ? followed by a regular expression for "
-                            . "$leafTableType names/titles.\n> ");
-    if (preg_match("/^(\d+,\s*)*\d+$/", $inputStr)) {
-        queryInsertRecords($pdoConn, 
-                           "associd", 
-                           [$leafIDName], 
-                           array_map('trim', explode(",", $inputStr)));
+    $tryAgain = false;
+    do {
+        $pdoConn->exec(<<<STMT
+                DROP TEMPORARY TABLE IF EXISTS associd;
+                CREATE TEMPORARY TABLE associd ($leafIDName int unsigned);
+                STMT);
 
-        if (!empty($notRealIDs = $pdoConn->query(<<<STMT
-                                        TABLE associd 
-                                            EXCEPT 
-                                        SELECT $leafIDName FROM $leafTableType;
-                                        STMT)
-                                ->fetchALL(\PDO::FETCH_COLUMN))) {
-            promptRollback( $pdoConn, 
-                            "Error: page IDs [" . implode(', ', $notRealIDs)
-                                    . "] don't correspond to existing {$leafTableType}s.");
+        $tryInputAgain = false;
+        do {
+            echo attributeTableStr( $leaves, 
+                                    "$leafTableType list:", 
+                                    $leafIDName, 
+                                    $leafName   );
+            
+            if ($insertLeavesFn AND promptInput(
+                    "Want to add {$leafTableType}s that aren't here? (y/n) > ") == 'y') {
+                $insertLeavesFn();
+                $leaves = $pdoConn->query("SELECT $leafIDName, $leafName FROM $leafTableType;")
+                                ->fetchAll(\PDO::FETCH_ASSOC);
+                echo attributeTableStr( $leaves, 
+                                        "$leafTableType list:", 
+                                        $leafIDName, 
+                                        $leafName   );
+            }
+
+            $inputStr = promptInput("Enter $leafTableType IDs separated by commas, "
+                                    . "or a ? followed by a regular expression for "
+                                    . "$leafTableType names/titles.\n> ");
+            if (preg_match("/^(\d+,\s*)*\d+$/", $inputStr)) {
+                queryInsertRecords( $pdoConn, 
+                                    "associd", 
+                                    [$leafIDName], 
+                                    array_map(fn($leaf) => [trim($leaf)], explode(",", $inputStr)), 
+                                    $promptToCommit, 
+                                    $promptCommitMessage);
+
+                if (!empty($notRealIDs = $pdoConn->query(<<<STMT
+                                                TABLE associd 
+                                                    EXCEPT 
+                                                SELECT $leafIDName FROM $leafTableType;
+                                                STMT)
+                                        ->fetchAll(\PDO::FETCH_COLUMN))) {
+                    if (promptInput(
+                                "Error: IDs [" . implode(', ', $notRealIDs)
+                                . "] don't correspond to existing {$leafTableType}s.\n"
+                                . "Try again? (y/n) > ")
+                            == 'y') {
+                        $tryInputAgain = true;
+                    } else {
+                        echo "Okay. Returning...";
+                        return false;
+                    }
+                }
+
+            } else if (\strlen($inputStr) > 0 AND $inputStr[0] == "?") {
+                $regExp = $pdoConn->prepare(<<<STMT
+                                INSERT INTO associd ($leafIDName)
+                                    SELECT $leafIDName FROM $leafTableType
+                                        WHERE REGEXP_LIKE($leafName, ?, 'c'); 
+                                STMT); // 'c' enforces case-sensitivity
+                                            
+                $regExp->execute([substr($inputStr,1)]);
+                $tryInputAgain = false;
+            } else {
+                $tryInputAgain = (promptInput("'$inputStr' invalid. Try again? (y/n) > ") == 'y');
+            }
+        } while ($tryInputAgain);
+
+        $assocSelect = $pdoConn->prepare(<<<STMT
+                SELECT $leafIDName, $leafName 
+                FROM (
+                    SELECT $leafIDName FROM 
+                        associd INNER JOIN $leafTableType USING ($leafIDName)
+                    EXCEPT 
+                    SELECT $leafIDName FROM $leafTableAssocName
+                        WHERE $rootIDName = ?
+                ) AS t INNER JOIN $leafTableType USING ($leafIDName);
+                STMT);
+        $assocSelect->execute([$record[$rootIDName]]);
+
+        $alreadyAssocSelect = $pdoConn->prepare(<<<STMT
+                SELECT $leafIDName, $leafName 
+                FROM (
+                    SELECT $leafIDName FROM 
+                        associd INNER JOIN $leafTableType USING ($leafIDName)
+                    INTERSECT 
+                    SELECT $leafIDName FROM $leafTableAssocName
+                        WHERE $rootIDName = ?
+                ) AS t INNER JOIN $leafTableType USING ($leafIDName);
+                STMT);
+        $alreadyAssocSelect->execute([$record[$rootIDName]]);
+
+        echo "\n-----------------------------------------\n"
+            . "{$leafTableType}s to associate with `{$record[$rootName]}`:\n" 
+            . "ID      Name/Title/Path\n"
+            . implode("\n", 
+                        $recsToStrs($assocSelect->fetchAll(\PDO::FETCH_ASSOC)))
+            . "\n-----------------------------------------\n"
+            . "{$leafTableType}s already associated with `{$record[$rootName]}`:\n" 
+            . "ID      Name/Title/Path\n"
+            . implode("\n", 
+                        $recsToStrs($alreadyAssocSelect->fetchAll(\PDO::FETCH_ASSOC)))
+            . "\n_________________________________________\n";
+
+        $trimExistingLinks = $pdoConn->prepare(<<<STMT
+                DELETE FROM associd 
+                    WHERE $leafIDName IN( 
+                        SELECT $leafIDName FROM $leafTableAssocName 
+                            WHERE $rootIDName = ?
+                    )
+                ;
+                STMT);
+        $trimExistingLinks->execute([$record[$rootIDName]]);
+
+        if (promptInput("Okay to associate? (y/n) > ") == "y") {
+            $assoc = ($leafTableType == 'file' ? 
+                    $pdoConn->prepare(<<<STMT
+                        UPDATE $leafTableAssocName SET $rootIDName = ?
+                            WHERE $leafIDName IN(TABLE associd);
+                        STMT)
+                    : 
+                    $pdoConn->prepare(<<<STMT
+                        INSERT INTO $leafTableAssocName 
+                            ($rootIDName, $leafIDName)
+                        SELECT ?, $leafIDName FROM associd;
+                        STMT)
+            );
+            $assoc->execute([$record[$rootIDName]]);
+            echo "{$leafTableType}s associated.\n";
+            $leafIDs = $pdoConn ->query('TABLE associd;')
+                                ->fetchAll(\PDO::FETCH_COLUMN);
+            if (promptInput("Add any more? (y/n) > ") == 'y') {
+                $tryAgain = true;
+            } else {
+                if ($promptToCommit) promptCommit($pdoConn, $promptCommitMessage);
+                return $leafIDs;
+            }
+        
+        } else if (promptInput("Try again? (y/n) > ") == 'y') {
+            $tryAgain = true;
+        } else {
+            echo "Okay. Returning without associating...\n";
+            if ($promptToCommit) promptCommit($pdoConn, $promptCommitMessage);
             return false;
         }
 
-    } else if (\strlen($inputStr) > 0 AND $inputStr[0] == "?") {
-        $regExp = $pdoConn->prepare(<<<STMT
-                        INSERT INTO associd ($leafIDName)
-                            SELECT $leafIDName FROM $leafTableType
-                                WHERE REGEXP_LIKE($leafName, ?, 'c'); 
-                        STMT); // 'c' enforces case-sensitivity
-                                    
-        $regExp->execute([substr($inputStr,1)]);
-
-    } else {
-        promptRollback($pdoConn, "'$inputStr' invalid.");
-        echo "Returning...\n";
-        return false;
-    }
-    
-    $assocSelect = $pdoConn->prepare(<<<STMT
-            SELECT $leafIDName, $leafName 
-            FROM (
-                SELECT $leafIDName FROM 
-                    associd INNER JOIN $leafTableType USING ($leafIDName)
-                EXCEPT 
-                SELECT $leafIDName FROM $leafTableAssocName
-                    WHERE $rootIDName = ?
-            ) AS t INNER JOIN $leafTableType USING ($leafIDName);
-            STMT);
-    $assocSelect->execute([$record[$rootIDName]]);
-
-    $alreadyAssocSelect = $pdoConn->prepare(<<<STMT
-            SELECT $leafIDName, $leafName 
-            FROM (
-                SELECT $leafIDName FROM 
-                    associd INNER JOIN $leafTableType USING ($leafIDName)
-                INTERSECT 
-                SELECT $leafIDName FROM $leafTableAssocName
-                    WHERE $rootIDName = ?
-            ) AS t INNER JOIN $leafTableType USING ($leafIDName);
-            STMT);
-    $alreadyAssocSelect->execute([$record[$rootIDName]]);
-
-    echo "\n-----------------------------------------\n"
-         . "{$leafTableType}s to associate with `{$record[$rootName]}`:\n" 
-         . "ID      Name/Title/Path\n"
-         . implode("\n", 
-                    $recsToStrs($assocSelect->fetchAll(\PDO::FETCH_ASSOC)))
-         . "\n-----------------------------------------\n"
-         . "{$leafTableType}s already associated with `{$record[$rootName]}`:\n" 
-         . "ID      Name/Title/Path\n"
-         . implode("\n", 
-                    $recsToStrs($alreadyAssocSelect->fetchAll(\PDO::FETCH_ASSOC)))
-         . "\n_________________________________________\n";
-
-    $trimExistingLinks = $pdoConn->prepare(<<<STMT
-            DELETE FROM associd 
-                WHERE $leafIDName IN( 
-                    SELECT $leafIDName FROM $leafTableAssocName 
-                        WHERE $rootIDName = ?
-                )
-            ;
-            STMT);
-    $trimExistingLinks->execute([$record[$rootIDName]]);
-
-    if (promptInput("Okay to associate? (y/n) > ") == "y") {
-        if ($leafTableType == 'file') {
-            $assoc = $pdoConn->prepare(<<<STMT
-                    UPDATE $leafTableAssocName SET $rootIDName = ?
-                        WHERE $leafIDName IN(TABLE associd);
-                    STMT);
-            
-        } else {
-            $assoc = $pdoConn->prepare(<<<STMT
-                    INSERT INTO $leafTableAssocName 
-                        ($rootIDName, $leafIDName)
-                    SELECT ?, $leafIDName FROM associd;
-                    STMT);
-        }
-        $assoc->execute([$record[$rootIDName]]);
-        echo "Files associated.\n";
-        $leafIDs = $pdoConn ->query('TABLE associd;')
-                            ->fetchAll(\PDO::FETCH_COLUMN);
         $pdoConn->exec("DROP TEMPORARY TABLE associd;"); 
-        if ($promptToCommit) promptCommit($pdoConn, $promptCommitMessage);
-        return $leafIDs;
-    
-    } else {
-        echo "Okay. Returning without associating...\n";
-        if ($promptToCommit) promptCommit($pdoConn, $promptCommitMessage);
-        return false;
-    }
+    } while ($tryAgain);
 }
 
 function associateTagsInteractive(  array $pageRecord, 
@@ -1568,44 +1862,169 @@ function appendGeneratePageRecords( \PDO $pdoConn,
     if (!tryBeginTransaction($pdoConn)) return false;
 
     $records = [];
-    $getRecordBack = $pdoConn->prepare(<<<STMT
-        SELECT * FROM page WHERE pageid = (
-            SELECT MAX(pageid) FROM page 
-            WHERE title = ? AND updatedesc = ? AND postdate IS NULL
-        );
-        STMT);
+    $tryAgain = false;
     echo "Generating page records...\n";
     do {
-        $record = generatePageRecordInteractive($pdoConn);
-        if (!queryInsertRecords($pdoConn, 'page', PAGEINSERTCOLUMNS, [$record])) {
+        $record = orderArrayByOrderedKeys(  PAGEINSERTCOLUMNS, 
+                                            generatePageRecordInteractive($pdoConn) );
+        if (!queryInsertRecords(
+                $pdoConn, 'page', PAGEINSERTCOLUMNS, [$record], promptToCommit: false   )) {
             promptRollback($pdoConn, 'Inserting page records failed.');
             return false;
         }
-        
-        $getRecordBack->execute([$record['title']]);
+        // echo "Page Record:\n";
+        // var_export($record);
+        // echo "Made it past page insertion.\n";
+        $getRecordBack = $pdoConn->prepare(<<<STMT
+            SELECT * FROM page WHERE pageid = (
+                SELECT MAX(pageid) FROM page 
+                WHERE title = ? AND postdate IS NULL AND path = ? AND imagedesc = ?
+            );
+            STMT);  
+        // echo "Prepared statement for getting ID.\n";
+        $getRecordBack->execute([   $record['title'], 
+                                    $record['path'], 
+                                    $record['imagedesc']    ]);
+        // echo "Executed statement.\n";
         $record = $getRecordBack->fetch(\PDO::FETCH_ASSOC);
+        // echo "Fetched back record.\n";
 
-        if (promptInput("Associate files? (y/n) > " == 'y'))
+        if (promptInput("Associate files? (y/n) > ") == 'y')
             associateFilesInteractive($record, $pdoConn, promptToCommit: false);
 
-        if (promptInput("Associate tags? (y/n) > " == 'y'))
+        if (promptInput("Associate tags? (y/n) > ") == 'y')
             associateTagsInteractive($record, $pdoConn, promptToCommit: false);
 
-        if (promptInput("Associate content warnings? (y/n) > " == 'y'))
+        if (promptInput("Associate content warnings? (y/n) > ") == 'y')
             associateCWsInteractive($record, $pdoConn, promptToCommit: false);
 
-        if (!appendPages([$record], $pdoConn, $lastPageID, promptToCommit: false)) {
-            promptRollback($pdoConn, 'Ording pages failed.');
-            return false;
-        }
+        $isInserted = insertPageAtEnd($record['pageid'], $pdoConn, promptToCommit: false);
+        if ($isInserted) {
+            $records[] = $record;
+        } else echo "Appending page failed. No record added for it.\n";
 
-        $records[] = $record;
     } while (promptInput("Generate another page? (y/n) > ") == 'y');
 
     if ($promptToCommit) promptCommit($pdoConn, $promptCommitMessage);
 
     return $records;
 }
+
+/**
+ * Summary of Briel\generateFileRecordsTraverse
+ * traverse a filetree of a folder recursively. 
+ * basically, if a folder has no other folders within, that's a leaf. 
+ * if *any* have images, even non-leaf nodes, run record generation on them.
+ * if that node has images and a metadata file, use the generation with metadata. 
+ * Otherwise, normal generation. 
+ * return generated records up the call stack.
+ * @param string $dirPath
+ * @param \PDO $pdoConn
+ * @param mixed $ratioStatement
+ * @param mixed $purposeStatement
+ * @return array<array|mixed>|bool
+ */
+function generateFileRecordsTraverse(   string $dirPath,
+                                        \PDO $pdoConn, 
+                                        ?\PDOStatement $ratioStatement = null, 
+                                        ?\PDOStatement $purposeStatement = null   ) {
+    $dirPath = endDirectoryPathWithSlash($dirPath);
+    $dirEntries = array_filter(scandir($dirPath), fn($entry) => $entry != '.' AND $entry != '..');
+    $subPaths = array_map(fn($entry) => $dirPath . $entry, $dirEntries);
+    $subDirs = array_filter($subPaths, 'is_dir');
+    // print_r($subDirs);
+    $images = array_filter($subPaths, fn($path) => preg_match(  '(image/.*)', 
+                                                                mime_content_type($path)    ));
+    $records = [];
+    if ($images) {
+        $records = \in_array('metadata.json', $dirEntries) ? 
+                generateFileRecordsFromFolderWithMetadata(  $dirPath, 
+                                                            $pdoConn, 
+                                                            ratioStatement: $ratioStatement, 
+                                                            purposeStatement: $purposeStatement )
+                : generateFileRecordsFromFolderInteractive( $dirPath, 
+                                                            $pdoConn, 
+                                                            ratioStatement: $ratioStatement);
+    }
+    
+    foreach ($subDirs as $subDirPath) {
+        $records = [
+                ...$records, 
+                ...generateFileRecordsTraverse( $subDirPath, 
+                                                $pdoConn, 
+                                                ratioStatement: $ratioStatement, 
+                                                purposeStatement: $purposeStatement )
+        ];
+    }
+
+    return $records;
+}
+
+/**
+ * Summary of Briel\generateInsertUpdateFileRecords
+ * Interactive generation and insertion of file records as part of posting an update.
+ * @param \PDO $pdoConn
+ * @param bool $promptToCommit
+ * @param string $promptCommitMessage
+ * @return void
+ */
+function generateInsertUpdateFileRecords(   \PDO $pdoConn, 
+                                            bool $promptToCommit = true, 
+                                            string $promptCommitMessage = ""    ) {
+    $tryAgain = false;
+    do {
+        $fileRecords = [];
+        $numFiles = 1;
+        while (promptInput("Add many files from many sub-folders? (y/n) > ") == 'y') {
+            $input = promptInput(
+                    "Enter a path to the folder containing the subfolders or `n` to cancel.\n> ");
+            if ($input == 'n') break;
+            else if (is_dir($input)) {
+                $newRecords = generateFileRecordsTraverse($input, $pdoConn);
+                $fileRecords = [...$fileRecords, ...$newRecords];
+                $numFiles += \count($newRecords);
+            } else {
+                echo "$input is not an existing folder.";
+            }
+        } 
+
+        while (promptInput("Add lots of files from one folder? (y/n) > ") == 'y') {
+            $dirPath = endDirectoryPathWithSlash(promptInput("Enter a path to the folder.\n> "));
+            $newRecords = file_exists($dirPath . 'metadata.json') ? 
+                    generateFileRecordsFromFolderWithMetadata($dirPath, $pdoConn)
+                    : generateFileRecordsFromFolderInteractive($dirPath, $pdoConn);
+            $fileRecords = [...$fileRecords, ...$newRecords];
+            $numFiles += \count($newRecords);
+        }
+
+        for (; promptInput("Add a file? (y/n) > ") == 'y'; $numFiles++) {
+            $fileRecords[] = generateFileRecordInteractive(
+                    promptInput("Enter path for file $numFiles: > "), $pdoConn);
+        }
+        if ($numFiles > 1) {
+            echo ($numFiles - 1) . " file records generated:\n";
+            print_r($fileRecords);
+            // insert file records
+            if (promptinput("Insert these into the database? (y/n) > ") == "y") {
+                insertFileRecords(  $fileRecords, 
+                                    $pdoConn, 
+                                    promptToCommit: $promptToCommit, 
+                                    promptCommitMessage: $promptCommitMessage   );
+                echo "...done!\n";
+                $tryAgain = false;
+            } elseif (promptInput(
+                        "Okay. Wanna try again at adding files? (y/n) > ") == "y") {
+                $tryAgain = true;
+            } else {
+                echo "Okay, moving on...\n";
+                $tryAgain = false;
+            }
+        } else {
+            $tryAgain = (promptInput("No file records generated. Try again? (y/n) > ") == 'y');
+        }
+    } while ($tryAgain);
+}
+
 
 function generateUpdateRecordInteractive(\PDO $pdoConn) {
     echo "Generating new update record...\n";
@@ -2342,7 +2761,6 @@ function allSearchComics(   string $searchStr,
                             \PDO $pdoConn, 
                             bool $matchExactly = false, 
                             bool $searchImgDesc = false  ) {
-
     [$getResults, $execList] = execSearchComicsStmt($searchStr, 
                                                     $pdoConn, 
                                                     $matchExactly, 

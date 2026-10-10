@@ -1,0 +1,43 @@
+h1 {
+    font-size: min(4em, 15vw)
+}
+
+a.nav-button {
+    font-family: "Briel Nib Bold", Courier, monospace;
+}
+
+main {
+    width: 70%;
+    margin: auto;
+}
+
+form {
+    margin: 1em auto;
+}
+
+textarea {
+    background-color: var(--bg-color);
+    display: block;
+    margin: 0.5em 0;
+}
+
+textarea + button {
+    /* margin-bottom: 0.3rem; */
+}
+
+
+@media screen and (max-width: 685px) {
+    header .nav-button {
+        display: block;
+        height: 3.5em;
+    }
+
+    header .nav-button svg.ui {
+        margin: 0.1em 0em;
+        max-height: 2em;
+    }
+
+    header .home-button .button-text {
+        position: static;
+    }
+}

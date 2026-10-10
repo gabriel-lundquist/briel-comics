@@ -202,8 +202,10 @@ export function keyNavigate(keyEvent,
                             nextPageLink, 
                             prevUpdateLink, 
                             nextUpdateLink, 
-                            noNavWhenFocusedSelectors) {
+                            noNavWhenFocusedSelectors, 
+                            preventDefault = false) {
     if (noneHaveFocus(noNavWhenFocusedSelectors)) {
+        if (preventDefault) keyEvent.preventDefault();
         if (prevKeys.has(keyEvent.key)) {
             if (keyEvent.shiftKey) {
                 if (prevUpdateLink) window.location.href = prevUpdateLink;

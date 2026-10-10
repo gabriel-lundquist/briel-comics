@@ -429,7 +429,7 @@ document.addEventListener("keydown", function (event) {
         if (widenKeys.has(event.key) || narrowKeys.has(event.key)) 
             keyResize(event, widenKeys, narrowKeys);
         else if (prevKeys.has(event.key) || nextKeys.has(event.key)) {
-            event.preventDefault();
+            // event.preventDefault();
             let scrollCoord = window.scrollY;
             if (document.querySelector("body").classList.contains("horizontal")) {
                 scrollCoord = window.scrollX;
@@ -452,7 +452,8 @@ document.addEventListener("keydown", function (event) {
                         getNextComicLink(elementIndex, mapList), 
                         "", 
                         "", 
-                        ["input[type='search']"]
+                        ["input[type='search']"], 
+                        preventDefault=true
             );
         }
         

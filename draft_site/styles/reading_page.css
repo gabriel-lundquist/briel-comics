@@ -6,6 +6,7 @@ html {
     --bg-color: #491d25;
     --ui-prime-color: #ffffff;
     --hilite-color: #000000;
+    --link-color: #ffffff;
     --deemphasize-color: #aaaaaa;
     --bg-gradient: conic-gradient(from 304deg at 12% -10% in hsl shorter hue, rgb(48, 21, 27) 50%, #491d25ff 55%, #230b0dff 73%);
 
@@ -91,6 +92,23 @@ main {
     text-align: center;
 }
 
+h1 {
+    font-family: "Briel Nib", Courier, monospace;
+    margin: calc(clamp(0.3rem, 0.2*(100vw - var(--comic-page-width)), 0.8rem)) 0.2rem 0.1rem;
+    text-align: left;
+    font-size: large;
+    /* color: var(--deemphasize-color); */
+    /* font-display: initial; */
+}
+
+h1 a {
+    color: var(--ui-prime-color);
+}
+
+h1 a:visited {
+    /* color: var(--ui-prime-color); */
+}
+
 h2 {
     /* margin-top: 0.5em; */
     margin-top: 0;
@@ -105,12 +123,11 @@ h2 {
     border-image-width: 1em 2.2em 2em;
     border-image-outset: 1.2em 2.2vw 1.8em;
     margin-top: 1.2em;
-    margin-bottom: 2.5em;
+    margin-bottom: 2.3em;
     max-width: var(--comic-page-width);
 }
 
-#cw_section, 
-#note-section {
+#cw_section {
     border-image-slice: 450 550 750 500;
     border-image-width: 1.8em 2em 2.8em 1.8em;
     border-image-outset: 2.2em calc(1em - 0.5vw) 2.6em calc(0.8em - 0.5vw);
@@ -118,6 +135,16 @@ h2 {
     padding-left: 1.5em;
     padding-right: 1.5em;
     max-width: calc(var(--comic-page-width) - 2 * 1.5em - 2 * (0.9em - 1vw));
+}
+
+#note-section {
+    border-image-slice: 450 550 750 500;
+    border-image-width: 1.8em 2em 2em 1.8em;
+    border-image-outset: 2em 1.2vw 2em 0.8vw;
+    margin: 1.2em 0 3em; 
+    padding-left: 1.5em;
+    padding-right: 1.5em;
+    max-width: calc(var(--comic-page-width) - 2 * 1.5em);
 }
 
 #note-section p {
@@ -129,19 +156,12 @@ h2 {
     display: flex;
     flex-direction: row;
     align-items: center;
+    padding: 0 1.5em;
 }
 
 #tag-div, 
 #cw-div {
     flex: 6;
-}
-
-#tag-div {
-    padding-left: 1.5em;
-}
-
-#cw-div {
-    padding-right: 1.5em;
 }
 
 #tag-cw-section svg.separator {
@@ -162,8 +182,7 @@ h2 {
 #note-section + #desc-section {
     border-image-width: 2.5em 4em 4.8em;
     border-image-outset: 2em calc(1.2em - 1vw) 4.7em calc(1.4em - 1vw);
-    padding-left: calc(2em + 1.5vw);
-    padding-right: calc(2em + 1.5vw);
+    --desc-side-padding: calc(2em + 1.5vw);
     margin: 2.5em 1.5em 3.5em;
     max-width: calc(var(--comic-page-width) - 2 * 1.5em - 2 * var(--desc-side-padding));
 }
@@ -190,26 +209,20 @@ nav {
     /* Make font size of text in the nav pane (previous, next, etc.) 4 
     points bigger than the inherited size */
     font-size: larger;
-    /* border-left: 0.3em solid var(--deemphasize-color);
-    border-right: 0.3em solid var(--ui-prime-color);
-    border-radius: 0.2em; */
 }
 
 a:link {
-    color: inherit;
+    color: var(--link-color);
     padding: 0.1em;
     border-radius: 0.1em;
 }
 
 a:visited {
-    /* Can change color depending on page */
     color: var(--deemphasize-color)
 }
 
 a:hover {
-    /* font-style: oblique; */
-    /* Can change color depending on page */
-    color: var(--ui-prime-color);
+    color: var(--link-color);
     background: var(--hilite-color);
 }
 
@@ -224,15 +237,22 @@ svg.ui {
     fill: var(--ui-prime-color);
 }
 
+a:link svg.ui {
+    fill: var(--link-color);
+}
+
 a:visited svg.ui {
     fill: var(--deemphasize-color);
 }
 
-.nav-line {
+a:hover svg.ui {
+    fill: var(--ui-prime-color);
+}
+
+/* .nav-line {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* max-width: calc(var(--shrink-factor) * var(--comic-page-width)); */
     max-width: var(--comic-page-width);
     margin: 0 auto;
 }
@@ -246,15 +266,6 @@ a:visited svg.ui {
     position: relative;
     margin: 0;
     --nav-max-height: 2.5em;
-}
-
-.nav-line a.nav-button span.button-text {
-    /* position: absolute;
-    top: calc(50% - 0.5em);
-    left: calc(50% - 0.5em); */
-    /* background-color: #491d25bb; */
-    /* font-size: smaller; */
-    /* position: relative; */
 }
 
 .nav-line a.nav-button svg.ui {
@@ -292,9 +303,7 @@ a:visited svg.ui {
 }
 
 .nav-line a.next-button svg.ui {
-    /* max-height: 3em; */
     max-width: calc(50vw - 4em);
-    /* display: inline; */
     flex: 1;
 }
 
@@ -320,17 +329,12 @@ a:visited svg.ui {
 }
 
 .nav-line a.prev-upd8-button svg.ui {
-    /* max-height: 3em; */
     max-width: calc(1.5 * (50vw - 4em));
-    /* display: inline; */
     flex: 2;
 }
 
 .nav-line a.prev-upd8-button span.button-text {
-    /* font-size: smaller; */
     flex: 1;
-    /* top: 0.2em; */
-    /* right: min(0.8em, calc((50vw - 4em) / 15 - 0.1em)); */
 }
 
 .nav-line a.home-button, 
@@ -342,38 +346,24 @@ a:visited svg.ui {
 }
 
 .nav-line a.home-button svg.ui {
-    /* max-height: 3em; */
     max-width: calc(1.5 * (50vw - 4em));
 }
-
-/* .nav-line a.random-button svg.ui {
-    max-width: calc(2 * (50vw - 4em));
-    flex: 2;
-}  */
 
 .nav-line a.home-button span.button-text {
     position: absolute;
     top: 29%;
     left: 42%;
     font-size: smaller;
-    /* background-color: var(--bg-color); */
-    /* border-radius: 10%; */
-}
-
-.nav-line a.random-button span.button-text {
-    /* flex: 1; */
 }
 
 .nav-line a.next-upd8-button {
     border-top-right-radius: 40% 8%;
-    /* border-top-left-radius: 0; */
     border-bottom-right-radius: 70% 50%;
     border-bottom-left-radius: 20% 10%;
     height: min(var(--nav-max-height), 15vw);
 }
 
 .nav-line a.next-upd8-button svg.ui {
-    /* max-height: 3em; */
     max-width: calc(1.5 * (50vw - 4em));
     flex: 2;
 }
@@ -398,24 +388,22 @@ a:visited svg.ui {
 
 .nav-line a.archive-button span.button-text {
     flex: 1;
-}
+} */
 
 .page-display {
-    --frame-side-width: 1.5em;
+    --frame-top-width: 1.8em;
+    --frame-side-width: 1.3em;
     --frame-bottom-width: 1.2em;
 }
 
 .page-display img.comic-page {
     max-width: 100%;
-    /* margin-left: var(--frame-side-width);
-    margin-right: var(--frame-side-width); */
     margin-bottom: var(--frame-bottom-width);
-    /* Change 8vh for the default preferred top margin  */
-    margin-top: calc(clamp(0px, 0.5*(100vw - var(--comic-page-width)), 2em));
-    /* border-image-source: url("/draft_site/images/decoration/2026-08-12ReadingFrame_White.svg"); */
-    border-image-slice: 220 260 320 315;
-    border-image-width: var(--frame-side-width) var(--frame-side-width) var(--frame-bottom-width);
-    border-image-outset: var(--frame-side-width) var(--frame-side-width) var(--frame-bottom-width);
+    /* margin-top: calc(clamp(0px, 0.5*(100vw - var(--comic-page-width)), 2em)); */
+    margin-top: 0.4em;
+    border-image-slice: 330 210 270 250;
+    border-image-width: var(--frame-top-width) var(--frame-side-width) var(--frame-bottom-width);
+    border-image-outset: var(--frame-top-width) var(--frame-side-width) var(--frame-bottom-width);
 }
 
 .page-display img.fit-page {

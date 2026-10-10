@@ -3,7 +3,9 @@ namespace Briel;
 
 require_once('siteOperations.php');
 
-$conn = pdoConnect();
+$db = pdoConnect();
 
-generateViewPage(   [getPageInfo($conn, 31), getPageInfo($conn, 32), getPageInfo($conn, 30)], 
-                    'Wizard and Hero'   );
+regenerateComicPages([29,30,31,32,74,75], $db);
+regenerateHomepage($db);
+// redoCachedSearches($db);
+// regenerateArchivePages($db);
