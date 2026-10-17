@@ -118,6 +118,12 @@ h2 {
 }
 
 #tag_section, 
+#tag-cw-section, 
+#cw_section, 
+#note-section, 
+
+
+#tag_section, 
 #tag-cw-section {
     border-image-slice: 350 550 480 550;
     border-image-width: 1em 2.2em 2em;
@@ -131,7 +137,7 @@ h2 {
     border-image-slice: 450 550 750 500;
     border-image-width: 1.8em 2em 2.8em 1.8em;
     border-image-outset: 2.2em calc(1em - 0.5vw) 2.6em calc(0.8em - 0.5vw);
-    margin: 2.2em calc(0.9em - 1vw) 3em; 
+    margin: 2.2em auto 3em; 
     padding-left: 1.5em;
     padding-right: 1.5em;
     max-width: calc(var(--comic-page-width) - 2 * 1.5em - 2 * (0.9em - 1vw));
@@ -141,7 +147,7 @@ h2 {
     border-image-slice: 450 550 750 500;
     border-image-width: 1.8em 2em 2em 1.8em;
     border-image-outset: 2em 1.2vw 2em 0.8vw;
-    margin: 1.2em 0 3em; 
+    margin: 1.2em auto 3em; 
     padding-left: 1.5em;
     padding-right: 1.5em;
     max-width: calc(var(--comic-page-width) - 2 * 1.5em);
@@ -183,14 +189,14 @@ h2 {
     border-image-width: 2.5em 4em 4.8em;
     border-image-outset: 2em calc(1.2em - 1vw) 4.7em calc(1.4em - 1vw);
     --desc-side-padding: calc(2em + 1.5vw);
-    margin: 2.5em 1.5em 3.5em;
+    margin: 2.5em auto 3.5em;
     max-width: calc(var(--comic-page-width) - 2 * 1.5em - 2 * var(--desc-side-padding));
 }
 
 #tag-cw-section + #desc-section {
     border-image-width: 2em 4em 4em;
     border-image-outset: 2em calc(0.5em + 2vw) 4em;
-    margin: 2.5em 1.2em 3.5em;
+    margin: 2.5em auto 3.5em;
     max-width: calc(var(--comic-page-width) - 2 * 1.2em - 2 * var(--desc-side-padding));
 }
 

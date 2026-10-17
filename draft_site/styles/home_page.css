@@ -8,7 +8,6 @@ header,
 /* nav,  */
 aside, 
 section,
-#tag-cw-section, 
 /* #desc-section,  */
 #al-graphic {
     max-width: var(--comic-page-width);
@@ -17,13 +16,16 @@ section,
 #blog-section, 
 #desc-section, 
 #follow-section, 
+#tag-cw-section, 
 #about-section {
     padding: 0 var(--standard-side-padding);
     max-width: calc(var(--comic-page-width) - 2 * var(--standard-side-padding));
+    margin-left: auto;
+    margin-right: auto;
 }
 
 header {
-    margin: 0;
+    margin: 0 auto;
     position: relative; /* Puts it above border images in Z index */
 }
 
@@ -58,8 +60,7 @@ a.whole-page-link:hover {
 
 #blog-section {
     border-image: var(--box-1) 350 550 480 550 / 1em 2.2em 1em / 1.2em 2.2vw 1.2em;
-    margin-top: 1em;
-    margin-bottom: 1.8em;
+    margin: 1em auto 1.8em;
     /* padding: 0 var(--standard-side-padding);
     max-width: calc(var(--comic-page-width) - 2 * var(--standard-side-padding)); */
 }
@@ -68,15 +69,9 @@ a.whole-page-link:hover {
     color: var(--deemphasize-color)
 }
 
-/* #desc-section {
-    margin: 0 0.5em 4em;
-    padding: 0 var(--standard-side-padding); 
-    max-width: calc(var(--comic-page-width) - 2 * var(--standard-side-padding) - 2 * 0.5em);
-} */
-
 #tag-cw-section + #desc-section, 
 #note-section + #desc-section {
-    margin: 0 0.15em 2em;
+    margin: 0 auto 2em;
     padding: 0 var(--standard-side-padding); 
     max-width: calc(var(--comic-page-width) - 2 * var(--standard-side-padding) - 2 * 0.15em);
     border-image: var(--box-2) 450 550 780 500 / 1.8em 2em 2.6em 1.8em / 2.2em calc(1em - 0.5vw) 2.6em calc(0.8em - 0.5vw);
@@ -88,7 +83,7 @@ a.whole-page-link:hover {
 
 #follow-section {
     border-image: var(--box-2) 450 550 750 500 / 1.8em 2em 2.8em 1.8em / 2.2em calc(1em - 0.5vw) 2.6em calc(0.8em - 0.5vw);
-    margin: 0 0.3em 2.6em;
+    margin: 0 auto 2.6em;
     /* padding: 0 0.8em;
     max-width: calc(var(--comic-page-width) - 2 * 0.8em); */
 }
@@ -100,7 +95,7 @@ a.whole-page-link:hover {
 
 #about-section {
     border-image: var(--box-3) 500 600 900 600 / 2.5em 2.2em 3.5em 2em / 2.2em calc(1.5em - 0.5vw) 2.6em calc(1.5em - 1vw);;
-    margin: 0 1em 3em;
+    margin: 0 auto 3em;
     --about-side-padding: 1em;
     padding: 0.5em var(--about-side-padding) 0.9em; 
     max-width: calc(var(--comic-page-width) - 2 * var(--about-side-padding) - 2 * 1em);
