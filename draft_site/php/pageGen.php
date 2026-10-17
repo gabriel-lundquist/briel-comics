@@ -1045,12 +1045,72 @@ function generateReadingAccessoryElements(PageInfo $page) {
 
 function generateBlogEntryElements(BlogInfo $blog) {
     ob_start(); ?>
-    <p><?= $blog->text ?></p>
+    <p><?= $blog->text //may have HTML tags, so no htmlspecialchars() on this ?></p>
     <p><time date="<?= $blog->date->format(HTMLDATEFORMAT) ?>">
        - <?= $blog->date->format(BRIELDATEFORMAT) ?></time>
     </p>
 <?php
     return ob_get_flush();
+}
+
+/**
+ * Summary of Briel\generateBlogPage
+ * @param array $blogs BlogInfo records
+ * @return array|bool|string|null
+ */
+function generateBlogPage(array $blogs) {
+    ob_start(); ?>
+<!doctype html>
+<html lang="en-US">
+    <head>
+        <!-- Good to include charset just to prevent weird errors later on. -->
+        <meta charset="utf-8">
+        
+        <!-- Prevents mobile browsers from screwing with you. -->
+        <meta name="viewport" content="width=device-width">
+
+        <meta name="author" content="Breel">
+        <meta name="description" content="A home page for a comics website.">
+        
+        <title>Web Logs | <?= randomPageTitle() ?></title>
+        <link href="<?= SITEICONPATH ?>" rel="icon" type="image/x-icon">
+
+        <link href="<?= FONTFACESPATH ?>" rel="stylesheet">
+        <link href="<?= LISTSTYLEPATH ?>" rel="stylesheet">
+        <link href="<?= HEADERNAVSTYLEPATH ?>" rel="stylesheet">
+        <link href="<?= NAVBUTTONSTYLEPATH ?>" rel="stylesheet">
+    </head>
+
+    <body>
+        <header>
+            <div class="bar"><?php 
+    generateHomeButton(labelID: 'header-home-label', textFirst: true);  ?>
+                <h1>Web logs</h1><?php 
+    generateArchiveButton(labelID: 'header-archive-label', leftGraphic: false); ?>
+            </div>
+        </header>
+
+        <main>
+            <?php 
+    foreach ($blogs as $blog) {
+        echo "<article class=\"blog\">\n";
+        generateBlogEntryElements($blog);
+        echo "</article>\n";
+    }
+            ?>
+        </main>
+
+        <footer>
+            <p class="nav-line"><?php generateHomeButton(smallGraphic: true); ?></p>
+
+            <?php include 'copyrightElement.php'; ?>
+        </footer>
+    </body>
+</html>
+    <?php
+    $pageStr = ensureServerPaths(ob_get_clean());
+    echo $pageStr;
+    return $pageStr;
 }
 
 function generateHomepage(  BlogInfo $blogInfo, 
@@ -1208,6 +1268,7 @@ function generateHomepage(  BlogInfo $blogInfo,
                 <section id="blog-section" aria-labelledby="weblog-heading">
                     <h2 id="weblog-heading">Web log</h2>
                     <?php generateBlogEntryElements($blogInfo); ?>
+                    <a href="<?=BLOGARCHIVEPATH?>">Web log archive</a>
                 </section>
 
                 <?php generateReadingAccessoryElements($pageInfo); ?>
@@ -1693,7 +1754,7 @@ function generateSearchPage(string $searchStr,
         <link href="<?= FONTFACESPATH ?>" rel="stylesheet" />
         <link href="<?= LISTSTYLEPATH ?>" rel="stylesheet" />
         <link href="<?= HEADERNAVSTYLEPATH ?>" rel="stylesheet" />
-        <link href="<?= NAVBUTTONSTYLEPATH ?>" rel="stylesheet">
+        <link href="<?= NAVBUTTONSTYLEPATH ?>" rel="stylesheet" />
         <link href="<?= STYLEDIRPATH ?>search_page.css" rel="stylesheet" />
         
         <script type="module" src="<?= SEARCHSCRIPTPATH ?>"></script>

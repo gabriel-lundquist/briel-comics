@@ -387,7 +387,7 @@ function getComicInViewport(
 
 function getPrevComicLink(elementIndex, mapList = document.querySelectorAll("map")) {
     // subtract 1 since elementIndex = 0 corresponds to header.
-    console.log("Getting previous link");
+    // console.log("Getting previous link");
     const comicIndex = elementIndex - 1;
     const getMapPrevHref = (index) => mapList[index].querySelector(".prev-button").href;
     if (comicIndex < 0) return getMapPrevHref(0); // we're in the header
@@ -400,7 +400,7 @@ function getPrevComicLink(elementIndex, mapList = document.querySelectorAll("map
 }
 
 function getCurrComicLink(elementIndex, mapList = document.querySelectorAll("map")) {
-    console.log("Getting current link");
+    // console.log("Getting current link");
     const comicIndex = elementIndex - 1;
     if (comicIndex <= 0) {
         return mapList[1].querySelector(".prev-button").href;
@@ -435,15 +435,15 @@ document.addEventListener("keydown", function (event) {
                 scrollCoord = window.scrollX;
             }
             const coords = getComicScrollEndCoords();
-            console.log("Scroll coord: " + scrollCoord);
-            console.log(coords);
+            // console.log("Scroll coord: " + scrollCoord);
+            // console.log(coords);
             const elementIndex = getComicInViewport(coords);
-            console.log("Element index: " + elementIndex);
+            // console.log("Element index: " + elementIndex);
             const mapList = document.querySelectorAll("map");
             const backLink = coords.some((val) => isWithinThreshold(val, scrollCoord)) ? 
                                     getPrevComicLink(elementIndex, mapList)
                                     : getCurrComicLink(elementIndex, mapList);
-            console.log("Back link: " + backLink);
+            // console.log("Back link: " + backLink);
             keyNavigate(event, 
                         window, 
                         prevKeys, 
@@ -453,7 +453,7 @@ document.addEventListener("keydown", function (event) {
                         "", 
                         "", 
                         ["input[type='search']"], 
-                        preventDefault=true
+                        true
             );
         }
         

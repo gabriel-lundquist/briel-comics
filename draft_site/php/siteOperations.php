@@ -6,6 +6,17 @@ use DateTimeImmutable;
 require_once 'dbManip.php';
 require_once 'pageGen.php';
 
+function getAllBlogInfo(\PDO $db) {
+    $getRecord = $db->query('SELECT blogtext, postdate FROM blog ORDER BY postdate DESC;');
+    $record = $getRecord->fetch(\PDO::FETCH_ASSOC);
+    $infos = [];
+    while ($record) {
+        $infos[] = new BlogInfo($record['blogtext'], $record['postdate']);
+        $record = $getRecord->fetch(\PDO::FETCH_ASSOC);
+    }
+    return $infos;
+}
+
 /**
  * Summary of Briel\getPageInfo
  * Uses database statements to get all the information needed to generate the html file
@@ -397,7 +408,7 @@ function redoCachedSearches(\PDO $pdoConn) {
 
         // get the info for each page (lists of tags, cws, thumbnails)
         $resultInfos = array_fill(0, count($results), null);
-        for ($i = 0; $i < count($results); $i++) {
+        for ($i = 0; $i < \count($results); $i++) {
             $getThumbnails->execute([$results[$i]['pageid']]);
             $thumbnailRecords = [];
             if (($thumbnailRecords = $getThumbnails->fetchAll(\PDO::FETCH_ASSOC)) == []) {
@@ -435,7 +446,7 @@ function redoCachedSearches(\PDO $pdoConn) {
             for ($i = 1; $i <= \count($pageStrs); $i++) {
                 $filePath = FILEROOT . SEARCHCACHEDIR
                             . implode('_', [    'search', 
-                                                $search['search'], 
+                                                urlencode($search['search']), 
                                                 $search['searchimgdesc'], 
                                                 $search['matchexactly'], 
                                                 "p{$i}.html"    ]);
@@ -490,6 +501,21 @@ function redoCachedSearches(\PDO $pdoConn) {
                 VALUES $insertStmt;
                 STMT);
         $insert->execute($insertParams);
+    }
+}
+
+function generateSaveBlogPage(\PDO $pdoConn) {
+    if (!tryPDOConnect($pdoConn)) {
+        echo "Couldn't establish/continue SQL server connection. Returning false...\n";
+        return false;
+    }
+
+    ob_start();
+    $success = file_put_contents(   BLOGARCHIVEFILEPATH, 
+                                    generateBlogPage(getAllBlogInfo($pdoConn))  );
+    ob_end_clean();
+    if (!$success) {
+        echo "Failed to write to blog archive page at " . BLOGARCHIVEFILEPATH . "\n";
     }
 }
 
@@ -557,6 +583,14 @@ function postUpdate(?\PDO $pdoConn = null) {
     $addDateToUpdate = $pdoConn->prepare(
             "UPDATE comicupdate SET postdate = NOW() WHERE updateid = ?;");
     $addDateToUpdate->execute([$updateRecord['updateid']]);
+
+    if (promptInput("Would you like to make a new blog post? (y/n) > " == "y")) {
+        $blogText = promptInput("Enter blog text (or a path to it):\n> ");
+        if (is_readable($blogText)) $blogText = file_get_contents($blogText) ?: $blogText;
+        $pdoConn->prepare("INSERT INTO blog(blogtext, postdate) VALUES (?, NOW());")
+                ->execute([$blogText]);
+    }
+    generateSaveBlogPage($pdoConn);
 
     echo "Regenerating homepage HTML file...\n";
     // regenerate home page

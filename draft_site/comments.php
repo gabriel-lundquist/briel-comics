@@ -21,12 +21,12 @@ ob_start();
         <link href="<?= FONTFACESPATH ?>" rel="stylesheet" />
         <link href="<?= LISTSTYLEPATH ?>" rel="stylesheet" />
         <link href="<?= HEADERNAVSTYLEPATH ?>" rel="stylesheet" />
-        <link href="<?= NAVBUTTONSTYLEPATH ?>" rel="stylesheet">
+        <link href="<?= NAVBUTTONSTYLEPATH ?>" rel="stylesheet" />
     </head>
 
     <body>
         <header>
-            <div class="nav-line">
+            <div class="bar">
                 <?php 
     generateHomeButton(labelID: 'header-home-label', textFirst: true);
                 ?>
