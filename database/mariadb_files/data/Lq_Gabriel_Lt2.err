@@ -1,0 +1,67 @@
+2026-10-17 16:38:29 0 [Note] Starting MariaDB 13.0.2-MariaDB source revision 620a4b5624222048fece7fe1789978ae0675cae2 server_uid 8ogJuOXX2XG9/50pX28ArxSjJjI= as process 26952
+2026-10-17 16:38:29 0 [Note] InnoDB: Compressed tables use zlib 1.3.2
+2026-10-17 16:38:29 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-17 16:38:29 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-17 16:38:29 0 [Note] InnoDB: Using ThreadPool
+2026-10-17 16:38:29 0 [Note] InnoDB: innodb_buffer_pool_size_max=8388608m, innodb_buffer_pool_size=1971m
+2026-10-17 16:38:29 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-17 16:38:29 0 [Note] InnoDB: File system buffers for log disabled (block size=4096 bytes)
+2026-10-17 16:38:29 0 [Note] InnoDB: End of log at LSN=45418
+2026-10-17 16:38:29 0 [Note] InnoDB: Opened 3 undo tablespaces
+2026-10-17 16:38:29 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+2026-10-17 16:38:29 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-17 16:38:29 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-17 16:38:29 0 [Note] InnoDB: log sequence number 45418; transaction id 14
+2026-10-17 16:38:29 0 [Note] Plugin 'FEEDBACK' is disabled.
+2026-10-17 16:38:29 0 [Note] InnoDB: Loading buffer pool(s) from C:\Users\gabri\Code\Briel comics website\briel-comics\database\mariadb_files\data\ib_buffer_pool
+2026-10-17 16:38:29 0 [Note] mysqld.exe: SSPI: using principal name 'localhost', mech 'Negotiate'
+2026-10-17 16:38:29 0 [Note] InnoDB: Buffer pool(s) load completed at 261017 16:38:29
+2026-10-17 16:38:30 0 [Note] Server socket created on IP: '::', port: '3309'.
+2026-10-17 16:38:30 0 [Note] Server socket created on IP: '0.0.0.0', port: '3309'.
+2026-10-17 16:38:30 0 [Note] mysqld.exe: Event Scheduler: Loaded 0 events
+2026-10-17 16:38:30 0 [Note] C:\Program Files\MariaDB 13.0\bin\mysqld.exe: ready for connections.
+Version: '13.0.2-MariaDB'  socket: ''  port: 3309  MariaDB Server
+2026-10-17 16:49:12 0 [Note] Windows service "MariaDB_breel":  received SERVICE_CONTROL_STOP
+2026-10-17 16:49:12 0 [Note] C:\Program Files\MariaDB 13.0\bin\mysqld.exe (initiated by: unknown): Normal shutdown
+2026-10-17 16:49:12 0 [Note] InnoDB: FTS optimize thread exiting.
+2026-10-17 16:49:12 0 [Note] InnoDB: Starting shutdown...
+2026-10-17 16:49:12 0 [Note] InnoDB: Dumping buffer pool(s) to C:\Users\gabri\Code\Briel comics website\briel-comics\database\mariadb_files\data\ib_buffer_pool
+2026-10-17 16:49:12 0 [Note] InnoDB: Buffer pool(s) dump completed at 261017 16:49:12
+2026-10-17 16:49:12 0 [Note] InnoDB: Removed temporary tablespace data file: "./ibtmp1"
+2026-10-17 16:49:12 0 [Note] Shutdown completed; log sequence number 45418; transaction id 15
+2026-10-17 16:49:12 0 [Note] C:\Program Files\MariaDB 13.0\bin\mysqld.exe: Shutdown complete
+2026-10-17 16:49:47 0 [Note] Starting MariaDB 13.0.2-MariaDB source revision 620a4b5624222048fece7fe1789978ae0675cae2 server_uid 8ogJuOXX2XG9/50pX28ArxSjJjI= as process 27652
+2026-10-17 16:49:47 0 [Note] InnoDB: Compressed tables use zlib 1.3.2
+2026-10-17 16:49:47 0 [Note] InnoDB: Number of transaction pools: 1
+2026-10-17 16:49:47 0 [Note] InnoDB: Using crc32 + pclmulqdq instructions
+2026-10-17 16:49:47 0 [Note] InnoDB: Using ThreadPool
+2026-10-17 16:49:47 0 [Note] InnoDB: innodb_buffer_pool_size_max=8388608m, innodb_buffer_pool_size=1971m
+2026-10-17 16:49:47 0 [Note] InnoDB: Completed initialization of buffer pool
+2026-10-17 16:49:47 0 [Note] InnoDB: File system buffers for log disabled (block size=4096 bytes)
+2026-10-17 16:49:47 0 [Note] InnoDB: End of log at LSN=45418
+2026-10-17 16:49:47 0 [Note] InnoDB: Opened 3 undo tablespaces
+2026-10-17 16:49:47 0 [Note] InnoDB: 128 rollback segments in 3 undo tablespaces are active.
+2026-10-17 16:49:47 0 [Note] InnoDB: Setting file './ibtmp1' size to 12.000MiB. Physically writing the file full; Please wait ...
+2026-10-17 16:49:47 0 [Note] InnoDB: File './ibtmp1' size is now 12.000MiB.
+2026-10-17 16:49:47 0 [Note] InnoDB: log sequence number 45418; transaction id 14
+2026-10-17 16:49:47 0 [Note] Plugin 'FEEDBACK' is disabled.
+2026-10-17 16:49:47 0 [Note] InnoDB: Loading buffer pool(s) from C:\Users\gabri\Code\Briel comics website\briel-comics\database\mariadb_files\data\ib_buffer_pool
+2026-10-17 16:49:47 0 [Note] mysqld.exe: SSPI: using principal name 'localhost', mech 'Negotiate'
+2026-10-17 16:49:47 0 [Note] InnoDB: Buffer pool(s) load completed at 261017 16:49:47
+2026-10-17 16:49:48 0 [Note] Server socket created on IP: '::', port: '3309'.
+2026-10-17 16:49:48 0 [Note] Server socket created on IP: '0.0.0.0', port: '3309'.
+2026-10-17 16:49:48 0 [Note] mysqld.exe: Event Scheduler: Loaded 0 events
+2026-10-17 16:49:48 0 [Note] C:\Program Files\MariaDB 13.0\bin\mysqld.exe: ready for connections.
+Version: '13.0.2-MariaDB'  socket: ''  port: 3309  MariaDB Server
+2026-10-17 16:54:47 6 [Warning] Aborted connection 6 to db: 'unconnected' user: 'root' host: 'localhost' (Got an error reading communication packets)
+2026-10-17 16:54:47 3 [Warning] Aborted connection 3 to db: 'unconnected' user: 'root' host: 'localhost' (Got an error reading communication packets)
+2026-10-17 16:54:47 5 [Warning] Aborted connection 5 to db: 'test' user: 'root' host: 'localhost' (Got an error reading communication packets)
+2026-10-21 20:28:45 0 [Note] Windows service "MariaDB_breel":  received SERVICE_CONTROL_STOP
+2026-10-21 20:28:45 0 [Note] C:\Program Files\MariaDB 13.0\bin\mysqld.exe (initiated by: unknown): Normal shutdown
+2026-10-21 20:28:45 0 [Note] InnoDB: FTS optimize thread exiting.
+2026-10-21 20:28:45 0 [Note] InnoDB: Starting shutdown...
+2026-10-21 20:28:45 0 [Note] InnoDB: Dumping buffer pool(s) to C:\Users\gabri\Code\Briel comics website\briel-comics\database\mariadb_files\data\ib_buffer_pool
+2026-10-21 20:28:45 0 [Note] InnoDB: Buffer pool(s) dump completed at 261021 20:28:45
+2026-10-21 20:28:45 0 [Note] InnoDB: Removed temporary tablespace data file: "./ibtmp1"
+2026-10-21 20:28:45 0 [Note] Shutdown completed; log sequence number 45418; transaction id 15
+2026-10-21 20:28:45 0 [Note] C:\Program Files\MariaDB 13.0\bin\mysqld.exe: Shutdown complete

@@ -37,26 +37,6 @@ const PAGEINSERTCOLUMNS = [ "title",
 
 const TEXTMATCHTHRESHOLD = 0.1;
 
-// class DatabaseStatements {
-//     public function __construct(    
-//             public \PDO $db, 
-//             public ?\PDOStatement $getPageRecord = null, 
-//             public ?\PDOStatement $getPrevPageID = null, 
-//             public ?\PDOStatement $getNextPageID = null, 
-//             public ?\PDOStatement $getPrevUpdateID = null, 
-//             public ?\PDOStatement $getNextUpdateID = null, 
-//             public ?\PDOStatement $getPageFromUpdateID = null, 
-//             public ?\PDOStatement $getUpdateFromPageID = null, 
-//             public ?\PDOStatement $getImgRecords = null, 
-//             public ?\PDOStatement $getThumbnailRecords = null, 
-//             public ?\PDOStatement $getTags = null, 
-//             public ?\PDOStatement $getCWs = null, 
-//             public ?\PDOStatement $getSpreadType = null, 
-//             public ?\PDOStatement $getStylePath = null) {
-
-//     }
-// }
-
 class DatabaseStatements {
     public function __construct(    public \PDO $pdoConn, 
                                     public ?\PDOStatement $getPageRecord = null, 
