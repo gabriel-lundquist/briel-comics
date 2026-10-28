@@ -355,7 +355,7 @@ function generateSaveUpdatePageFiles(   \PDO $pdoConn,
  */
 function redoCachedSearches(\PDO $pdoConn) {
     backupSearchData($pdoConn);
-    
+    $pdoConn->exec("USE user_submitted;");
     $getSearch = $pdoConn->query(
             "SELECT DISTINCT search, searchimgdesc, matchexactly FROM searchcache;");
     $getSearchAtIndex = $pdoConn->prepare(<<<STMT
@@ -368,6 +368,7 @@ function redoCachedSearches(\PDO $pdoConn) {
             search = :search AND matchexactly = :exact AND searchimgdesc = :desc
             AND resultpageindex >= :minpageindex;
         STMT);
+    $pdoConn->exec("USE " . MAINDBNAME . ";");
     $getTags = getTagsFromPageIDStmt($pdoConn);
     $getCWs = getCWsFromPageIDStmt($pdoConn);
     $getThumbnails = getThumbnailFromPageIDStmt($pdoConn);
@@ -441,15 +442,16 @@ function redoCachedSearches(\PDO $pdoConn) {
         );
 
         if ($pageStrs) {
+            $pdoConn->exec("USE user_submitted;");
             // save all pages and update cache records
             $i = 1;
             for ($i = 1; $i <= \count($pageStrs); $i++) {
                 $filePath = FILEROOT . SEARCHCACHEDIR
-                            . implode('_', [    'search', 
-                                                urlencode($search['search']), 
-                                                $search['searchimgdesc'], 
-                                                $search['matchexactly'], 
-                                                "p{$i}.html"    ]);
+                            . implode('_', ['search', 
+                                            urlencode($search['search']), 
+                                            $search['searchimgdesc'], 
+                                            $search['matchexactly'], 
+                                            "p{$i}.html"]);
                 // save the file
                 $successfulSave = file_put_contents($filePath, $pageStrs[$i - 1]);
                 if ($successfulSave === false) {
@@ -467,8 +469,8 @@ function redoCachedSearches(\PDO $pdoConn) {
                 $searchAtIndex = $getSearchAtIndex->fetch(\PDO::FETCH_ASSOC);
                 if (!$searchAtIndex) {
                     // assemble the statement...
-                    $insertStmt .= 
-                    " ROW(:search{$i}_$n, :desc{$i}_$n, :exact{$i}_$n, :index{$i}_$n, :path{$i}_$n)";
+                    $insertStmt .= " ROW(:search{$i}_$n, :desc{$i}_$n, :exact{$i}_$n, "
+                            . ":index{$i}_$n, :path{$i}_$n)";
                     $insertParams = [   ...$insertParams, 
                                         ":search{$i}_$n" => $search['search'], 
                                         ":desc{$i}_$n" => $search['searchimgdesc'], 
@@ -491,6 +493,7 @@ function redoCachedSearches(\PDO $pdoConn) {
     // Insert new search indices into database if necessary
     if ($insertStmt != '') {
         tryBeginTransaction($pdoConn);
+        $pdoConn->exec("USE user_submitted;");
         // insert the records from assembled statement
         $insert = $pdoConn->prepare(<<<STMT
                 INSERT INTO searchcache (   search, 
@@ -502,6 +505,8 @@ function redoCachedSearches(\PDO $pdoConn) {
                 STMT);
         $insert->execute($insertParams);
     }
+
+    $pdoConn->exec("USE " . MAINDBNAME . ";");
 }
 
 function generateSaveBlogPage(\PDO $pdoConn) {
@@ -516,7 +521,8 @@ function generateSaveBlogPage(\PDO $pdoConn) {
     ob_end_clean();
     if (!$success) {
         echo "Failed to write to blog archive page at " . BLOGARCHIVEFILEPATH . "\n";
-    }
+        return false;
+    } else return true;
 }
 
 /**
@@ -575,6 +581,20 @@ function postUpdate(?\PDO $pdoConn = null) {
     // generate and save new HTML files as well as new versions of old HTML files
     generateSaveUpdatePageFiles($pdoConn, $pageRecords, $prevUpdatePageIDs);
 
+    $blogText = null;
+    if (promptInput("Would you like to make a new blog post? (y/n) > " == "y")) {
+        $blogText = promptInput("Enter blog text (or a path to it):\n> ");
+        if (is_readable($blogText)) $blogText = file_get_contents($blogText) ?: $blogText;
+    }
+
+    backupSearchData($pdoConn);
+    if (promptInput("Would you like to delete the cached search page HTML files?\n(y/n) > ")
+            == "y") {
+        foreach (glob(SEARCHCACHEDIRPATH . "?*.{HTML,html}", GLOB_BRACE) as $path) {
+            unlink($path);
+        }
+    } 
+
     // add post date to pages and update
     $addDateToPage = $pdoConn->prepare("UPDATE page SET postdate = NOW() WHERE pageid = ?;");
     foreach (array_column($pageRecords, 'pageid') as $pageID) {
@@ -584,9 +604,7 @@ function postUpdate(?\PDO $pdoConn = null) {
             "UPDATE comicupdate SET postdate = NOW() WHERE updateid = ?;");
     $addDateToUpdate->execute([$updateRecord['updateid']]);
 
-    if (promptInput("Would you like to make a new blog post? (y/n) > " == "y")) {
-        $blogText = promptInput("Enter blog text (or a path to it):\n> ");
-        if (is_readable($blogText)) $blogText = file_get_contents($blogText) ?: $blogText;
+    if ($blogText) {
         $pdoConn->prepare("INSERT INTO blog(blogtext, postdate) VALUES (?, NOW());")
                 ->execute([$blogText]);
     }
@@ -601,7 +619,71 @@ function postUpdate(?\PDO $pdoConn = null) {
     $archivePagePaths = [];
     regenerateArchivePages($pdoConn, $archivePagePaths);
 
-    // backup and delete/regenerate affected searches
+    // regenerate affected searches
+    redoCachedSearches($pdoConn);
+
+    echo "Final check for commitment. ";
+    promptCommit($pdoConn);
+}
+
+function generateSiteUpdate(?\PDO $pdoConn = null) {
+    if (!tryPDOConnect($pdoConn)) {
+        echo "Couldn't establish/continue SQL server connection. Aborting...\n";
+        return false;
+    }
+    echo "Generating update files...\n";
+    tryBeginTransaction($pdoConn);
+
+    $unpostedUpdateRecords = $pdoConn
+            ->query("SELECT updateid, title FROM comicupdate WHERE postdate IS NULL;")
+            ->fetchAll(\PDO::FETCH_ASSOC);
+    $tryAgain = false;
+    $updateID = null;
+    do {
+        echo attributeTableStr( $unpostedUpdateRecords, 
+                                "Unposted updates:", 
+                                'updateid', 
+                                'title' );
+        $updateID = promptInput("Enter the ID of the update you want to post,"
+                                        . " or 'n' if you want to cancel posting.\n> ");
+        if ($updateID == 'n') return false;
+        elseif (!\in_array($updateID, array_column($unpostedUpdateRecords, 'updateid'))) {
+            echo "$updateID not in the list of IDs.\n";
+            $tryAgain = true;
+        } else {
+            $tryAgain = false;
+        }
+    } while ($tryAgain);
+
+    $updateRecord = executeAndFetch(
+            getUpdateRecordFromIDStmt($pdoConn), 
+            [$updateID], 
+            mode: \PDO::FETCH_ASSOC
+    );
+
+    $pageRecords = [];
+    $getPageIDs = getPageIDsFromUpdateIDStmt($pdoConn);
+    $getPageIDs->execute([$updateID]);
+    $getPageRecord = getPageRecordFromIDStmt($pdoConn);
+    while (($page = $getPageIDs->fetch(\PDO::FETCH_ASSOC)) !== false) {
+        $pageRecords[] = executeAndFetch(   $getPageRecord, 
+                                            [$page['pageid']], 
+                                            \PDO::FETCH_ASSOC   );
+    }
+
+    $prevUpdateID = executeAndFetchScalar(getPrevUpdateFromIDStmt($pdoConn), $updateID);
+    $getPageIDs->execute([$prevUpdateID]);
+    $prevUpdatePageIDs = $getPageIDs->fetchAll(\PDO::FETCH_COLUMN);
+
+    // generate and save new HTML files as well as new versions of old HTML files
+    generateSaveUpdatePageFiles($pdoConn, $pageRecords, $prevUpdatePageIDs);
+
+    // $blogText = null;
+    // if (promptInput("Would you like to make a new blog post? (y/n) > " == "y")) {
+    //     $blogText = promptInput("Enter blog text (or a path to it):\n> ");
+    //     if (is_readable($blogText)) $blogText = file_get_contents($blogText) ?: $blogText;
+    // }
+
     backupSearchData($pdoConn);
     if (promptInput("Would you like to delete the cached search page HTML files?\n(y/n) > ")
             == "y") {
@@ -609,10 +691,130 @@ function postUpdate(?\PDO $pdoConn = null) {
             unlink($path);
         }
     } 
+
+    // add post date to pages, update, and blog
+    $addDateToPage = $pdoConn->prepare("UPDATE page SET postdate = NOW() WHERE pageid = ?;");
+    foreach (array_column($pageRecords, 'pageid') as $pageID) {
+        $addDateToPage->execute([$pageID]);
+    }
+    $addDateToUpdate = $pdoConn->prepare(
+            "UPDATE comicupdate SET postdate = NOW() WHERE updateid = ?;");
+    $addDateToUpdate->execute([$updateRecord['updateid']]);
+    $pdoConn->exec(<<<STMT
+            UPDATE blog SET postdate = NOW() WHERE blogid = (
+                SELECT MAX(blogid) FROM blog WHERE postdate IS NULL
+            );
+            STMT);
+
+    generateSaveBlogPage($pdoConn);
+
+    echo "Regenerating homepage HTML file...\n";
+    // regenerate home page
+    regenerateHomepage($pdoConn);
+
+    echo "Regenerating archive HTML files...\n";
+    // regenerate archive
+    $archivePagePaths = [];
+    regenerateArchivePages($pdoConn, $archivePagePaths);
+
+    echo "Regenerating cached search HTML files...\n";
+    // regenerate affected searches
     redoCachedSearches($pdoConn);
 
     echo "Final check for commitment. ";
     promptCommit($pdoConn);
+}
+
+function generateSite(?\PDO $pdoConn = null) {
+    if (!tryPDOConnect($pdoConn)) {
+        echo "Couldn't establish/continue SQL server connection. Aborting...\n";
+        return false;
+    }    
+
+    $stmt = new DatabaseStatements($pdoConn);
+
+    if (promptInput("Would you like to delete the cached search page HTML files?\n(y/n) > ")
+            == "y") {
+        foreach (glob(SEARCHCACHEDIRPATH . "?*.{HTML,html}", GLOB_BRACE) as $path) {
+            unlink($path);
+        }
+    } 
+
+    $updateID = false;
+    $blogID = false;
+    if (promptInput("Would you like to add a post date to an undated blog or update? (y/n) > ")
+             == "y") {
+        $unpostedUpdateRecords = $pdoConn
+                ->query("SELECT updateid, title FROM comicupdate WHERE postdate IS NULL;")
+                ->fetchAll(\PDO::FETCH_ASSOC);
+        $tryAgain = false;
+        do {
+            echo attributeTableStr( $unpostedUpdateRecords, 
+                                    "Unposted updates:", 
+                                    'updateid', 
+                                    'title' );
+            $updateID = promptInput("Enter the ID of the update you want to date,"
+                                    . " or 'n' if you want to skip dating updates.\n> ");
+            if ($updateID == 'n') $tryAgain = $updateID = false;
+            elseif (!\in_array($updateID, array_column($unpostedUpdateRecords, 'updateid'))) {
+                echo "$updateID not in the list of IDs.\n";
+                $tryAgain = true;
+            } else $tryAgain = false;
+        } while ($tryAgain);
+
+        $unpostedBlogRecords = $pdoConn->query(
+                "SELECT blogid, CONCAT(SUBSTRING(blogtext FROM 0 FOR 29), '...') AS trunctext 
+                            FROM blog WHERE postdate IS NULL;"
+        )->fetchAll(\PDO::FETCH_ASSOC);
+        $tryAgain = false;
+        do {
+            echo attributeTableStr( $unpostedBlogRecords, 
+                                    "Unposted blogs:", 
+                                    'blogid', 
+                                    'trunctext' );
+            $blogID = promptInput("Enter the ID of the blog you want to date,"
+                                    . " or 'n' if you want to skip dating blogs.\n> ");
+            if ($blogID == 'n') $tryAgain = $blogID = false;
+            elseif (!\in_array($blogID, array_column($unpostedBlogRecords, 'blogid'))) {
+                echo "$blogID not in the list of IDs.\n";
+                $tryAgain = true;
+            } else $tryAgain = false;
+        } while ($tryAgain);
+    }
+
+    if ($updateID !== false) {
+        $addDateToUpdate = $pdoConn->prepare(
+                "UPDATE comicupdate SET postdate = NOW() WHERE updateid = ?;");
+        $addDateToUpdate->execute([$updateID]);
+        $addDateToPages = $pdoConn->prepare(
+                "UPDATE page SET postdate = NOW() WHERE pageid = ?;");
+        $stmt->getPageFromUpdateID->execute([$updateID]);
+        while (($page = $stmt->getPageFromUpdateID->fetch()) !== false) {
+            $addDateToPages->execute([$page['pageid']]);
+        }
+    }
+
+    if ($blogID !== false) {
+        $addDateToBlog = $pdoConn->prepare(
+                "UPDATE blog SET postdate = NOW() WHERE blogid = ?;");
+        $addDateToBlog->execute([$blogID]);
+    }
+
+    $allPageIDs = $pdoConn
+            ->query("SELECT pageid FROM page WHERE postdate IS NOT NULL;")
+            ->fetchAll(\PDO::FETCH_COLUMN);
+
+    regenerateComicPages($allPageIDs, $pdoConn, $stmt);
+
+    regenerateArchivePages($pdoConn);
+
+    redoCachedSearches($pdoConn);
+
+    generateSaveBlogPage($pdoConn);
+
+    regenerateHomepage($pdoConn);
+
+    return true;
 }
 
 function regenerateComicPages(  array|int $pageIDs, 

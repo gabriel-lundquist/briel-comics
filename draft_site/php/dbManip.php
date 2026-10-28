@@ -2964,6 +2964,7 @@ function getNextPageFromIDStmt(\PDO $pdoConn) {
 
 /**
  * Summary of Briel\getPrevUpdateFromIDStmt
+ * Gets the previous update ID in the order, given an update ID.
  * @param \PDO $pdoConn
  * @return bool|\PDOStatement when executed, this statement will return `false` if 
  * there is no record with the given ID as a target, `null` if the record exists but
@@ -3020,15 +3021,15 @@ function getPrevSearchStmt(\PDO $pdoConn) {
 
 function updatePrevSearchCountStmt(\PDO $pdoConn) {
     return $pdoConn->prepare(<<<STMT
-            UPDATE searchcache SET numtimes = numtimes + 1 
-            WHERE search = :search AND matchexactly = :exact AND searchimgdesc = :desc;
+            UPDATE searchdata SET numtimes = numtimes + 1 
+                WHERE search = :search AND matchexactly = :exact AND searchimgdesc = :desc;
             STMT);
 }
 
-function existsPrevSearchOtherIndexStmt(\PDO $pdoConn) {
+function existsPrevSearchAnyIndexStmt(\PDO $pdoConn) {
     return $pdoConn->prepare(<<<STMT
             SELECT EXISTS(
-                SELECT NULL FROM searchcache 
+                SELECT NULL FROM searchdata 
                 WHERE search = :search 
                     AND matchexactly = :exact 
                     AND searchimgdesc = :desc
@@ -3145,4 +3146,67 @@ function orderUnorderablePageIDs(   \PDO $pdoConn,
     ksort($pageOrdersOrdered);
     return array_merge(...array_values($pageOrdersOrdered));
 }
+
+function recordUpdate(?\PDO $pdoConn = null) {
+    if (!tryPDOConnect($pdoConn)) {
+        echo "Couldn't establish/continue SQL server connection. Aborting...\n";
+        return false;
+    }
+    echo "Recording update...\n";
+    tryBeginTransaction($pdoConn);
+
+    // after file upload, generate and insert file records
+    generateInsertUpdateFileRecords($pdoConn);
+    
+    // generate update record
+    $updateRecord = generateUpdateRecordInteractive($pdoConn);
+
+    // insert update record
+    queryInsertRecords( $pdoConn, 
+                        'comicupdate', 
+                        ['title', 'updatedesc'], 
+                        [$updateRecord], 
+                        promptToCommit: false   );
+
+    // only problem is the update's ID is generated when it's inserted.
+    // so here we get the updateid generated during insert
+    $getUpdateID = $pdoConn->prepare(<<<STMT
+            SELECT updateid FROM comicupdate 
+                WHERE title = ? AND updatedesc = ? AND postdate IS NULL LIMIT 1;
+            STMT);
+    $getUpdateID->execute([$updateRecord['title'], $updateRecord['updatedesc']]);
+    $updateRecord['updateid'] = $getUpdateID->fetch(\PDO::FETCH_ASSOC)['updateid'];
+
+    // add update ID to update order
+    insertUpdateAtEnd($updateRecord['updateid'], $pdoConn, promptToCommit: false);
+
+    $prevUpdateID = getEndOfRecentUpdateOrderID($pdoConn);
+    $getPrevUpdatePages = getPageIDsFromUpdateIDStmt($pdoConn);
+    $getPrevUpdatePages->execute([$prevUpdateID]);
+    $prevUpdatePageIDs = $getPrevUpdatePages->fetchAll(\PDO::FETCH_COLUMN);
+
+    // generate page records, add them to pageorder, and associate them to files/tags/cws
+    $pageRecords = appendGeneratePageRecords(
+            $pdoConn, 
+            getLastPageIDOfUpdateFromID($pdoConn, $prevUpdateID), 
+            promptToCommit: false
+    );
+
+    // associate pages with update
+    associatePagesInteractive($updateRecord, $pdoConn);
+
+    $blogText = null;
+    if (promptInput("Would you like to make a new blog post? (y/n) > " == "y")) {
+        $blogText = promptInput("Enter blog text (or a path to it):\n> ");
+        if (is_readable($blogText)) $blogText = file_get_contents($blogText) ?: $blogText;
+        $pdoConn->prepare("INSERT INTO blog(blogtext) VALUES (?);")
+                ->execute([$blogText]);
+    }
+    
+    backupSearchData($pdoConn);
+
+    echo "Final check for commitment. ";
+    return promptCommit($pdoConn);
+}
+
 ?>

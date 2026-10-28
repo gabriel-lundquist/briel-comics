@@ -32,7 +32,6 @@ const HOMEFILEPATH = FILEROOT . 'home.html';
 const STYLEDIRPATH = SITEROOT . 'styles/';
 const HOMESTYLEPATH = STYLEDIRPATH . "home_page.css";
 const COMMENTPATH = SITEROOT . 'comments.php';
-const BLOGARCHIVEPATH = SITEROOT . 'weblog.html';
 const SEARCHCACHEDIR = 'searchcache/';
 const SEARCHCACHEDIRPATH = SITEROOT . SEARCHCACHEDIR;
 const BLANKSEARCHFILENAME = 'blank_search.html';
@@ -64,6 +63,7 @@ const NAVBUTTONSTYLEPATH = STYLEDIRPATH . 'nav-buttons.css';
 const BLOGARCHIVEFILENAME = 'weblogs.html';
 const BLOGARCHIVEPATH = SITEROOT . BLOGARCHIVEFILENAME;
 const BLOGARCHIVEFILEPATH = FILEROOT . BLOGARCHIVEFILENAME;
+const MAINDBNAME = "briel_comics_test";
 
 const SQLDATETIMEFORMAT = 'Y-m-d H:i:s';
 

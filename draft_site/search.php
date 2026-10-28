@@ -1,8 +1,9 @@
 <?php
 
-use function Briel\existsPrevSearchOtherIndexStmt;
+use function Briel\existsPrevSearchAnyIndexStmt;
 use function Briel\getPrevSearchStmt;
 use function Briel\updatePrevSearchCountStmt;
+use const Briel\MAINDBNAME;
 use const Briel\SEARCHPAGEINDEXKEY;
 
 // A note: this will not return a page in a search until it has a path in the database!
@@ -39,6 +40,7 @@ $prevInTransaction = $pdoConnection->inTransaction();
 
 // first, check if this exact search (with the terms potentially shuffled)
 // has been done before
+$pdoConnection->exec("USE user_submitted;");
 $prevSearch = Briel\getPrevSearchStmt($pdoConnection);
 $searchcacheKey = Briel\searchcacheKeyFromSearchString($getParams['search']);
 $prevSearch->execute([  
@@ -66,7 +68,7 @@ if ($prevExists !== false) {
 
 } else {
     // the exact index value may not exist, but maybe the search does?
-    $prevSearchOtherIndex = Briel\existsPrevSearchOtherIndexStmt($pdoConnection);
+    $prevSearchOtherIndex = Briel\existsPrevSearchAnyIndexStmt($pdoConnection);
     $prevSearchOtherIndex->execute([  
             ':search' => $searchcacheKey, 
             ':exact' => $getParams['exact'], 
@@ -87,6 +89,7 @@ if ($prevExists !== false) {
         ]);
 
     } else {
+        $pdoConnection->exec("USE " . MAINDBNAME . ";");
         // search is nowhere in the cache. do the actual search algorithm
         [$results, $s, $execList] = Briel\allSearchComics(
                 $getParams['search'], 
@@ -94,9 +97,12 @@ if ($prevExists !== false) {
                 $matchExactly = ($getParams['exact'] == Briel\CHECKBOXON), 
                 $searchDesc = ($getParams['desc'] == Briel\CHECKBOXON)
         );
+        $pdoConnection->exec("USE user_submitted;");
 
+        $pdoConnection->exec("USE " . MAINDBNAME . ";");
         if (count($results) >= Briel\getNumServablePages($pdoConnection)) { 
             // this search has returned all pages!
+            $pdoConnection->exec("USE user_submitted;");
             $prevSearchOtherIndex->execute(
                     [':search' => '', ':exact' => '', ':desc' => '']);
 
@@ -108,10 +114,12 @@ if ($prevExists !== false) {
                 foreach (['search', 'desc', 'exact'] as $field) 
                     $getParams[$field] = '';
                 $searchcacheKey = '';
+                $pdoConnection->exec("USE " . MAINDBNAME . ";");
                 [$results, $s, $execList] = Briel\allSearchComics('', $pdoConnection);
-
+                $pdoConnection->exec("USE user_submitted;");
             } else {
                 // the search that returns all pages has already been done
+                $pdoConnection->exec("USE user_submitted;");
                 $prevSearch->execute([  
                         ':search' => '', 
                         ':exact' => '', 
@@ -141,6 +149,7 @@ if ($prevExists !== false) {
             // search has never been done. we make the pages here
 
             // first, prep the info we'll need
+            $pdoConnection->exec("USE " . MAINDBNAME . ";");
             $getTags = Briel\getTagsFromPageIDStmt($pdoConnection);
             $getCWs = Briel\getCWsFromPageIDStmt($pdoConnection);
             $getThumbnails = Briel\getThumbnailFromPageIDStmt($pdoConnection);
@@ -212,6 +221,7 @@ if ($prevExists !== false) {
                 if ($insertStmt != '') {
                     if (!$prevInTransaction) $pdoConnection->beginTransaction();
                     // insert the records from assembled statement
+                    $pdoConnection->exec("USE user_submitted;");
                     $insert = $pdoConnection->prepare(<<<STMT
                             INSERT INTO searchcache (   search, 
                                                         searchimgdesc, 
@@ -234,8 +244,5 @@ if (!$prevInTransaction AND $pdoConnection->inTransaction()) $pdoConnection->com
 
 // generate *all search result pages*--they'll all reference the same `$_GET` search value!
     // Though I will need to add in a separate parameter for page number
-
-    // ...does a PDO object automatically close the connection when a script ends?
-    // Or does it stay open if it's kept in session storage?
 
 ?>
