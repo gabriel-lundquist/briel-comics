@@ -1,0 +1,3 @@
+[mysqld]
+datadir = /home/gabriel/Code/Briel Comics website/briel-comics/database/mysql_files/data
+port = 3307
