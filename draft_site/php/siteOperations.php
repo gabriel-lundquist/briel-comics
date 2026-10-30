@@ -252,7 +252,7 @@ function regenerateArchivePages(?\PDO $pdoConn = null, array $paths = []) {
  * flush to output.
  * @param \PDO|null $pdoConn
  * @param string $addlStylePath Option path to an extra styling document to use in 
- * addition to `home_page.css`.
+ * addition to `home.css`.
  * @return bool|string The return value of `ob_get_clean()`;
  */
 function regenerateHomepage(?\PDO $pdoConn = null, string $addlStylePath = "") {
@@ -272,7 +272,7 @@ function regenerateHomepage(?\PDO $pdoConn = null, string $addlStylePath = "") {
                         getPageInfo($pdoConn, $pageID), 
                         $getUpdateTitle->fetch(\PDO::FETCH_NUM)[0], 
                         addlStylePath: $addlStylePath   );
-    file_put_contents(HOMEFILEPATH, ob_get_contents());
+    file_put_contents(HOMEPATH, ob_get_contents());
     return ob_get_clean();
 }
 
@@ -368,7 +368,7 @@ function redoCachedSearches(\PDO $pdoConn) {
             search = :search AND matchexactly = :exact AND searchimgdesc = :desc
             AND resultpageindex >= :minpageindex;
         STMT);
-    $pdoConn->exec("USE " . MAINDBNAME . ";");
+    $pdoConn->exec("USE " . MASTERDBNAME . ";");
     $getTags = getTagsFromPageIDStmt($pdoConn);
     $getCWs = getCWsFromPageIDStmt($pdoConn);
     $getThumbnails = getThumbnailFromPageIDStmt($pdoConn);
@@ -446,7 +446,7 @@ function redoCachedSearches(\PDO $pdoConn) {
             // save all pages and update cache records
             $i = 1;
             for ($i = 1; $i <= \count($pageStrs); $i++) {
-                $filePath = FILEROOT . SEARCHCACHEDIR
+                $filePath = SEARCHCACHEDIR
                             . implode('_', ['search', 
                                             urlencode($search['search']), 
                                             $search['searchimgdesc'], 
@@ -506,7 +506,7 @@ function redoCachedSearches(\PDO $pdoConn) {
         $insert->execute($insertParams);
     }
 
-    $pdoConn->exec("USE " . MAINDBNAME . ";");
+    $pdoConn->exec("USE " . MASTERDBNAME . ";");
 }
 
 function generateSaveBlogPage(\PDO $pdoConn) {
@@ -516,13 +516,22 @@ function generateSaveBlogPage(\PDO $pdoConn) {
     }
 
     ob_start();
-    $success = file_put_contents(   BLOGARCHIVEFILEPATH, 
+    $success = file_put_contents(   BLOGARCHIVEPATH, 
                                     generateBlogPage(getAllBlogInfo($pdoConn))  );
     ob_end_clean();
     if (!$success) {
-        echo "Failed to write to blog archive page at " . BLOGARCHIVEFILEPATH . "\n";
+        echo "Failed to write to blog archive page at " . BLOGARCHIVEPATH . "\n";
         return false;
     } else return true;
+}
+
+function checkToDeleteSearchCacheFiles() {
+    if (promptInput("Would you like to delete the cached search page HTML files?\n(y/n) > ")
+            == "y") {
+        foreach (glob(SEARCHCACHEDIR . "?*.{HTML,html}", GLOB_BRACE) as $path) {
+            unlink($path);
+        }
+    } 
 }
 
 /**
@@ -588,12 +597,7 @@ function postUpdate(?\PDO $pdoConn = null) {
     }
 
     backupSearchData($pdoConn);
-    if (promptInput("Would you like to delete the cached search page HTML files?\n(y/n) > ")
-            == "y") {
-        foreach (glob(SEARCHCACHEDIRPATH . "?*.{HTML,html}", GLOB_BRACE) as $path) {
-            unlink($path);
-        }
-    } 
+    checkToDeleteSearchCacheFiles();
 
     // add post date to pages and update
     $addDateToPage = $pdoConn->prepare("UPDATE page SET postdate = NOW() WHERE pageid = ?;");
@@ -685,12 +689,7 @@ function generateSiteUpdate(?\PDO $pdoConn = null) {
     // }
 
     backupSearchData($pdoConn);
-    if (promptInput("Would you like to delete the cached search page HTML files?\n(y/n) > ")
-            == "y") {
-        foreach (glob(SEARCHCACHEDIRPATH . "?*.{HTML,html}", GLOB_BRACE) as $path) {
-            unlink($path);
-        }
-    } 
+    checkToDeleteSearchCacheFiles();
 
     // add post date to pages, update, and blog
     $addDateToPage = $pdoConn->prepare("UPDATE page SET postdate = NOW() WHERE pageid = ?;");
@@ -733,12 +732,7 @@ function generateSite(?\PDO $pdoConn = null) {
 
     $stmt = new DatabaseStatements($pdoConn);
 
-    if (promptInput("Would you like to delete the cached search page HTML files?\n(y/n) > ")
-            == "y") {
-        foreach (glob(SEARCHCACHEDIRPATH . "?*.{HTML,html}", GLOB_BRACE) as $path) {
-            unlink($path);
-        }
-    } 
+    checkToDeleteSearchCacheFiles();
 
     $updateID = false;
     $blogID = false;

@@ -1,10 +1,11 @@
 <?php
+
 require_once './php/dbManip.php';
 require_once './php/pageGen.php';
 
 $db = Briel\pdoConnect(echoConnSuccess: false); // check for session storage?
 if ($db === false) {
-    readfile(Briel\FILEROOT . Briel\BLANKSEARCHFILENAME);
+    readfile(Briel\BLANKSEARCHPATH);
     exit("Ah shit, database connection failed.");
 }
 

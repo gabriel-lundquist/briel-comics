@@ -49,7 +49,7 @@ ob_start();
         $nowTime = date('h:i:sa');
         $nowDate = date('l, F jS, Y');
         file_put_contents(
-                COMMENTDOCFILEPATH, 
+                COMMENTDOCPATH, 
                 "\t***\n\t***\n\nAt $nowTime on $nowDate, someone sent you the following:\n"
                         . "\t---\n{$_POST['comment']}\n\n", 
                 FILE_APPEND

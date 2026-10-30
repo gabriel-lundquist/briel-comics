@@ -1,16 +1,18 @@
 <?php
 
-use function Briel\existsPrevSearchAnyIndexStmt;
-use function Briel\getPrevSearchStmt;
-use function Briel\updatePrevSearchCountStmt;
-use const Briel\MAINDBNAME;
+use const Briel\MASTERDBNAME;
 use const Briel\SEARCHPAGEINDEXKEY;
+use const Briel\USERDBNAME;
 
 // A note: this will not return a page in a search until it has a path in the database!
 // DONE!!! Things to consider: session storage for pdoConnection, limiting searches
 
 require_once './php/dbManip.php';
 require_once './php/pageGen.php';
+
+function outputBlank() {
+    return readfile(Briel\BLANKSEARCHPATH);
+}
 
 // first, do maintenance on the GET request information
 $getParams = $_GET; // copy $_GET
@@ -25,13 +27,13 @@ foreach (['desc', 'exact'] as $field) {
         $getParams[$field] = '';
 }
 
-if (empty($getParams[Briel\SEARCHPAGEINDEXKEY])) {
-    $getParams[Briel\SEARCHPAGEINDEXKEY] = 1;
+if (empty($getParams[SEARCHPAGEINDEXKEY])) {
+    $getParams[SEARCHPAGEINDEXKEY] = 1;
 }
 
 $pdoConnection = Briel\pdoConnect(echoConnSuccess: false); // check for a cookie? session storage?
 if ($pdoConnection === false) {
-    readfile(Briel\FILEROOT . Briel\BLANKSEARCHFILENAME);
+    outputBlank();
     exit("Oh fuck! MySQL connection failed...");
 }
 
@@ -40,14 +42,14 @@ $prevInTransaction = $pdoConnection->inTransaction();
 
 // first, check if this exact search (with the terms potentially shuffled)
 // has been done before
-$pdoConnection->exec("USE user_submitted;");
+$pdoConnection->exec("USE " . USERDBNAME . ";");
 $prevSearch = Briel\getPrevSearchStmt($pdoConnection);
 $searchcacheKey = Briel\searchcacheKeyFromSearchString($getParams['search']);
 $prevSearch->execute([  
         ':search' => $searchcacheKey, 
         ':exact' => $getParams['exact'], 
         ':desc' => $getParams['desc'], 
-        ':pageindex' => $getParams[Briel\SEARCHPAGEINDEXKEY]    
+        ':pageindex' => $getParams[SEARCHPAGEINDEXKEY]    
 ]);
 
 $isOutputYet = false;
@@ -77,7 +79,7 @@ if ($prevExists !== false) {
 
     if ($prevSearchOtherIndex->fetch()[0] != 0) {
         // the search does exist! just not this page. output blank search page
-        readfile(Briel\FILEROOT . Briel\BLANKSEARCHFILENAME);
+        outputBlank();
         $isOutputYet = true;
 
         // and update that ofc
@@ -89,7 +91,7 @@ if ($prevExists !== false) {
         ]);
 
     } else {
-        $pdoConnection->exec("USE " . MAINDBNAME . ";");
+        $pdoConnection->exec("USE " . MASTERDBNAME . ";");
         // search is nowhere in the cache. do the actual search algorithm
         [$results, $s, $execList] = Briel\allSearchComics(
                 $getParams['search'], 
@@ -97,12 +99,12 @@ if ($prevExists !== false) {
                 $matchExactly = ($getParams['exact'] == Briel\CHECKBOXON), 
                 $searchDesc = ($getParams['desc'] == Briel\CHECKBOXON)
         );
-        $pdoConnection->exec("USE user_submitted;");
+        $pdoConnection->exec("USE " . USERDBNAME . ";");
 
-        $pdoConnection->exec("USE " . MAINDBNAME . ";");
+        $pdoConnection->exec("USE " . MASTERDBNAME . ";");
         if (count($results) >= Briel\getNumServablePages($pdoConnection)) { 
             // this search has returned all pages!
-            $pdoConnection->exec("USE user_submitted;");
+            $pdoConnection->exec("USE " . USERDBNAME . ";");
             $prevSearchOtherIndex->execute(
                     [':search' => '', ':exact' => '', ':desc' => '']);
 
@@ -114,23 +116,23 @@ if ($prevExists !== false) {
                 foreach (['search', 'desc', 'exact'] as $field) 
                     $getParams[$field] = '';
                 $searchcacheKey = '';
-                $pdoConnection->exec("USE " . MAINDBNAME . ";");
+                $pdoConnection->exec("USE " . MASTERDBNAME . ";");
                 [$results, $s, $execList] = Briel\allSearchComics('', $pdoConnection);
-                $pdoConnection->exec("USE user_submitted;");
+                $pdoConnection->exec("USE " . USERDBNAME . ";");
             } else {
                 // the search that returns all pages has already been done
-                $pdoConnection->exec("USE user_submitted;");
+                $pdoConnection->exec("USE " . USERDBNAME . ";");
                 $prevSearch->execute([  
                         ':search' => '', 
                         ':exact' => '', 
                         ':desc' => '',
-                        ':pageindex' => $getParams[Briel\SEARCHPAGEINDEXKEY]
+                        ':pageindex' => $getParams[SEARCHPAGEINDEXKEY]
                 ]);
 
                 $allSearch = $prevSearch->fetch(PDO::FETCH_ASSOC);
                 // obligatory check for whether the index doesn't exist
                 if ($allSearch === false) {
-                    readfile(Briel\FILEROOT . Briel\BLANKSEARCHFILENAME);
+                    outputBlank();
                     $isOutputYet = true;
 
                 // but if it does, output the appropriate blank search
@@ -149,7 +151,7 @@ if ($prevExists !== false) {
             // search has never been done. we make the pages here
 
             // first, prep the info we'll need
-            $pdoConnection->exec("USE " . MAINDBNAME . ";");
+            $pdoConnection->exec("USE " . MASTERDBNAME . ";");
             $getTags = Briel\getTagsFromPageIDStmt($pdoConnection);
             $getCWs = Briel\getCWsFromPageIDStmt($pdoConnection);
             $getThumbnails = Briel\getThumbnailFromPageIDStmt($pdoConnection);
@@ -195,7 +197,7 @@ if ($prevExists !== false) {
                 $execParams = [];
                 $insertStmt = '';
                 for ($i = 1; $i <= count($pageStrs); $i++) {
-                    $filePath = Briel\FILEROOT . Briel\SEARCHCACHEDIR
+                    $filePath = Briel\SEARCHCACHEDIR
                                 . implode('_', ['search', 
                                                 urlencode($searchcacheKey), 
                                                 $getParams['desc'], 
@@ -221,7 +223,7 @@ if ($prevExists !== false) {
                 if ($insertStmt != '') {
                     if (!$prevInTransaction) $pdoConnection->beginTransaction();
                     // insert the records from assembled statement
-                    $pdoConnection->exec("USE user_submitted;");
+                    $pdoConnection->exec("USE " . USERDBNAME . ";");
                     $insert = $pdoConnection->prepare(<<<STMT
                             INSERT INTO searchcache (   search, 
                                                         searchimgdesc, 
@@ -233,7 +235,7 @@ if ($prevExists !== false) {
                     $insert->execute($execParams);
                 }
             } else { // ...unless we have generated no pages, then output blank
-                readfile(Briel\FILEROOT . Briel\BLANKSEARCHFILENAME);
+                outputBlank();
                 $isOutputYet = true;
             }
         }
