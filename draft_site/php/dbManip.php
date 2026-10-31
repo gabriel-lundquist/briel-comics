@@ -3,9 +3,6 @@ namespace Briel;
 
 require_once 'brielConstants.php';
 
-const SQLLOADFILENULL = '\N';
-const SQLSPACEREGEX = '[[:space:]]';
-
 const FILECOLUMNS = [   "fileid",
                         "path",
                         "width",
@@ -36,26 +33,6 @@ const PAGEINSERTCOLUMNS = [ "title",
                             "note" ];
 
 const TEXTMATCHTHRESHOLD = 0.1;
-
-// class DatabaseStatements {
-//     public function __construct(    
-//             public \PDO $db, 
-//             public ?\PDOStatement $getPageRecord = null, 
-//             public ?\PDOStatement $getPrevPageID = null, 
-//             public ?\PDOStatement $getNextPageID = null, 
-//             public ?\PDOStatement $getPrevUpdateID = null, 
-//             public ?\PDOStatement $getNextUpdateID = null, 
-//             public ?\PDOStatement $getPageFromUpdateID = null, 
-//             public ?\PDOStatement $getUpdateFromPageID = null, 
-//             public ?\PDOStatement $getImgRecords = null, 
-//             public ?\PDOStatement $getThumbnailRecords = null, 
-//             public ?\PDOStatement $getTags = null, 
-//             public ?\PDOStatement $getCWs = null, 
-//             public ?\PDOStatement $getSpreadType = null, 
-//             public ?\PDOStatement $getStylePath = null) {
-
-//     }
-// }
 
 class DatabaseStatements {
     public function __construct(    public \PDO $pdoConn, 
@@ -104,7 +81,6 @@ class DatabaseStatements {
             $getStatement->execute([$pageID]);
         }
     }
-
 }
 
 /**
@@ -124,31 +100,29 @@ function promptPathHTML() {
 
 /**
  * Summary of Briel\pdoConnect
- * WILL NEED TO EDIT IN AN ENVIRONMENT VARIABLE FOR THE PASSWORD
  * Returns the PDO connection if successful, `false` if not.
- * Default values come from my laptop server settings.
  * @param string $dbhost
  * @param string $dbuser
  * @param string $dbname
  * @param int $dbport
  * @param bool $enterPassword
  * @param bool $echoConnSuccess
- * @param string $passwordEnvVarName
+ * @param string $password
  * @return bool|\PDO
  */
-function pdoConnect(string $dbhost = 'localhost', 
-                    string $dbuser = 'root', 
-                    string $dbname = 'briel_comics_test', 
-                    int $dbport = 3307, 
+function pdoConnect(string $dbhost = DBHOST, 
+                    string $dbuser = DBPAGEGENUSER, 
+                    string $dbname = MASTERDBNAME, 
+                    int $dbport = DBPORT, 
                     bool $enterPassword = false,
                     bool $echoConnSuccess = false,
-                    string $passwordEnvVarName = 'COMIC_DB_PASSWORD') {
+                    string $password = DBPAGEGENUSERPW) {
     try {
         $conn = new \PDO(   "mysql:host=$dbhost; dbname=$dbname; port=$dbport", 
                             $dbuser, 
                             $enterPassword ? 
                                     promptInput("Enter password. > ") 
-                                    : getenv($passwordEnvVarName)
+                                    : $password
                         );
         $conn->setAttribute(\PDO::ATTR_ERRMODE, 
                             \PDO::ERRMODE_EXCEPTION);
@@ -166,19 +140,28 @@ function pdoConnect(string $dbhost = 'localhost',
  * Returns `false` if it is falsy and `pdoConnect()` also returns a falsy value.
  * Otherwise returns `true`, i.e. `$pdoConn` (which is a reference) is a working 
  * connection.
- * @param mixed $pdoConn
+ * @param ?\PDO $pdoConn
  * @return bool
  */
-function tryPDOConnect(&$pdoConn) {
+function tryPDOConnect( ?\PDO &$pdoConn, 
+                        string $dbhost = DBHOST, 
+                        string $dbuser = DBPAGEGENUSER, 
+                        string $dbname = MASTERDBNAME, 
+                        int $dbport = DBPORT, 
+                        bool $enterPassword = false, 
+                        bool $echoConnSuccess = false, 
+                        string $passwordEnvVar = DBPAGEGENUSERPW) {
     if (!$pdoConn) {
-        $pdoConn = pdoConnect();
+        $pdoConn = pdoConnect(  $dbhost, 
+                                $dbuser, 
+                                $dbname, 
+                                $dbport, 
+                                $enterPassword, 
+                                $echoConnSuccess, 
+                                $passwordEnvVar );
         if (!$pdoConn) return false;
         else return true;
     } else return true;
-}
-
-function dumpQuery(string $query, \PDO $pdoConn) {
-    var_dump($pdoConn->query($query)->fetchAll(\PDO::FETCH_ASSOC));
 }
 
 /**
@@ -291,7 +274,14 @@ function attributeTableStr( array $records,
             . "\n" . str_repeat('_', $tableSpacerLen) . "\n";
 }
 
-// DEFUNCT
+function fileListStr(   array $paths    ) {
+    return "ID\tPath\n" 
+            . implode("\n", array_map(  fn($key, $val) => "$key\t" . basename($val), 
+                                        array_keys($paths), 
+                                        array_values($paths)    ))
+            . "\n";
+}
+
 function getNoninteractiveFileRecordParts(  string $filePath, 
                                             \PDO $pdoConn, 
                                             array $incompleteRecord = []) {
@@ -379,14 +369,6 @@ function getInteractiveFileRecordParts( \PDO $pdoConn,
             'purposeid' => $purposeID];
 }
 
-function fileListStr(   array $paths    ) {
-    return "ID\tPath\n" 
-            . implode("\n", array_map(  fn($key, $val) => "$key\t" . basename($val), 
-                                        array_keys($paths), 
-                                        array_values($paths)    ))
-            . "\n";
-}
-
 function generateFileRecordsFromFolderWithMetadata( string $dirPath,
                                                     \PDO $pdoConn, 
                                                     ?\PDOStatement $ratioStatement = null, 
@@ -438,11 +420,6 @@ function generateFileRecordsFromFolderWithMetadata( string $dirPath,
     }
 
     return $records;
-}
-
-function orderArrayByOrderedKeys(   array $orderedKeys, 
-                                    array $toOrder  ) {
-    return array_combine($orderedKeys, array_map(fn($key) => $toOrder[$key], $orderedKeys));
 }
 
 function generateFileRecordsFromFolderInteractive(  string $dirPath, 
@@ -553,102 +530,10 @@ function generateFileRecordInteractive( string $filePath,
                                                 ratioStatement: $ratioStatement )];
 }
 
-// // defunct
-// function generateInsertFileRecords(?\PDO $pdoConn = null) {
-//     if (!tryPDOConnect($pdoConn)) {
-//         echo "Couldn't establish/continue SQL server connection. Aborting...\n";
-//         return false;
-//     }
-//     tryBeginTransaction($pdoConn);
-
-//     // after file upload, generate file records
-//     $tryAgain = false;
-//     $fileRecords = null;
-//     do {
-//         $fileRecords = [];
-//         for ($numFiles = 1; promptInput("Add a file? (y/n) > ") == 'y'; $numFiles++) {
-//             $fileRecords[] = generateFileRecordInteractive(
-//                     str_replace('\\', '/', promptInput("Enter path for file $numFiles: > ")), 
-//                     $pdoConn);
-//         }
-//         if ($numFiles > 1) {
-//             echo ($numFiles - 1) . " file records generated:\n";
-//             print_r($fileRecords);
-//             // insert file records
-//             if (promptinput("Insert these into the database? (y/n) > ") == "y") {
-//                 insertFileRecords($fileRecords, $pdoConn, promptCommitMessage: "Okay...");
-//                 echo "...done!\n";
-//                 $tryAgain = false;
-//             } elseif (promptInput(
-//                         "Okay. Wanna try again at adding files? (y/n) > ") == "y") {
-//                 $tryAgain = true;
-//             } else {
-//                 echo "Okay, moving on...\n";
-//                 $tryAgain = false;
-//             }
-//         }
-//     } while ($tryAgain);
-
-//     return $fileRecords;
-// }
-
 function endDirectoryPathWithSlash( string $dirPath ) {
     if (!str_ends_with($dirPath, '/') AND !str_ends_with($dirPath, '\\')) $dirPath .= '/';
     return $dirPath;
 }
-
-// DEFUNCT
-// function generateInsertFileRecordsForPage(  int $pageID, 
-//                                             ?\PDO $pdoConn = null, 
-//                                             string $folder = "" ) {
-//     echo "Generating file records for page $pageID...\n";
-//     if (!tryPDOConnect($pdoConn)) {
-//         echo "Couldn't establish/continue SQL server connection. Aborting...\n";
-//         return false;
-//     }
-//     tryBeginTransaction($pdoConn);
-
-//     $paths = [];
-//     if (is_dir($folder)) {
-//         if (!str_ends_with($folder, '/') AND !str_ends_with($folder, '\\')) $folder .= '/';
-//         echo "Image files found in `$folder`:\n";
-//         $paths = array_map(fn($entry) => $folder . $entry, scandir($folder));
-//         $paths = array_filter(  
-//                 $paths, 
-//                 fn($p) => preg_match('(image/.*)', mime_content_type($p))
-//         );
-//         echo \implode("\n", $paths) . "\n";
-
-//     } else {
-//         echo "Enter paths for files, pressing `Enter` after each. Enter `n` to stop.\n";
-//         for ($path = promptInput('> '); $path != 'n'; $path = promptInput('> ')) {
-//             if (is_file($path)) $paths[] = $path;
-//             else echo "Not a file. Enter `n` to stop.\n";
-//         }
-//     }
-
-//     $constantFields = getInteractiveFileRecordParts($pdoConn);
-//     $records = [];
-//     foreach ($paths as $path) {
-//         $records[] = [
-//                 'pageid' => $pageID, 
-//                 ...$constantFields,
-//                 ...getNoninteractiveFileRecordParts($path, $pdoConn)
-//         ]; 
-//     }
-
-//     echo "\nGenerated records:\n";
-//     print_r($records);
-//     // insert file records
-//     if (promptinput("Insert these into the database? (y/n) > ") == "y") {
-//         queryInsertRecords($pdoConn, 'file', array_keys($records[0]), $records);
-//         echo "...done!\n";
-//         return true;
-//     } else {
-//         echo "Okay, moving on...\n";
-//         return false;
-//     }
-// }
 
 /**
  * Summary of Briel\prepareInsertRecords
@@ -774,54 +659,6 @@ function insertFileRecords( array $records,
                                         $promptCommitMessage );
     return $queryResult;
 }
-
-// function insertFileRecordsFolder(   string $dirPath, 
-//                                     \PDO $pdoConn, 
-//                                     bool $promptToCommit = true, 
-//                                     string $promptCommitMessage = '' ) {
-
-//     $fileInfo = \finfo_open(\FILEINFO_MIME_TYPE);
-
-//     $filePaths = array_map(fn($fileName) => realpath("$dirPath/$fileName"), 
-//                            \scandir($dirPath));
-    
-//     $records = [];
-//     foreach ($filePaths as $filePath) {
-//         $fileInfoStr = \finfo_file($fileInfo, $filePath);
-//         // if MIME type is image
-//         if (substr($fileInfoStr, 
-//                    0,
-//                    strrpos($fileInfoStr, '/')) == 'image') {
-//             $records[] = generateFileRecordInteractive($filePath, $pdoConn);
-//         }
-//     }
-
-//     return $records;
-// }
-
-// /**
-//  * Summary of Briel\loadFileRecords
-//  * @param mixed $dirPath
-//  * @param mixed $dbhost
-//  * @param mixed $dbuser
-//  * @param mixed $dbname
-//  * @param mixed $dbport
-//  */
-// function loadFileRecords(   $dirPath, 
-//                             $dbhost = 'localhost', 
-//                             $dbuser = 'root', 
-//                             $dbname = 'briel_comics_test', 
-//                             $dbport = 3307  ) {
-    
-//     $pdoConn = pdoConnect($dbhost, 
-//                           $dbuser, 
-//                           $dbname, 
-//                           $dbport);
-//     return insertFileRecords(insertFileRecordsFolder($dirPath, $pdoConn), 
-//                              $pdoConn);
-// }
-
-;
 
 /**
  * Summary of Briel\insertPageRecords
@@ -962,7 +799,7 @@ function getPageTitleInteractive(\PDO $pdoConn) {
     return $title;
 }
 
-function getPagePathInteractive(\PDO $pdoConn) {
+function getPagePathInteractive() {
     $useAnyway = false;
     $path = promptPathHTML();
     while (!isFilePath($path, "html") 
@@ -982,7 +819,7 @@ function getPagePathInteractive(\PDO $pdoConn) {
     return realpath($path);
 }
 
-function getImgDescInteractive(\PDO $pdoConn) {
+function getImgDescInteractive() {
     $imageDesc = promptInput("Enter comic page description (or a path to it):\n> ");
     if (is_readable($imageDesc)) {
         $imageDesc = file_get_contents($imageDesc);
@@ -1043,7 +880,7 @@ function getColorStyleInteractive(\PDO $pdoConn) {
     return $colorStyleID;
 }
 
-function getNoteInteractive(\PDO $pdoConn) {
+function getNoteInteractive() {
     if (($note = promptInput(
                 "Enter text you'd like to add as a note on this page, or 'n' for none.\n> "))
             != 'n') {
@@ -1063,10 +900,10 @@ function generatePageRecordInteractive(\PDO $pdoConn) {
     $title = getPageTitleInteractive($pdoConn);
     
     // Set path
-    $path = getPagePathInteractive($pdoConn);
+    $path = getPagePathInteractive();
 
     // Get image description
-    $imageDesc = getImgDescInteractive($pdoConn);
+    $imageDesc = getImgDescInteractive();
 
     // Get spread ID
     $spreadID = getSpreadIDInteractive($pdoConn);
@@ -1075,7 +912,7 @@ function generatePageRecordInteractive(\PDO $pdoConn) {
     $colorStyleID = getColorStyleInteractive($pdoConn);
 
     // Get note
-    $note = getNoteInteractive($pdoConn);
+    $note = getNoteInteractive();
 
     // pageid is automatically generated upon inserting these values.
     return array_combine(PAGEINSERTCOLUMNS, [   $title, 
@@ -1086,9 +923,9 @@ function generatePageRecordInteractive(\PDO $pdoConn) {
                                                 $note   ]);
 }
 
-function orderContinues(array $record, string $key) {
-    return $record !== false AND $record[$key] !== null;
-}
+// function orderContinues(array $record, string $key) {
+//     return $record !== false AND $record[$key] !== null;
+// }
 
 function nextOrderContinues(array $targetRecord) {
     return $targetRecord !== false AND $targetRecord['targetid'] !== null;
@@ -1288,10 +1125,12 @@ function downList($pageID, $getTarget, $delRowBySource) {
  * @return array[]
  */
 function getPageOrderLists(\PDO $pdoConn) {
+
     $pdoConn->exec(<<<STMT
-                CREATE TEMPORARY TABLE temppageorder 
-                    AS SELECT * FROM pageorder;
-                STMT);
+            DROP TEMPORARY TABLE IF EXISTS temppageorder;
+            CREATE TEMPORARY TABLE temppageorder 
+                AS SELECT * FROM pageorder;
+            STMT);
 
     $rowExists = $pdoConn->prepare(
             "SELECT sourceid, targetid FROM temppageorder LIMIT 1;");
@@ -1384,7 +1223,6 @@ function insertAfter(   string $orderTableName,
         return false;
     }
 }
-
 
 function insertPageAfter(   int $prevPageID, 
                             int $newPageID, 
@@ -1702,7 +1540,7 @@ function associateInteractive(  array $record,
                                     $promptCommitMessage);
 
                 if (!empty($notRealIDs = $pdoConn->query(<<<STMT
-                                                TABLE associd 
+                                                SELECT * FROM associd 
                                                     EXCEPT 
                                                 SELECT $leafIDName FROM $leafTableType;
                                                 STMT)
@@ -1783,7 +1621,7 @@ function associateInteractive(  array $record,
             $assoc = ($leafTableType == 'file' ? 
                     $pdoConn->prepare(<<<STMT
                         UPDATE $leafTableAssocName SET $rootIDName = ?
-                            WHERE $leafIDName IN(TABLE associd);
+                            WHERE $leafIDName IN(SELECT * FROM associd);
                         STMT)
                     : 
                     $pdoConn->prepare(<<<STMT
@@ -1794,7 +1632,7 @@ function associateInteractive(  array $record,
             );
             $assoc->execute([$record[$rootIDName]]);
             echo "{$leafTableType}s associated.\n";
-            $leafIDs = $pdoConn ->query('TABLE associd;')
+            $leafIDs = $pdoConn ->query('SELECT * FROM associd;')
                                 ->fetchAll(\PDO::FETCH_COLUMN);
             if (promptInput("Add any more? (y/n) > ") == 'y') {
                 $tryAgain = true;
@@ -2024,7 +1862,6 @@ function generateInsertUpdateFileRecords(   \PDO $pdoConn,
         }
     } while ($tryAgain);
 }
-
 
 function generateUpdateRecordInteractive(\PDO $pdoConn) {
     echo "Generating new update record...\n";
@@ -2390,8 +2227,8 @@ function createTempSearchTables($joinTokens,
                     SELECT token, tagid, name FROM joinsearch INNER JOIN tag
                         ON name $matchOp token
                 CLAUSE;
-        $tagSearch = $pdoConn->prepare(
-                        "CREATE TEMPORARY TABLE tagsearch AS ($tagSearchDefinition);");
+        $tagSearch = $pdoConn->prepare("DROP TEMPORARY TABLE IF EXISTS tagsearch;\n"
+                . "CREATE TEMPORARY TABLE tagsearch AS ($tagSearchDefinition);");
         $tagSearch->execute([...$joinTokens, ...$tagTokens]);
         
         $possibleTagMatches = $pdoConn->query("SELECT name, tagid FROM tagsearch;");
@@ -2404,8 +2241,8 @@ function createTempSearchTables($joinTokens,
                 . ') AS joinsearch (token)) '
                 . "SELECT token, contwarningid, name FROM "
                 . "joinsearch INNER JOIN contwarning ON name $matchOp token";
-        $cwSearch = $pdoConn->prepare(
-                "CREATE TEMPORARY TABLE cwsearch AS ($cwSearchDefinition);");
+        $cwSearch = $pdoConn->prepare("DROP TEMPORARY TABLE IF EXISTS cwsearch;\n"
+                . "CREATE TEMPORARY TABLE cwsearch AS ($cwSearchDefinition);");
         $cwSearch->execute([...$joinTokens, ...$cwTokens]);
 
         $possibleCWMatches = $pdoConn->query("SELECT name, contwarningid 
@@ -2462,9 +2299,9 @@ function assembleSearchClauses( &$execList,
 
     $cwSelectClause = [];
     if ($possibleCWMatches) {
-        for (   $i = 0, $cwMatch = $possibleCWMatches->fetch(\PDO::FETCH_ASSOC); 
-                $cwMatch !== false; 
-                $i++, $cwMatch = $possibleCWMatches->fetch(\PDO::FETCH_ASSOC)   ) {
+        for (   $i = 0; 
+                ($cwMatch = $possibleCWMatches->fetch(\PDO::FETCH_ASSOC)) !== false; 
+                $i++    ) {
             $cwSelectClause[] = <<<CLAUSE
                     EXISTS( SELECT contwarningpage.contwarningid 
                             FROM contwarningpage 
@@ -2630,13 +2467,29 @@ function assembleSearchClauses( &$execList,
                 $whereClause    ];
 }
 
+function useDatabase(string $dbName, \PDO $pdoConn) {
+    $useDB = $pdoConn->prepare("USE ?;");
+    return $useDB->execute([$dbName]);
+}
+
+function useUserDatabase(\PDO $pdoConn) {
+    return useDatabase(USERDBNAME, $pdoConn);
+}
+
+function useMasterDatabase(\PDO $pdoConn) {
+    return useDatabase(MASTERDBNAME, $pdoConn);
+}
+
 function dropTempTables($joinTokens, $tagTokens, $cwTokens, \PDO $pdoConn) {
+    // $originalDatabase = $pdoConn->query("SELECT DATABASE();")->fetch()[0];
+    // useUserDatabase(USERDBNAME);
     if ($joinTokens OR $tagTokens) {
         $pdoConn->exec('DROP TEMPORARY TABLE tagsearch;'); 
     } 
     if ($joinTokens OR $cwTokens) {
         $pdoConn->exec('DROP TEMPORARY TABLE cwsearch;'); 
     }
+    // useDatabase($originalDatabase)
 }
 
 function execSearchComicsStmt(  $searchStr, 
@@ -3148,7 +3001,7 @@ function orderUnorderablePageIDs(   \PDO $pdoConn,
 }
 
 function recordUpdate(?\PDO $pdoConn = null) {
-    if (!tryPDOConnect($pdoConn)) {
+    if (!tryPDOConnectManip($pdoConn)) {
         echo "Couldn't establish/continue SQL server connection. Aborting...\n";
         return false;
     }

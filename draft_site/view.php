@@ -1,17 +1,11 @@
 <?php
 
 use Briel\DatabaseStatements;
-use function Briel\allSearchComics;
 use function Briel\executeAndFetchScalar;
-use function Briel\generateViewPage;
-use function Briel\getAllUpdateInfo;
-use function Briel\getUpdateInfo;
-use function Briel\orderUnorderablePageIDs;
-use const Briel\CHECKBOXON;
 require_once('./php/siteOperations.php');
 
 function searchForView(array $get, PDO $db) {
-    [$results, $s, $e] = allSearchComics(   
+    [$results, $s, $e] = Briel\allSearchComics(   
             $get['search'], 
             $db, 
             !empty($get['desc']) AND $get['desc'] == Briel\CHECKBOXON, 
@@ -21,8 +15,8 @@ function searchForView(array $get, PDO $db) {
     $search = $get['search'];
     $viewTitle = $search;
 
-    $orderedIDs = orderUnorderablePageIDs($db, array_column($results, 'pageid'));
-    $stmt = new Briel\DatabaseStatements($db);
+    $orderedIDs = Briel\orderUnorderablePageIDs($db, array_column($results, 'pageid'));
+    $stmt = new DatabaseStatements($db);
     $pageInfosOrdered = array_map(  fn($id) => Briel\getPageInfo($db, $id, $stmt), 
                                     $orderedIDs );
     
@@ -49,7 +43,7 @@ if ($db !== false) {
     } else if (empty($get['updateid'])) { // search is not empty
         [$pageInfosOrdered, $search, $viewTitle] = searchForView($get, $db);
     } else { // updateID is not empty
-        $stmt = new Briel\DatabaseStatements($db);
+        $stmt = new DatabaseStatements($db);
         $updateExists = $db->prepare(
                 "SELECT EXISTS(SELECT NULL FROM comicupdate WHERE updateid = ?);");
         if (Briel\executeAndFetchScalar($updateExists, $get['updateid']) == 1) {

@@ -658,7 +658,7 @@ function generateComicpage( PageInfo $page,
             </main>
 
             <footer>
-                <?php include 'copyrightElement.php'; ?>
+                <?php include DYNAMICPAGEDIR . 'copyrightElement.php'; ?>
             </footer>
 
         </article>  
@@ -1109,7 +1109,7 @@ function generateBlogPage(array $blogs) {
         <footer>
             <p class="nav-line"><?php generateHomeButton(smallGraphic: true); ?></p>
 
-            <?php include 'copyrightElement.php'; ?>
+            <?php include DYNAMICPAGEDIR . 'copyrightElement.php'; ?>
         </footer>
     </body>
 </html>
@@ -1348,7 +1348,7 @@ function generateHomepage(  BlogInfo $blogInfo,
                 <?php 
                 generateSearchForm();
 
-                include 'copyrightElement.php'; 
+                include DYNAMICPAGEDIR . 'copyrightElement.php'; 
                 ?>
             </footer>
 
@@ -1807,7 +1807,7 @@ function generateSearchPage(string $searchStr,
 
         <footer>
             <?php 
-    include('searchExplainerElement.php');
+    include DYNAMICPAGEDIR . 'searchExplainerElement.php';
 
     generateSearchForm( '-footer', 
                         $searchStr, 
@@ -1816,7 +1816,7 @@ function generateSearchPage(string $searchStr,
 
     generateSearchNav(\count($allFileNames), $pageIndex, $getParams, $allFileNames);
 
-    include('copyrightElement.php'); 
+    include DYNAMICPAGEDIR . 'copyrightElement.php'; 
             ?>
         </footer>
     </body>
@@ -2045,7 +2045,7 @@ function generateArchivePage(   array $updateInfos,
                         $archivePagePaths, 
                         includeHomeButton: true);
 
-            include('copyrightElement.php');
+            include DYNAMICPAGEDIR . 'copyrightElement.php';
             ?>
         </footer>
     </body>
@@ -2244,7 +2244,7 @@ function generateViewPage(  array $pageInfos,
                     ?>
                 </p>
             </nav>
-            <?php include('copyrightElement.php'); ?>
+            <?php include DYNAMICPAGEDIR . 'copyrightElement.php'; ?>
         </footer>
     </body>
 </html>

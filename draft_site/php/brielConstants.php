@@ -2,83 +2,97 @@
 # Folder paths should have a slash at the end
 namespace Briel;
 
-$loaded = parse_ini_file("./breel.ini", scanner_mode: INI_SCANNER_TYPED);
+$loaded = parse_ini_file("breel.ini", scanner_mode: INI_SCANNER_TYPED);
+$namespacePrefix = "Briel\\";
 
-$defaults = [
-        "MASTERFOLDER" => "/srv/breel-site/", 
-        "SERVEDFOLDER" => "/",
-];
-
-$defaults += [
-        "SITEROOT" => $defaults["MASTERFOLDER"] . "www/",
-        "BACKENDROOT" => $defaults["MASTERFOLDER"] . "backend/", 
-];
-
-$defaults += [
-        "STYLEDIR" => $defaults["SITEROOT"] . "style/", 
-        "PAGEDIR"=> $defaults["SITEROOT"] . "page/", 
-        "SCRIPTDIR"=> $defaults["SITEROOT"] . "script/", 
-        "IMAGEDIR"=> $defaults["SITEROOT"] . "img/", 
-];
-
-$defaults += [
-        "SEARCHCACHEDIR" => $defaults["PAGEDIR"] . "search/", 
-        "ARCHIVEDIR" => $defaults["PAGEDIR"] . "archive/",
-        "READINGDIR" => $defaults["PAGEDIR"] . "comic/",
-        "DYNAMICPAGEDIR" => $defaults["PAGEDIR"] . "dynamic/",
-        "COLORSTYLEDIR"=> $defaults["STYLEDIR"] . "color/", 
-        "DECORATIONDIR"=> $defaults["IMAGEDIR"] . "decoration/", 
-        "COMICIMAGEDIR" => $defaults["IMAGEDIR"] . "comic/", 
-];
-
-$defaults += [
-        "LOCALSITE" => true, 
-
-        "MASTERDBNAME" => "breel_comics", 
-        "USERDBNAME" => "breel_user_submitted",
-        "SQLDATETIMEFORMAT" => "Y-m-d H:i:s",
-        "SEARCHFIELDSPECS" => [ "tag", 
-                                "cw", 
-                                "title", 
-                                "day", 
-                                "month", 
-                                "year",
-                                "description"   ], 
-
-        "WHITESPACES" => " \n\t\r",
-
-        "HOMEPATH"=> $defaults["PAGEDIR"] . "home.html",
-        "SEARCHPATH" => $defaults["DYNAMICPAGEDIR"] . "search.php",
-        "COMMENTPATH"=> $defaults["DYNAMICPAGEDIR"] . "comments.php", 
-        "RANDOMPATH"=> $defaults["DYNAMICPAGEDIR"] . "random.php", 
-        "VIEWPATH"=> $defaults["DYNAMICPAGEDIR"] . "view.php", 
-        "BLOGARCHIVEPATH"=> $defaults["PAGEDIR"] . "weblogs.html", 
-        "ARCHIVESTARTPATH" => $defaults["ARCHIVEDIR"] . "archive_p1.html",
-        "BLANKSEARCHPATH"=> $defaults["PAGEDIR"] . "search_blank.html", 
-        
-        "HOMESTYLEPATH"=> $defaults["STYLEDIR"] . "home.css", 
-        "READINGSTYLEPATH" => $defaults["STYLEDIR"] . "reading.css",
-        "LISTSTYLEPATH"  => $defaults["STYLEDIR"] . "entry-list.css",
-        "ARCHIVESTYLEPATH" => $defaults["STYLEDIR"] . "archive.css", 
-        "SEARCHSTYLEPATH" => $defaults["STYLEDIR"] . "search.css", 
-        "VIEWSTYLEPATH" => $defaults["STYLEDIR"] . "view.css", 
-        "FONTFACESPATH"=> $defaults["STYLEDIR"] . "briel_font-faces.css", 
-        "HEADERNAVSTYLEPATH"=> $defaults["STYLEDIR"] . "header-nav.css", 
-        "NAVBUTTONSTYLEPATH"=> $defaults["STYLEDIR"] . "nav-buttons.css", 
- 
-        "READINGSCRIPTPATH"=> $defaults["SCRIPTDIR"] . "reading.js",
-        "SEARCHSCRIPTPATH"=> $defaults["SCRIPTDIR"] . "search.js",
-        "VIEWSCRIPTPATH"=> $defaults["SCRIPTDIR"] . "view.js",
-
-        "SITEICONPATH" => $defaults["DECORATIONDIR"] . "smileicon.ico",
-        "COMMENTDOCPATH" => $defaults["MASTERFOLDER"] . "comments.txt",  
-];
-
-// If a default is present in the .ini file, define constants to be that.
-// If not, use constant value from above defaults.
-foreach ($defaults as $key => $value) {
-    define($key, empty($loaded[$key]) ? $value : $loaded[$key]);
+function defineList(array $defaults, array $loaded, string $prefix) {	
+	if ($loaded) {
+		foreach ($defaults as $key => $value) {
+			define($prefix . $key, isset($loaded[$key]) ? $loaded[$key] : $value);
+		}
+	} else {
+		foreach ($defaults as $key => $value) {
+			define($prefix . $key, $value);
+		}
+	}
 }
+
+const SEARCHFIELDSPECS = [	"tag", 
+							"cw", 
+							"title", 
+							"day", 
+							"month", 
+							"year",
+							"description"	];
+
+defineList(	[	"MASTERFOLDER" => "/srv/breel-site/", 
+            	"SERVEDFOLDER" => "/"	], 
+			$loaded, 
+			$namespacePrefix	);
+
+defineList(	[	"SITEROOT" => MASTERFOLDER . "www/",
+				"BACKENDROOT" => MASTERFOLDER . "backend/"	],  
+			$loaded, 
+			$namespacePrefix	);
+
+defineList(	[	"STYLEDIR" => SITEROOT . "style/", 
+				"PAGEDIR"=> SITEROOT . "page/", 
+				"SCRIPTDIR"=> SITEROOT . "script/", 
+				"IMAGEDIR"=> SITEROOT . "img/"	],  
+			$loaded, 
+			$namespacePrefix	);
+
+defineList( [	"SEARCHCACHEDIR" => PAGEDIR . "search/", 
+				"ARCHIVEDIR" => PAGEDIR . "archive/",
+				"READINGDIR" => PAGEDIR . "comic/",
+				"DYNAMICPAGEDIR" => PAGEDIR . "dynamic/",
+				"COLORSTYLEDIR"=> STYLEDIR . "color/", 
+				"DECORATIONDIR"=> IMAGEDIR . "decoration/", 
+				"COMICIMAGEDIR" => IMAGEDIR . "comic/",	],  
+			$loaded, 
+			$namespacePrefix	);
+
+defineList( [ 	"LOCALSITE" => true, 
+
+				"MASTERDBNAME" => "breel_comics", 
+				"USERDBNAME" => "breel_user_submitted",
+				"DBHOST" => "localhost", 
+				"DBPORT" => 3306, 
+				"DBMANIPUSER" => "manip", 
+				"DBPAGEGENUSER" => "pagegen", 
+				"DBMANIPUSERPW" => "",
+				"DBPAGEGENUSERPW" => "",
+				"SQLDATETIMEFORMAT" => "Y-m-d H:i:s",
+
+				"WHITESPACES" => " \n\t\r",
+
+				"HOMEPATH"=> PAGEDIR . "home.html",
+				"SEARCHPATH" => DYNAMICPAGEDIR . "search.php",
+				"COMMENTPATH"=> DYNAMICPAGEDIR . "comments.php", 
+				"RANDOMPATH"=> DYNAMICPAGEDIR . "random.php", 
+				"VIEWPATH"=> DYNAMICPAGEDIR . "view.php", 
+				"BLOGARCHIVEPATH"=> PAGEDIR . "weblogs.html", 
+				"ARCHIVESTARTPATH" => ARCHIVEDIR . "archive_p1.html",
+				"BLANKSEARCHPATH"=> PAGEDIR . "search_blank.html", 
+				
+				"HOMESTYLEPATH"=> STYLEDIR . "home.css", 
+				"READINGSTYLEPATH" => STYLEDIR . "reading.css",
+				"LISTSTYLEPATH"  => STYLEDIR . "entry-list.css",
+				"ARCHIVESTYLEPATH" => STYLEDIR . "archive.css", 
+				"SEARCHSTYLEPATH" => STYLEDIR . "search.css", 
+				"VIEWSTYLEPATH" => STYLEDIR . "view.css", 
+				"FONTFACESPATH"=> STYLEDIR . "briel_font-faces.css", 
+				"HEADERNAVSTYLEPATH"=> STYLEDIR . "header-nav.css", 
+				"NAVBUTTONSTYLEPATH"=> STYLEDIR . "nav-buttons.css", 
+		
+				"READINGSCRIPTPATH"=> SCRIPTDIR . "reading.js",
+				"SEARCHSCRIPTPATH"=> SCRIPTDIR . "search.js",
+				"VIEWSCRIPTPATH"=> SCRIPTDIR . "view.js",
+
+				"SITEICONPATH" => DECORATIONDIR . "smileicon.ico",
+				"COMMENTDOCPATH" => MASTERFOLDER . "comments.txt",	],  
+			$loaded, 
+			$namespacePrefix	);
 
 // This is the regular expression that matches paths on the local filesystem
 define("FILEFOLDERREGEXP", '(' . str_replace('/', '[/\\\]', SITEROOT) . ')');
@@ -156,4 +170,10 @@ function createDateFromSQLDateTime(string $dateStr) {
     return \DateTimeImmutable::createFromFormat(SQLDATETIMEFORMAT, $dateStr);
 }
 
+function orderArrayByOrderedKeys(   array $orderedKeys, 
+                                    array $toOrder  ) {
+    return array_combine($orderedKeys, array_map(fn($key) => $toOrder[$key], $orderedKeys));
+}
+
+var_export($loaded);
 ?>

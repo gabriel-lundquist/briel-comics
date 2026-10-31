@@ -1,17 +1,13 @@
 <?php
-
-use const Briel\MASTERDBNAME;
-use const Briel\SEARCHPAGEINDEXKEY;
-use const Briel\USERDBNAME;
-
 // A note: this will not return a page in a search until it has a path in the database!
 // DONE!!! Things to consider: session storage for pdoConnection, limiting searches
-
-require_once './php/dbManip.php';
-require_once './php/pageGen.php';
+namespace Briel;
+$setting = parse_ini_file("dynamic.ini");
+require_once $setting['BACKENDSCRIPTDIR'] . 'dbReadWrite.php';
+require_once $setting['BACKENDSCRIPTDIR'] . 'pageGen.php';
 
 function outputBlank() {
-    return readfile(Briel\BLANKSEARCHPATH);
+    return readfile(BLANKSEARCHPATH);
 }
 
 // first, do maintenance on the GET request information
@@ -23,7 +19,7 @@ if (getenv('DEBUG_SEARCH')) { // an environment variable injected in my VSCode d
 if (empty($getParams['search'])) $getParams['search'] = '';
 
 foreach (['desc', 'exact'] as $field) {
-    if (empty($getParams[$field]) OR $getParams[$field] != Briel\CHECKBOXON) 
+    if (empty($getParams[$field]) OR $getParams[$field] != CHECKBOXON) 
         $getParams[$field] = '';
 }
 
@@ -31,7 +27,7 @@ if (empty($getParams[SEARCHPAGEINDEXKEY])) {
     $getParams[SEARCHPAGEINDEXKEY] = 1;
 }
 
-$pdoConnection = Briel\pdoConnect(echoConnSuccess: false); // check for a cookie? session storage?
+$pdoConnection = pdoConnect(); // check for a cookie? session storage?
 if ($pdoConnection === false) {
     outputBlank();
     exit("Oh fuck! MySQL connection failed...");
@@ -43,8 +39,8 @@ $prevInTransaction = $pdoConnection->inTransaction();
 // first, check if this exact search (with the terms potentially shuffled)
 // has been done before
 $pdoConnection->exec("USE " . USERDBNAME . ";");
-$prevSearch = Briel\getPrevSearchStmt($pdoConnection);
-$searchcacheKey = Briel\searchcacheKeyFromSearchString($getParams['search']);
+$prevSearch = getPrevSearchStmt($pdoConnection);
+$searchcacheKey = searchcacheKeyFromSearchString($getParams['search']);
 $prevSearch->execute([  
         ':search' => $searchcacheKey, 
         ':exact' => $getParams['exact'], 
@@ -54,14 +50,14 @@ $prevSearch->execute([
 
 $isOutputYet = false;
 
-$prevExists = $prevSearch->fetch(PDO::FETCH_ASSOC);
+$prevExists = $prevSearch->fetch(\PDO::FETCH_ASSOC);
 if ($prevExists !== false) {
     // this search *has* been done before.
     readfile($prevExists['path']);
     $isOutputYet = true;
 
     // update the database for logging purposes
-    $update = Briel\updatePrevSearchCountStmt($pdoConnection);
+    $update = updatePrevSearchCountStmt($pdoConnection);
     $update->execute([  
             ':search' => $searchcacheKey, 
             ':exact' => $getParams['exact'], 
@@ -70,7 +66,7 @@ if ($prevExists !== false) {
 
 } else {
     // the exact index value may not exist, but maybe the search does?
-    $prevSearchOtherIndex = Briel\existsPrevSearchAnyIndexStmt($pdoConnection);
+    $prevSearchOtherIndex = existsPrevSearchAnyIndexStmt($pdoConnection);
     $prevSearchOtherIndex->execute([  
             ':search' => $searchcacheKey, 
             ':exact' => $getParams['exact'], 
@@ -83,7 +79,7 @@ if ($prevExists !== false) {
         $isOutputYet = true;
 
         // and update that ofc
-        $update = Briel\updatePrevSearchCountStmt($pdoConnection);
+        $update = updatePrevSearchCountStmt($pdoConnection);
         $update->execute([  
                 ':search' => $searchcacheKey, 
                 ':exact' => $getParams['exact'], 
@@ -93,16 +89,16 @@ if ($prevExists !== false) {
     } else {
         $pdoConnection->exec("USE " . MASTERDBNAME . ";");
         // search is nowhere in the cache. do the actual search algorithm
-        [$results, $s, $execList] = Briel\allSearchComics(
+        [$results, $s, $execList] = allSearchComics(
                 $getParams['search'], 
                 $pdoConnection, 
-                $matchExactly = ($getParams['exact'] == Briel\CHECKBOXON), 
-                $searchDesc = ($getParams['desc'] == Briel\CHECKBOXON)
+                $matchExactly = ($getParams['exact'] == CHECKBOXON), 
+                $searchDesc = ($getParams['desc'] == CHECKBOXON)
         );
         $pdoConnection->exec("USE " . USERDBNAME . ";");
 
         $pdoConnection->exec("USE " . MASTERDBNAME . ";");
-        if (count($results) >= Briel\getNumServablePages($pdoConnection)) { 
+        if (count($results) >= getNumServablePages($pdoConnection)) { 
             // this search has returned all pages!
             $pdoConnection->exec("USE " . USERDBNAME . ";");
             $prevSearchOtherIndex->execute(
@@ -117,7 +113,7 @@ if ($prevExists !== false) {
                     $getParams[$field] = '';
                 $searchcacheKey = '';
                 $pdoConnection->exec("USE " . MASTERDBNAME . ";");
-                [$results, $s, $execList] = Briel\allSearchComics('', $pdoConnection);
+                [$results, $s, $execList] = allSearchComics('', $pdoConnection);
                 $pdoConnection->exec("USE " . USERDBNAME . ";");
             } else {
                 // the search that returns all pages has already been done
@@ -129,7 +125,7 @@ if ($prevExists !== false) {
                         ':pageindex' => $getParams[SEARCHPAGEINDEXKEY]
                 ]);
 
-                $allSearch = $prevSearch->fetch(PDO::FETCH_ASSOC);
+                $allSearch = $prevSearch->fetch(\PDO::FETCH_ASSOC);
                 // obligatory check for whether the index doesn't exist
                 if ($allSearch === false) {
                     outputBlank();
@@ -152,37 +148,37 @@ if ($prevExists !== false) {
 
             // first, prep the info we'll need
             $pdoConnection->exec("USE " . MASTERDBNAME . ";");
-            $getTags = Briel\getTagsFromPageIDStmt($pdoConnection);
-            $getCWs = Briel\getCWsFromPageIDStmt($pdoConnection);
-            $getThumbnails = Briel\getThumbnailFromPageIDStmt($pdoConnection);
-            $getThumbnailContingency = Briel\getMinSizeFileFromPageIDStmt($pdoConnection);
+            $getTags = getTagsFromPageIDStmt($pdoConnection);
+            $getCWs = getCWsFromPageIDStmt($pdoConnection);
+            $getThumbnails = getThumbnailFromPageIDStmt($pdoConnection);
+            $getThumbnailContingency = getMinSizeFileFromPageIDStmt($pdoConnection);
             
             // next, get the info for each page (lists of tags, cws, thumbnails)
             $resultInfos = array_fill(0, count($results), null);
             for ($i = 0; $i < count($results); $i++) {
                 $getThumbnails->execute([$results[$i]['pageid']]);
                 $thumbnailRecords = [];
-                if (($thumbnailRecords = $getThumbnails->fetchAll(PDO::FETCH_ASSOC)) == []) {
+                if (($thumbnailRecords = $getThumbnails->fetchAll(\PDO::FETCH_ASSOC)) == []) {
                     $getThumbnailContingency->execute([$results[$i]['pageid']]);
                     // If this also returns false, there are no associated files.
-                    $thumbnailRecords = [$getThumbnailContingency->fetch(PDO::FETCH_ASSOC)];
+                    $thumbnailRecords = [$getThumbnailContingency->fetch(\PDO::FETCH_ASSOC)];
                 } 
                 
                 $getTags->execute([$results[$i]['pageid']]);
                 $getCWs->execute([$results[$i]['pageid']]);
 
-                $resultInfos[$i] = new Briel\SearchResultInfo(
+                $resultInfos[$i] = new SearchResultInfo(
                         $results[$i], 
                         $execList, 
-                        $getTags->fetchAll(PDO::FETCH_COLUMN), 
-                        $getCWs->fetchAll(PDO::FETCH_COLUMN), 
+                        $getTags->fetchAll(\PDO::FETCH_COLUMN), 
+                        $getCWs->fetchAll(\PDO::FETCH_COLUMN), 
                         $thumbnailRecords, 
-                        $getParams['exact'] == Briel\CHECKBOXON
+                        $getParams['exact'] == CHECKBOXON
                 );
             }
 
             // generateAllSearchPages on the sorted string and the info array
-            $pageStrs = Briel\generateAllSearchPages(   
+            $pageStrs = generateAllSearchPages(   
                     $searchcacheKey, 
                     $resultInfos, 
                     $getParams
@@ -197,7 +193,7 @@ if ($prevExists !== false) {
                 $execParams = [];
                 $insertStmt = '';
                 for ($i = 1; $i <= count($pageStrs); $i++) {
-                    $filePath = Briel\SEARCHCACHEDIR
+                    $filePath = SEARCHCACHEDIR
                                 . implode('_', ['search', 
                                                 urlencode($searchcacheKey), 
                                                 $getParams['desc'], 

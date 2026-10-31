@@ -1,9 +1,11 @@
 <?php
 namespace Briel;
-require_once './php/dbManip.php';
-require_once './php/pageGen.php';
 
-$db = pdoConnect(echoConnSuccess: false);
+$setting = parse_ini_file("dynamic.ini");
+require_once $setting['BACKENDSCRIPTDIR'] . 'dbRead.php';
+require_once $setting['BACKENDSCRIPTDIR'] . 'pageGen.php';
+
+$db = pdoConnect();
 $hasCommented = $_POST AND !empty($_POST['comment']);
 ob_start();
 ?>
@@ -88,7 +90,7 @@ ob_start();
                 ?>
             </nav>
             <?php 
-    include('./php/copyrightElement.php'); 
+    include DYNAMICPAGEDIR . 'copyrightElement.php'; 
             ?>
         </footer>
 

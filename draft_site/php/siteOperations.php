@@ -1,10 +1,22 @@
 <?php
 namespace Briel;
 
-use DateTimeImmutable;
-
-require_once 'dbManip.php';
+require_once 'dbReadWrite.php';
 require_once 'pageGen.php';
+
+function tryPDOConnectManip(?\PDO &$pdoConn, 
+                            string $dbname = MASTERDBNAME, 
+                            bool $enterPassword = false, 
+                            bool $echoConnSuccess = false) {
+
+    return tryPDOConnect(   $pdoConn, 
+                            dbhost: DBHOST, 
+                            dbuser: DBMANIPUSER,
+                            dbname: $dbname, 
+                            enterPassword: $enterPassword, 
+                            echoConnSuccess: $echoConnSuccess, 
+                            passwordEnvVar: DBMANIPUSERPW    );
+}
 
 function getAllBlogInfo(\PDO $db) {
     $getRecord = $db->query('SELECT blogtext, postdate FROM blog ORDER BY postdate DESC;');
@@ -162,7 +174,7 @@ function getPageInfo(   \PDO $pdoConn,
 function getUpdateInfo( int $updateID, 
                         ?DatabaseStatements $stmt = null, 
                         \PDO|bool|null $pdoConn = null) {
-    if (!$pdoConn) if (!tryPDOConnect($pdoConn)) return false;
+    if (!tryPDOConnect($pdoConn)) return false;
     if (!$stmt) $stmt = new DatabaseStatements($pdoConn);
 
     $stmt->getPageFromUpdateID->execute([$updateID]);
@@ -211,7 +223,7 @@ function getUpdateInfo( int $updateID,
  */
 function getAllUpdateInfo(  ?DatabaseStatements $stmt = null, 
                             \PDO|bool|null $pdoConn = null  ) {
-    if (!$pdoConn) if (!tryPDOConnect($pdoConn)) return false;
+    if (!tryPDOConnect($pdoConn)) return false;
     if (!$stmt) $stmt = new DatabaseStatements($pdoConn);
 
     $getUpdateIDs = $pdoConn->query(
@@ -233,7 +245,10 @@ function getAllUpdateInfo(  ?DatabaseStatements $stmt = null,
  * @return array
  */
 function regenerateArchivePages(?\PDO $pdoConn = null, array $paths = []) {
-    if (!$pdoConn) $pdoConn = pdoConnect();
+    if (!tryPDOConnect($pdoConn)) {
+        echo "Could not continue/create database connection. Aborting...";
+        return [];
+    };
     $pageStrs = generateAllArchivePages(getAllUpdateInfo(pdoConn: $pdoConn), $paths);
     // Remember: $pageStrs and $paths are 1-indexed for parity with the site
     // Also remember: `$paths` is modified by `generateAllArchivePages`
@@ -540,7 +555,7 @@ function checkToDeleteSearchCacheFiles() {
  * @return bool
  */
 function postUpdate(?\PDO $pdoConn = null) {
-    if (!tryPDOConnect($pdoConn)) {
+    if (!tryPDOConnectManip($pdoConn)) {
         echo "Couldn't establish/continue SQL server connection. Aborting...\n";
         return false;
     }
