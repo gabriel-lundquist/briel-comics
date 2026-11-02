@@ -11,3 +11,4 @@ $db = pdoConnect(echoConnSuccess: true);
 // redoCachedSearches($db, promptToCommit: true);
 // regenerateArchivePages($db);
 // generateSaveBlogPage($db);
+generateSiteUpdate($db);

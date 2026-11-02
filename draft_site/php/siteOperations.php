@@ -227,7 +227,7 @@ function getAllUpdateInfo(  ?DatabaseStatements $stmt = null,
     if (!$stmt) $stmt = new DatabaseStatements($pdoConn);
 
     $getUpdateIDs = $pdoConn->query(
-            "SELECT updateid FROM comicupdate WHERE postdate IS NOT NULL ORDER BY postdate;");
+        "SELECT updateid FROM comicupdate WHERE postdate IS NOT NULL ORDER BY postdate ASC;");
     $allUpdateInfo = [];
     while (($updateID = $getUpdateIDs->fetch(\PDO::FETCH_ASSOC)) !== false) {
         $allUpdateInfo[] = getUpdateInfo($updateID['updateid'], $stmt, $pdoConn);
@@ -322,16 +322,18 @@ function regenerateHomepage(null|bool|\PDO $pdoConn = null, string $addlStylePat
  * @param \PDO $pdoConn
  * @param array $pageRecords
  * @param array $prevUpdatePageIDs
+ * @param array $nextUpdatePageIDs
  * @return void
  */
 function generateSaveUpdatePageFiles(   \PDO $pdoConn, 
                                         array $pageRecords, 
-                                        array $prevUpdatePageIDs    ) {
+                                        array $prevUpdatePageIDs,
+                                        array $nextUpdatePageIDs    ) {
     echo "Getting page information for HTML files...\n";
     $comicPageStmts = new DatabaseStatements($pdoConn);
 
     $allPageInfo = [];
-    for ($i = 0; $i < \count($allPageInfo); $i++) {
+    for ($i = 0; $i < \count($pageRecords); $i++) {
         $allPageInfo[$i] = getPageInfo( $pdoConn, 
                                         $pageRecords[$i]['pageid'], 
                                         stmt: $comicPageStmts   );
@@ -339,9 +341,16 @@ function generateSaveUpdatePageFiles(   \PDO $pdoConn,
 
     // get page info to be used to regenerate previous HTML files
     $allPrevPageInfo = [];
-    for ($i = 0; $i < \count($allPrevPageInfo); $i++) {
+    for ($i = 0; $i < \count($prevUpdatePageIDs); $i++) {
         $allPrevPageInfo[$i] = getPageInfo( $pdoConn, 
                                             $prevUpdatePageIDs[$i], 
+                                            stmt: $comicPageStmts   );
+    }
+
+    $allNextPageInfo = [];
+    for ($i = 0; $i < \count($nextUpdatePageIDs); $i++) {
+        $allNextPageInfo[$i] = getPageInfo( $pdoConn, 
+                                            $nextUpdatePageIDs[$i], 
                                             stmt: $comicPageStmts   );
     }
 
@@ -358,6 +367,13 @@ function generateSaveUpdatePageFiles(   \PDO $pdoConn,
         if (!file_put_contents($prevPage->record['path'], generateComicPage($prevPage)))
             echo "Failed to put file from previous update at {$page->record['path']}.\n";
     }
+    
+    // regenerate HTML files from previous update (update links)
+    foreach ($allNextPageInfo as $nextPage) {
+        if (!file_put_contents($nextPage->record['path'], generateComicPage($nextPage)))
+            echo "Failed to put file from next update at {$page->record['path']}.\n";
+    }
+
     ob_end_clean();
 }
 
@@ -604,7 +620,7 @@ function postUpdate(null|bool|\PDO $pdoConn = null) {
     associatePagesInteractive($updateRecord, $pdoConn);
 
     // generate and save new HTML files as well as new versions of old HTML files
-    generateSaveUpdatePageFiles($pdoConn, $pageRecords, $prevUpdatePageIDs);
+    generateSaveUpdatePageFiles($pdoConn, $pageRecords, $prevUpdatePageIDs, []);
 
     $blogText = null;
     if (promptInput("Would you like to make a new blog post? (y/n) > " == "y")) {
@@ -645,7 +661,7 @@ function postUpdate(null|bool|\PDO $pdoConn = null) {
     promptCommit($pdoConn);
 }
 
-function generateSiteUpdate(null|bool|\PDO $pdoConn = null) {
+function generateSiteUpdate(null|bool|\PDO $pdoConn = null, $test = 33) {
     if (!tryPDOConnect($pdoConn)) {
         echo "Couldn't establish/continue SQL server connection. Aborting...\n";
         return false;
@@ -653,20 +669,21 @@ function generateSiteUpdate(null|bool|\PDO $pdoConn = null) {
     echo "Generating update files...\n";
     tryBeginTransaction($pdoConn);
 
-    $unpostedUpdateRecords = $pdoConn
-            ->query("SELECT updateid, title FROM comicupdate WHERE postdate IS NULL;")
+    $updateRecords = $pdoConn
+            ->query("SELECT updateid, title FROM comicupdate;")
             ->fetchAll(\PDO::FETCH_ASSOC);
     $tryAgain = false;
     $updateID = null;
     do {
-        echo attributeTableStr( $unpostedUpdateRecords, 
-                                "Unposted updates:", 
+        echo attributeTableStr( $updateRecords, 
+                                "Updates:", 
                                 'updateid', 
                                 'title' );
-        $updateID = promptInput("Enter the ID of the update you want to post,"
-                                        . " or 'n' if you want to cancel posting.\n> ");
+        // $updateID = promptInput("Enter the ID of the update you want to post,"
+        //                                 . " or 'n' if you want to cancel posting.\n> ");
+        $updateID = $test;
         if ($updateID == 'n') return false;
-        elseif (!\in_array($updateID, array_column($unpostedUpdateRecords, 'updateid'))) {
+        elseif (!\in_array($updateID, array_column($updateRecords, 'updateid'))) {
             echo "$updateID not in the list of IDs.\n";
             $tryAgain = true;
         } else {
@@ -694,24 +711,14 @@ function generateSiteUpdate(null|bool|\PDO $pdoConn = null) {
     $getPageIDs->execute([$prevUpdateID]);
     $prevUpdatePageIDs = $getPageIDs->fetchAll(\PDO::FETCH_COLUMN);
 
+    $nextUpdateID = executeAndFetchScalar(getNextUpdateFromIDStmt($pdoConn), $updateID);
+    $getPageIDs->execute([$nextUpdateID]);
+    $nextUpdatePageIDs = $getPageIDs->fetchAll(\PDO::FETCH_COLUMN);
+
     // generate and save new HTML files as well as new versions of old HTML files
-    generateSaveUpdatePageFiles($pdoConn, $pageRecords, $prevUpdatePageIDs);
+    generateSaveUpdatePageFiles($pdoConn, $pageRecords, $prevUpdatePageIDs, $nextUpdatePageIDs);
 
     checkToDeleteSearchCacheFiles();
-
-    // add post date to pages, update, and blog
-    $addDateToPage = $pdoConn->prepare("UPDATE page SET postdate = NOW() WHERE pageid = ?;");
-    foreach (array_column($pageRecords, 'pageid') as $pageID) {
-        $addDateToPage->execute([$pageID]);
-    }
-    $addDateToUpdate = $pdoConn->prepare(
-            "UPDATE comicupdate SET postdate = NOW() WHERE updateid = ?;");
-    $addDateToUpdate->execute([$updateRecord['updateid']]);
-    $pdoConn->exec(<<<STMT
-            UPDATE blog SET postdate = NOW() WHERE blogid = (
-                SELECT MAX(blogid) FROM blog WHERE postdate IS NULL
-            );
-            STMT);
 
     generateSaveBlogPage($pdoConn);
 
