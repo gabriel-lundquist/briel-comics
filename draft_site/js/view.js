@@ -39,7 +39,7 @@ const doublePageWidths = pageWidths.map((width) => width * 2);
 
 const widthFitMargin = "50px";
 
-import { resizeNavImageMaps, noneHaveFocus, keyNavigate } from "./briels_helpful_code.js";
+import { resizeNavImageMaps, noneHaveFocus, keyNavigate, getLink } from "./briels_helpful_code.js";
 
 const body = document.querySelector("body");
 
@@ -63,6 +63,7 @@ function toggleOrientation() {
     body.classList.toggle("horizontal");
     const windowWidth = document.querySelector("html").clientWidth;
     if (body.classList.contains("horizontal")) {
+        localStorage.setItem("orientation", "horizontal");
         for (const display of document.querySelectorAll(".comic-display")) {
             const pageWidth = parseSizesSingle(display.querySelector(".comic-page"));
             display.style.padding = "0 max(0em, 50vw - 0.5 * " + pageWidth + "px)";
@@ -71,6 +72,7 @@ function toggleOrientation() {
             }
         }
     } else {
+        localStorage.setItem("orientation", "vertical");
         for (const display of document.querySelectorAll(".comic-display")) {
             display.style = null;
         }
@@ -308,9 +310,6 @@ function keyResize(keyEvent, widenKeys, narrowKeys) {
     }
 }
 
-// event code added below
-
-
 // navigate with keys
 
 function isWithinThreshold(coord1, coord2, threshold = 1) {
@@ -347,19 +346,6 @@ function getComicScrollEndCoords() {
                                 widthFitMarginPx : 0);
     }
     coords[i + 1] = coords[i] + getOffsetLength(displays[i]);
-
-    // coords[0] = 0;
-    // coords[1] = getOffsetLength(document.querySelector("header"));
-    // for (let i = 0; i < displays.length; i++) {
-    //     coords[i + 2] = coords[i + 1] + getOffsetLength(displays[i]);
-    // }
-
-    // const endCoords = Array(displays.length);
-    // endCoords[0] = getOffsetLength(document.querySelector("header")) 
-    //                 + getOffsetLength(displays[i]);
-    // for (let i = 1; i < displays.length; i++) {
-    //     endCoords[i] = endCoords[i - 1] + getOffsetLength(displays[i]);
-    // }
 
     return coords;
 }
@@ -401,14 +387,16 @@ function getPrevComicLink(elementIndex, mapList = document.querySelectorAll("map
 
 function getCurrComicLink(elementIndex, mapList = document.querySelectorAll("map")) {
     // console.log("Getting current link");
-    const comicIndex = elementIndex - 1;
-    if (comicIndex <= 0) {
-        return mapList[1].querySelector(".prev-button").href;
-    } else if (elementIndex >= mapList.length) {
-        return mapList[mapList.length - 1].querySelector(".next-button").href;
-    } else {
-        return mapList[comicIndex + 1].querySelector(".prev-button").href;
-    }
+    if (mapList.length > 1) {
+        const comicIndex = elementIndex - 1;
+        if (comicIndex <= 0) {
+            return mapList[1].querySelector(".prev-button").href;
+        } else if (elementIndex >= mapList.length) {
+            return mapList[mapList.length - 1].querySelector(".next-button").href;
+        } else {
+            return mapList[comicIndex + 1].querySelector(".prev-button").href;
+        }
+    } else return "";
 }
 
 function getNextComicLink(elementIndex, mapList = document.querySelectorAll("map")) {
@@ -424,7 +412,8 @@ function getNextComicLink(elementIndex, mapList = document.querySelectorAll("map
     }
 }
 
-// kinda a kludge... there's a more elegant way where I have to rewrite some of keyNavigate
+// a kludge... there's a more elegant way where I have to rewrite some of keyNavigate
+// but I can't be fucked
 document.addEventListener("keydown", function (event) {
         if (widenKeys.has(event.key) || narrowKeys.has(event.key)) 
             keyResize(event, widenKeys, narrowKeys);
@@ -450,8 +439,8 @@ document.addEventListener("keydown", function (event) {
                         nextKeys, 
                         backLink, 
                         getNextComicLink(elementIndex, mapList), 
-                        "", 
-                        "", 
+                        getLink(document, ".prev-upd8-button"), 
+                        getLink(document, ".next-upd8-button"), 
                         ["input[type='search']"], 
                         true
             );
@@ -459,3 +448,5 @@ document.addEventListener("keydown", function (event) {
         
     }
 );
+
+if (localStorage.getItem("orientation") == "horizontal") toggleOrientation();

@@ -84,18 +84,20 @@ defineList( [ 	"LOCALSITE" => true,
 				"FONTFACESPATH"=> STYLEDIR . "briel_font-faces.css", 
 				"HEADERNAVSTYLEPATH"=> STYLEDIR . "header-nav.css", 
 				"NAVBUTTONSTYLEPATH"=> STYLEDIR . "nav-buttons.css", 
+				"COMMENTSTYLEPATH"=> STYLEDIR . "comment.css", 
 		
 				"READINGSCRIPTPATH"=> SCRIPTDIR . "reading.js",
 				"SEARCHSCRIPTPATH"=> SCRIPTDIR . "search.js",
 				"VIEWSCRIPTPATH"=> SCRIPTDIR . "view.js",
+				"ARCHIVESCRIPTPATH"=> SCRIPTDIR . "archive.js",
 
-				"SITEICONPATH" => DECORATIONDIR . "smileicon.ico",
+				"SITEICONPATH" => DECORATIONDIR . "witch.ico",
 				"COMMENTDOCPATH" => MASTERFOLDER . "comments.txt",	],  
 			$loaded, 
 			$namespacePrefix	);
 
 // This is the regular expression that matches paths on the local filesystem
-define("FILEFOLDERREGEXP", '(' . str_replace('/', '[/\\\]', SITEROOT) . ')');
+// define($namespacePrefix . "FILEFOLDERREGEXP", '(' . str_replace('/', '[/\\\]', SITEROOT) . ')');
 
 // // const MASTERFOLDER = '/srv/breel-site/'; #
 // // const SERVEDFOLDER = '/'; #
@@ -138,10 +140,10 @@ define("FILEFOLDERREGEXP", '(' . str_replace('/', '[/\\\]', SITEROOT) . ')');
 // const SEARCHSTYLEPATH = STYLEDIR . "search.css"; #
 // const RANDOMPATH = SITEROOT . 'page/dynamic/random.php'; #
 // const IMAGESDIRPATH = SITEROOT . 'images/'; # ren IMAGEDIR
-// const DECORATIONDIRPATH = IMAGESDIRPATH . 'decoration/'; # ren DECORATIONDIR
+// const DECORATIONDIR = IMAGESDIRPATH . 'decoration/'; # ren DECORATIONDIR
 // # added COMICIMAGEDIR
 // // const SITEICONNAME = 'smileicon.ico'; # un
-// const SITEICONPATH = DECORATIONDIRPATH . 'smileicon.ico'; #
+// const SITEICONPATH = DECORATIONDIR . 'smileicon.ico'; #
 // const VIEWSTYLENAME = 'view.css'; # un
 // const VIEWSTYLEPATH = STYLEDIR . VIEWSTYLENAME; #
 // const VIEWSCRIPTPATH = SCRIPTDIR . "view.js"; # 
@@ -175,5 +177,5 @@ function orderArrayByOrderedKeys(   array $orderedKeys,
     return array_combine($orderedKeys, array_map(fn($key) => $toOrder[$key], $orderedKeys));
 }
 
-var_export($loaded);
+// var_export($loaded);
 ?>

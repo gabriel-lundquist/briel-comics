@@ -80,10 +80,10 @@ function pdoConnect(string $dbhost = DBHOST,
                     string $password = DBPAGEGENUSERPW) {
     try {
         $conn = new \PDO(   "mysql:host=$dbhost; dbname=$dbname; port=$dbport", 
-                            $dbuser, 
-                            $enterPassword ? 
+                            username: $dbuser, 
+                            password: $enterPassword ? 
                                     promptInput("Enter password. > ") 
-                                    : getenv($password)
+                                    : $password
                         );
         $conn->setAttribute(\PDO::ATTR_ERRMODE, 
                             \PDO::ERRMODE_EXCEPTION);
@@ -101,10 +101,10 @@ function pdoConnect(string $dbhost = DBHOST,
  * Returns `false` if it is falsy and `pdoConnect()` also returns a falsy value.
  * Otherwise returns `true`, i.e. `$pdoConn` (which is a reference) is a working 
  * connection.
- * @param ?\PDO $pdoConn
+ * @param null|bool|\PDO $pdoConn
  * @return bool
  */
-function tryPDOConnect( ?\PDO &$pdoConn, 
+function tryPDOConnect( null|bool|\PDO &$pdoConn, 
                         string $dbhost = DBHOST, 
                         string $dbuser = DBPAGEGENUSER, 
                         string $dbname = MASTERDBNAME, 
@@ -468,7 +468,9 @@ function downList($pageID, $getTarget, $delRowBySource) {
  * @return array[]
  */
 function getPageOrderLists(\PDO $pdoConn) {
+    // $pdoConn->exec("");
     $pdoConn->exec(<<<STMT
+                DROP TEMPORARY TABLE IF EXISTS temppageorder;
                 CREATE TEMPORARY TABLE temppageorder 
                     AS SELECT * FROM pageorder;
                 STMT);
@@ -553,18 +555,23 @@ function getEndofRecentUpdateOrderID(\PDO $pdoConn) {
     return getEndOfUpdateOrderID(getMostRecentUpdate($pdoConn), $pdoConn);
 }
 
-
-function useDatabase(string $dbName, \PDO $pdoConn) {
-    $useDB = $pdoConn->prepare("USE ?;");
-    return $useDB->execute([$dbName]);
-}
+// /**
+//  * Summary of Briel\useDatabase
+//  * VERY INSECURE!!
+//  * @param string $dbName
+//  * @param \PDO $pdoConn
+//  * @return void
+//  */
+// function useDatabase(string $dbName, \PDO $pdoConn) {
+//     $useDB = $pdoConn->exec("USE " . $dbName .  ";");
+// }
 
 function useUserDatabase(\PDO $pdoConn) {
-    return useDatabase(USERDBNAME, $pdoConn);
+    return $pdoConn->exec("USE " . USERDBNAME . ";");
 }
 
 function useMasterDatabase(\PDO $pdoConn) {
-    return useDatabase(MASTERDBNAME, $pdoConn);
+    return $pdoConn->exec("USE " . MASTERDBNAME . ";");
 }
 
 function getTagsFromPageIDStmt(\PDO $pdoConn) {

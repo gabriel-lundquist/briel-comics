@@ -2,7 +2,9 @@
 
 use Briel\DatabaseStatements;
 use function Briel\executeAndFetchScalar;
-require_once('./php/siteOperations.php');
+
+$setting = parse_ini_file("dynamic.ini");
+require_once $setting['BACKENDSCRIPTDIR'] . 'siteOperations.php';
 
 function searchForView(array $get, PDO $db) {
     [$results, $s, $e] = Briel\allSearchComics(   

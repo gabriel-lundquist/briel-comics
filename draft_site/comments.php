@@ -24,6 +24,7 @@ ob_start();
         <link href="<?= LISTSTYLEPATH ?>" rel="stylesheet" />
         <link href="<?= HEADERNAVSTYLEPATH ?>" rel="stylesheet" />
         <link href="<?= NAVBUTTONSTYLEPATH ?>" rel="stylesheet" />
+        <link href="<?= COMMENTSTYLEPATH ?>" rel="stylesheet" />
     </head>
 
     <body>
@@ -61,7 +62,7 @@ ob_start();
                 . htmlspecialchars($_POST['comment']) . "</p>\n</article>\n";
     }       ?>
 
-            <form action="<?= COMMENTPATH ?>" method="post">
+            <form class="comment-box" action="<?= COMMENTPATH ?>" method="post">
                 <label for="comment">You say:</label>
                 <textarea 
                         id="comment" 

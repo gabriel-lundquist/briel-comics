@@ -140,10 +140,10 @@ function pdoConnect(string $dbhost = DBHOST,
  * Returns `false` if it is falsy and `pdoConnect()` also returns a falsy value.
  * Otherwise returns `true`, i.e. `$pdoConn` (which is a reference) is a working 
  * connection.
- * @param ?\PDO $pdoConn
+ * @param null|bool|\PDO $pdoConn
  * @return bool
  */
-function tryPDOConnect( ?\PDO &$pdoConn, 
+function tryPDOConnect( null|bool|\PDO &$pdoConn, 
                         string $dbhost = DBHOST, 
                         string $dbuser = DBPAGEGENUSER, 
                         string $dbname = MASTERDBNAME, 
@@ -170,7 +170,7 @@ function tryPDOConnect( ?\PDO &$pdoConn,
  * @param \PDO|bool $pdoConn
  * @return bool `true` when in a transaction by the end of execution, `false` otherwise.
  */
-function tryBeginTransaction(\PDO|bool $pdoConn) {
+function tryBeginTransaction(\PDO|null|bool $pdoConn) {
     if (!$pdoConn) {
         echo "Connection to SQL server doesn't exist.";
         return false;
@@ -2890,38 +2890,39 @@ function existsPrevSearchAnyIndexStmt(\PDO $pdoConn) {
             STMT);
 }
 
-/**
- * Summary of Briel\backupSearchData
- * @param \PDO $pdoConn [optional]
- * @param mixed $search [optional] Default null. If null, backs up entire search cache.
- * @param mixed $searchDesc [optional]
- * @param mixed $matchExactly [optional]
- * @return void
- */
-function backupSearchData(  \PDO $pdoConn, 
-                            $search = null, 
-                            $searchDesc = false, 
-                            $matchExactly = false   ) {
-    if ($search === null) {
-        $pdoConn->query(<<<STMT
-                INSERT INTO searchcachehistory (
-                    search, searchimgdesc, matchexactly, numtimes, firstsearched, lastsearched
-                ) SELECT search, searchimgdesc, matchexactly, numtimes, firstsearched, lastsearched
-                    FROM searchcache;
-                STMT);
-    } else {
-        $insertFromCache = $pdoConn->prepare(<<<STMT
-                INSERT INTO searchcachehistory (
-                    search, searchimgdesc, matchexactly, numtimes, firstsearched, lastsearched
-                ) SELECT search, searchimgdesc, matchexactly, numtimes, firstsearched, lastsearched
-                    FROM searchcache 
-                    WHERE search = ? AND searchimgdesc = ? AND matchexactly = ?;
-                STMT);
-        $insertFromCache->execute([ searchcacheKeyFromSearchString($search), 
-                                    $searchDesc ? CHECKBOXON : '', 
-                                    $matchExactly ? CHECKBOXON : '' ]);
-    }
-}
+// DEFUNCT
+// /**
+//  * Summary of Briel\backupSearchData
+//  * @param \PDO $pdoConn [optional]
+//  * @param mixed $search [optional] Default null. If null, backs up entire search cache.
+//  * @param mixed $searchDesc [optional]
+//  * @param mixed $matchExactly [optional]
+//  * @return void
+//  */
+// function backupSearchData(  \PDO $pdoConn, 
+//                             $search = null, 
+//                             $searchDesc = false, 
+//                             $matchExactly = false   ) {
+//     if ($search === null) {
+//         $pdoConn->query(<<<STMT
+//                 INSERT INTO searchdata (
+//                     search, searchimgdesc, matchexactly, numtimes, firstsearched, lastsearched
+//                 ) SELECT search, searchimgdesc, matchexactly, numtimes, firstsearched, lastsearched
+//                     FROM searchcache;
+//                 STMT);
+//     } else {
+//         $insertFromCache = $pdoConn->prepare(<<<STMT
+//                 INSERT INTO searchdata (
+//                     search, searchimgdesc, matchexactly, numtimes, firstsearched, lastsearched
+//                 ) SELECT search, searchimgdesc, matchexactly, numtimes, firstsearched, lastsearched
+//                     FROM searchcache 
+//                     WHERE search = ? AND searchimgdesc = ? AND matchexactly = ?;
+//                 STMT);
+//         $insertFromCache->execute([ searchcacheKeyFromSearchString($search), 
+//                                     $searchDesc ? CHECKBOXON : '', 
+//                                     $matchExactly ? CHECKBOXON : '' ]);
+//     }
+// }
 
 function isColorHexcode(string $input) {
     return preg_match('/^[0-9A-Fa-f]{6}$/', $input);
@@ -3000,7 +3001,7 @@ function orderUnorderablePageIDs(   \PDO $pdoConn,
     return array_merge(...array_values($pageOrdersOrdered));
 }
 
-function recordUpdate(?\PDO $pdoConn = null) {
+function recordUpdate(null|bool|\PDO $pdoConn = null) {
     if (!tryPDOConnectManip($pdoConn)) {
         echo "Couldn't establish/continue SQL server connection. Aborting...\n";
         return false;
@@ -3056,7 +3057,7 @@ function recordUpdate(?\PDO $pdoConn = null) {
                 ->execute([$blogText]);
     }
     
-    backupSearchData($pdoConn);
+    // backupSearchData($pdoConn);
 
     echo "Final check for commitment. ";
     return promptCommit($pdoConn);

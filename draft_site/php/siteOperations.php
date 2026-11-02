@@ -4,7 +4,7 @@ namespace Briel;
 require_once 'dbReadWrite.php';
 require_once 'pageGen.php';
 
-function tryPDOConnectManip(?\PDO &$pdoConn, 
+function tryPDOConnectManip(null|bool|\PDO &$pdoConn, 
                             string $dbname = MASTERDBNAME, 
                             bool $enterPassword = false, 
                             bool $echoConnSuccess = false) {
@@ -239,12 +239,12 @@ function getAllUpdateInfo(  ?DatabaseStatements $stmt = null,
 /**
  * Summary of Briel\regenerateArchivePages
  * Regenerates all archive pages and saves them. Old files are overwritten!
- * @param null|\PDO $pdoConn
+ * @param null|bool|\PDO $pdoConn
  * @param array $paths An array of *1-indexed* paths to write to. 
  * Passed to `generateAllArchivePages` where you'll find more information.
  * @return array
  */
-function regenerateArchivePages(?\PDO $pdoConn = null, array $paths = []) {
+function regenerateArchivePages(null|bool|\PDO $pdoConn = null, array $paths = []) {
     if (!tryPDOConnect($pdoConn)) {
         echo "Could not continue/create database connection. Aborting...";
         return [];
@@ -265,12 +265,12 @@ function regenerateArchivePages(?\PDO $pdoConn = null, array $paths = []) {
  * Updates the home page to feature the first page of the most recently posted update.
  * Starts an output buffer and returns its contents (or false on failure) but doesn't
  * flush to output.
- * @param \PDO|null $pdoConn
+ * @param \PDO|null|bool $pdoConn
  * @param string $addlStylePath Option path to an extra styling document to use in 
  * addition to `home.css`.
  * @return bool|string The return value of `ob_get_clean()`;
  */
-function regenerateHomepage(?\PDO $pdoConn = null, string $addlStylePath = "") {
+function regenerateHomepage(null|bool|\PDO $pdoConn = null, string $addlStylePath = "") {
     if (!tryPDOConnect($pdoConn)) {
         echo "Could not continue/create database connection. Aborting...";
         return false;
@@ -368,9 +368,9 @@ function generateSaveUpdatePageFiles(   \PDO $pdoConn,
  * @param \PDO $pdoConn
  * @return void
  */
-function redoCachedSearches(\PDO $pdoConn) {
-    backupSearchData($pdoConn);
-    $pdoConn->exec("USE user_submitted;");
+function redoCachedSearches(\PDO $pdoConn, bool $promptToCommit = false) {
+
+    useUserDatabase($pdoConn);
     $getSearch = $pdoConn->query(
             "SELECT DISTINCT search, searchimgdesc, matchexactly FROM searchcache;");
     $getSearchAtIndex = $pdoConn->prepare(<<<STMT
@@ -383,7 +383,7 @@ function redoCachedSearches(\PDO $pdoConn) {
             search = :search AND matchexactly = :exact AND searchimgdesc = :desc
             AND resultpageindex >= :minpageindex;
         STMT);
-    $pdoConn->exec("USE " . MASTERDBNAME . ";");
+    useMasterDatabase($pdoConn);
     $getTags = getTagsFromPageIDStmt($pdoConn);
     $getCWs = getCWsFromPageIDStmt($pdoConn);
     $getThumbnails = getThumbnailFromPageIDStmt($pdoConn);
@@ -457,7 +457,7 @@ function redoCachedSearches(\PDO $pdoConn) {
         );
 
         if ($pageStrs) {
-            $pdoConn->exec("USE user_submitted;");
+            useUserDatabase($pdoConn);
             // save all pages and update cache records
             $i = 1;
             for ($i = 1; $i <= \count($pageStrs); $i++) {
@@ -508,7 +508,7 @@ function redoCachedSearches(\PDO $pdoConn) {
     // Insert new search indices into database if necessary
     if ($insertStmt != '') {
         tryBeginTransaction($pdoConn);
-        $pdoConn->exec("USE user_submitted;");
+        useUserDatabase($pdoConn);
         // insert the records from assembled statement
         $insert = $pdoConn->prepare(<<<STMT
                 INSERT INTO searchcache (   search, 
@@ -521,7 +521,8 @@ function redoCachedSearches(\PDO $pdoConn) {
         $insert->execute($insertParams);
     }
 
-    $pdoConn->exec("USE " . MASTERDBNAME . ";");
+    if ($promptToCommit) promptCommit($pdoConn);
+    useMasterDatabase($pdoConn);
 }
 
 function generateSaveBlogPage(\PDO $pdoConn) {
@@ -551,10 +552,10 @@ function checkToDeleteSearchCacheFiles() {
 
 /**
  * Summary of Briel\postUpdate
- * @param null|\PDO $pdoConn
+ * @param null|bool|\PDO $pdoConn
  * @return bool
  */
-function postUpdate(?\PDO $pdoConn = null) {
+function postUpdate(null|bool|\PDO $pdoConn = null) {
     if (!tryPDOConnectManip($pdoConn)) {
         echo "Couldn't establish/continue SQL server connection. Aborting...\n";
         return false;
@@ -611,7 +612,6 @@ function postUpdate(?\PDO $pdoConn = null) {
         if (is_readable($blogText)) $blogText = file_get_contents($blogText) ?: $blogText;
     }
 
-    backupSearchData($pdoConn);
     checkToDeleteSearchCacheFiles();
 
     // add post date to pages and update
@@ -645,7 +645,7 @@ function postUpdate(?\PDO $pdoConn = null) {
     promptCommit($pdoConn);
 }
 
-function generateSiteUpdate(?\PDO $pdoConn = null) {
+function generateSiteUpdate(null|bool|\PDO $pdoConn = null) {
     if (!tryPDOConnect($pdoConn)) {
         echo "Couldn't establish/continue SQL server connection. Aborting...\n";
         return false;
@@ -697,13 +697,6 @@ function generateSiteUpdate(?\PDO $pdoConn = null) {
     // generate and save new HTML files as well as new versions of old HTML files
     generateSaveUpdatePageFiles($pdoConn, $pageRecords, $prevUpdatePageIDs);
 
-    // $blogText = null;
-    // if (promptInput("Would you like to make a new blog post? (y/n) > " == "y")) {
-    //     $blogText = promptInput("Enter blog text (or a path to it):\n> ");
-    //     if (is_readable($blogText)) $blogText = file_get_contents($blogText) ?: $blogText;
-    // }
-
-    backupSearchData($pdoConn);
     checkToDeleteSearchCacheFiles();
 
     // add post date to pages, update, and blog
@@ -739,7 +732,7 @@ function generateSiteUpdate(?\PDO $pdoConn = null) {
     promptCommit($pdoConn);
 }
 
-function generateSite(?\PDO $pdoConn = null) {
+function generateSite(null|bool|\PDO $pdoConn = null) {
     if (!tryPDOConnect($pdoConn)) {
         echo "Couldn't establish/continue SQL server connection. Aborting...\n";
         return false;
@@ -827,7 +820,7 @@ function generateSite(?\PDO $pdoConn = null) {
 }
 
 function regenerateComicPages(  array|int $pageIDs, 
-                                ?\PDO $pdoConn = null, 
+                                null|bool|\PDO $pdoConn = null, 
                                 ?DatabaseStatements $pageStmts = null   ) {
     if (!tryPDOConnect($pdoConn)) {
         echo "Couldn't establish/continue SQL server connection. Aborting...\n";

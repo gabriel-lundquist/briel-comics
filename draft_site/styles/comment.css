@@ -13,6 +13,9 @@ main {
 
 form {
     margin: 1em auto;
+    padding: 0.5em 1em;
+    background: var(--bg-gradient);
+    border-radius: 0.5em;
 }
 
 textarea {

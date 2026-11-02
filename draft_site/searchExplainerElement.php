@@ -8,7 +8,8 @@
         Valid prefixes are:
         <ul>
             <?php 
-require_once 'brielConstants.php';
+$setting = parse_ini_file("dynamic.ini");
+require_once $setting['BACKENDSCRIPTDIR'] . 'brielConstants.php';
 foreach (Briel\SEARCHFIELDSPECS as $field) {
     echo "\t\t\t<li><kbd>$field:</kbd>";
     switch ($field) {

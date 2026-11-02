@@ -522,26 +522,6 @@ function insertNewCWs( array $cws,
     return insertNewLeaves('contwarning', $cws, $pdoConn, $promptToCommit, $promptCommitMessage);
 }
 
-/**
- * Summary of Briel\getFileWidthPaths
- * @param int $pageid
- * @param \PDO $pdoConn
- */
-function getFileWidthPaths(int $pageid, \PDO $pdoConn) {
-    
-    if (    $selectFile = $pdoConn->prepare(<<<STMT
-                                        SELECT width, path FROM file 
-                                            WHERE pageid = ?;
-                                        STMT)
-            AND $selectFile->execute([$pageid]) ) {
-
-        return $selectFile->fetchAll(\PDO::FETCH_KEY_PAIR);
-        // FETCH_KEY_PAIR writes `path` values into an array indexed by `width`
-    } else {
-        return false;
-    }
-}
-
 function getPageTitleInteractive(\PDO $pdoConn) {
     $title = promptInput("Enter title: > ");
     $findFileFromTitle = $pdoConn->prepare("SELECT path FROM page WHERE title = ?;");
@@ -1699,8 +1679,9 @@ function createTempSearchTables($joinTokens,
                     SELECT token, tagid, name FROM joinsearch INNER JOIN tag
                         ON name $matchOp token
                 CLAUSE;
-        $tagSearch = $pdoConn->prepare("DROP TEMPORARY TABLE IF EXISTS tagsearch;\n"
-                . "CREATE TEMPORARY TABLE tagsearch AS ($tagSearchDefinition);");
+        $pdoConn->exec("DROP TEMPORARY TABLE IF EXISTS tagsearch;");
+        $tagSearch = $pdoConn->prepare(
+                "CREATE TEMPORARY TABLE tagsearch AS ($tagSearchDefinition);");
         $tagSearch->execute([...$joinTokens, ...$tagTokens]);
         
         $possibleTagMatches = $pdoConn->query("SELECT name, tagid FROM tagsearch;");
@@ -1713,8 +1694,9 @@ function createTempSearchTables($joinTokens,
                 . ') AS joinsearch (token)) '
                 . "SELECT token, contwarningid, name FROM "
                 . "joinsearch INNER JOIN contwarning ON name $matchOp token";
-        $cwSearch = $pdoConn->prepare("DROP TEMPORARY TABLE IF EXISTS cwsearch;\n"
-                . "CREATE TEMPORARY TABLE cwsearch AS ($cwSearchDefinition);");
+        $pdoConn->exec("DROP TEMPORARY TABLE IF EXISTS cwsearch;");
+        $cwSearch = $pdoConn->prepare(
+                "CREATE TEMPORARY TABLE cwsearch AS ($cwSearchDefinition);");
         $cwSearch->execute([...$joinTokens, ...$cwTokens]);
 
         $possibleCWMatches = $pdoConn->query("SELECT name, contwarningid 
@@ -2042,6 +2024,13 @@ function execSearchComicsStmt(  $searchStr,
     return [$getResults, $execList];
 }
 
+function updatePrevSearchCountStmt(\PDO $pdoConn) {
+    return $pdoConn->prepare(<<<STMT
+            UPDATE searchdata SET numtimes = numtimes + 1 
+                WHERE search = :search AND matchexactly = :exact AND searchimgdesc = :desc;
+            STMT);
+}
+
 /**
  * Summary of Briel\searchComics
  * 
@@ -2085,39 +2074,6 @@ function allSearchComics(   string $searchStr,
             $execList];
 }
 
-/**
- * Summary of Briel\backupSearchData
- * @param \PDO $pdoConn [optional]
- * @param mixed $search [optional] Default null. If null, backs up entire search cache.
- * @param mixed $searchDesc [optional]
- * @param mixed $matchExactly [optional]
- * @return void
- */
-function backupSearchData(  \PDO $pdoConn, 
-                            $search = null, 
-                            $searchDesc = false, 
-                            $matchExactly = false   ) {
-    if ($search === null) {
-        $pdoConn->query(<<<STMT
-                INSERT INTO searchcachehistory (
-                    search, searchimgdesc, matchexactly, numtimes, firstsearched, lastsearched
-                ) SELECT search, searchimgdesc, matchexactly, numtimes, firstsearched, lastsearched
-                    FROM searchcache;
-                STMT);
-    } else {
-        $insertFromCache = $pdoConn->prepare(<<<STMT
-                INSERT INTO searchcachehistory (
-                    search, searchimgdesc, matchexactly, numtimes, firstsearched, lastsearched
-                ) SELECT search, searchimgdesc, matchexactly, numtimes, firstsearched, lastsearched
-                    FROM searchcache 
-                    WHERE search = ? AND searchimgdesc = ? AND matchexactly = ?;
-                STMT);
-        $insertFromCache->execute([ searchcacheKeyFromSearchString($search), 
-                                    $searchDesc ? CHECKBOXON : '', 
-                                    $matchExactly ? CHECKBOXON : '' ]);
-    }
-}
-
 function insertColorStyleRecord(\PDO $pdoConn, 
                                 string $description, 
                                 string $path, 
@@ -2132,7 +2088,7 @@ function insertColorStyleRecord(\PDO $pdoConn,
                                 $promptCommitMessage    );
 }
 
-function recordUpdate(?\PDO $pdoConn = null) {
+function recordUpdate(null|bool|\PDO $pdoConn = null) {
     if (!tryPDOConnectManip($pdoConn)) {
         echo "Couldn't establish/continue SQL server connection. Aborting...\n";
         return false;
@@ -2188,8 +2144,6 @@ function recordUpdate(?\PDO $pdoConn = null) {
                 ->execute([$blogText]);
     }
     
-    backupSearchData($pdoConn);
-
     echo "Final check for commitment. ";
     return promptCommit($pdoConn);
 }

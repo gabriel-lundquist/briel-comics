@@ -13,7 +13,7 @@ function outputBlank() {
 // first, do maintenance on the GET request information
 $getParams = $_GET; // copy $_GET
 if (getenv('DEBUG_SEARCH')) { // an environment variable injected in my VSCode debug launch.json
-    //
+    $getParams['search'] = 'wizard';
 }
 
 if (empty($getParams['search'])) $getParams['search'] = '';
@@ -28,7 +28,7 @@ if (empty($getParams[SEARCHPAGEINDEXKEY])) {
 }
 
 $pdoConnection = pdoConnect(); // check for a cookie? session storage?
-if ($pdoConnection === false) {
+if (!$pdoConnection) {
     outputBlank();
     exit("Oh fuck! MySQL connection failed...");
 }
@@ -38,7 +38,7 @@ $prevInTransaction = $pdoConnection->inTransaction();
 
 // first, check if this exact search (with the terms potentially shuffled)
 // has been done before
-$pdoConnection->exec("USE " . USERDBNAME . ";");
+useUserDatabase($pdoConnection);
 $prevSearch = getPrevSearchStmt($pdoConnection);
 $searchcacheKey = searchcacheKeyFromSearchString($getParams['search']);
 $prevSearch->execute([  
@@ -87,7 +87,7 @@ if ($prevExists !== false) {
         ]);
 
     } else {
-        $pdoConnection->exec("USE " . MASTERDBNAME . ";");
+        useMasterDatabase($pdoConnection);
         // search is nowhere in the cache. do the actual search algorithm
         [$results, $s, $execList] = allSearchComics(
                 $getParams['search'], 
@@ -95,12 +95,10 @@ if ($prevExists !== false) {
                 $matchExactly = ($getParams['exact'] == CHECKBOXON), 
                 $searchDesc = ($getParams['desc'] == CHECKBOXON)
         );
-        $pdoConnection->exec("USE " . USERDBNAME . ";");
 
-        $pdoConnection->exec("USE " . MASTERDBNAME . ";");
-        if (count($results) >= getNumServablePages($pdoConnection)) { 
+        if (\count($results) >= getNumServablePages($pdoConnection)) { 
             // this search has returned all pages!
-            $pdoConnection->exec("USE " . USERDBNAME . ";");
+            useUserDatabase($pdoConnection);
             $prevSearchOtherIndex->execute(
                     [':search' => '', ':exact' => '', ':desc' => '']);
 
@@ -112,12 +110,12 @@ if ($prevExists !== false) {
                 foreach (['search', 'desc', 'exact'] as $field) 
                     $getParams[$field] = '';
                 $searchcacheKey = '';
-                $pdoConnection->exec("USE " . MASTERDBNAME . ";");
+                useMasterDatabase($pdoConnection);
                 [$results, $s, $execList] = allSearchComics('', $pdoConnection);
-                $pdoConnection->exec("USE " . USERDBNAME . ";");
+                useUserDatabase($pdoConnection);
             } else {
                 // the search that returns all pages has already been done
-                $pdoConnection->exec("USE " . USERDBNAME . ";");
+                useUserDatabase($pdoConnection);
                 $prevSearch->execute([  
                         ':search' => '', 
                         ':exact' => '', 
@@ -137,7 +135,7 @@ if ($prevExists !== false) {
                     $isOutputYet = true;
 
                     $pdoConnection->exec(
-                            "UPDATE searchcache SET numtimes = numtimes + 1 WHERE search = '';"
+                            "UPDATE searchdata SET numtimes = numtimes + 1 WHERE search = '';"
                     );
                 }
             }
@@ -147,15 +145,15 @@ if ($prevExists !== false) {
             // search has never been done. we make the pages here
 
             // first, prep the info we'll need
-            $pdoConnection->exec("USE " . MASTERDBNAME . ";");
+            useMasterDatabase($pdoConnection);
             $getTags = getTagsFromPageIDStmt($pdoConnection);
             $getCWs = getCWsFromPageIDStmt($pdoConnection);
             $getThumbnails = getThumbnailFromPageIDStmt($pdoConnection);
             $getThumbnailContingency = getMinSizeFileFromPageIDStmt($pdoConnection);
             
             // next, get the info for each page (lists of tags, cws, thumbnails)
-            $resultInfos = array_fill(0, count($results), null);
-            for ($i = 0; $i < count($results); $i++) {
+            $resultInfos = array_fill(0, \count($results), null);
+            for ($i = 0; $i < \count($results); $i++) {
                 $getThumbnails->execute([$results[$i]['pageid']]);
                 $thumbnailRecords = [];
                 if (($thumbnailRecords = $getThumbnails->fetchAll(\PDO::FETCH_ASSOC)) == []) {
@@ -192,7 +190,7 @@ if ($prevExists !== false) {
                 // save all pages and insert cache records
                 $execParams = [];
                 $insertStmt = '';
-                for ($i = 1; $i <= count($pageStrs); $i++) {
+                for ($i = 1; $i <= \count($pageStrs); $i++) {
                     $filePath = SEARCHCACHEDIR
                                 . implode('_', ['search', 
                                                 urlencode($searchcacheKey), 
@@ -216,10 +214,10 @@ if ($prevExists !== false) {
                                     ":path$i" => $filePath  ];
                 }
 
-                if ($insertStmt != '') {
+                if ($insertStmt != '') { // some pages were generated before this statement
                     if (!$prevInTransaction) $pdoConnection->beginTransaction();
                     // insert the records from assembled statement
-                    $pdoConnection->exec("USE " . USERDBNAME . ";");
+                    useUserDatabase($pdoConnection);
                     $insert = $pdoConnection->prepare(<<<STMT
                             INSERT INTO searchcache (   search, 
                                                         searchimgdesc, 
@@ -229,6 +227,14 @@ if ($prevExists !== false) {
                             VALUES $insertStmt;
                             STMT);
                     $insert->execute($execParams);
+
+                    $insertData = $pdoConnection->prepare(<<<STMT
+                            INSERT INTO searchdata (search, searchimgdesc, matchexactly)
+                            VALUES (?, ?, ?);
+                            STMT);
+                    $insertData->execute([  $searchcacheKey, 
+                                            $getParams['desc'], 
+                                            $getParams['exact'] ]);
                 }
             } else { // ...unless we have generated no pages, then output blank
                 outputBlank();

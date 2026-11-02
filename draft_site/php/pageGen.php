@@ -205,7 +205,7 @@ class BlogInfo {
 }
 
 function replacePathsForServerSite(string $str) {
-    return preg_replace(FILEFOLDERREGEXP, '/', $str);
+    return str_replace(SITEROOT, '/', $str);
 }
 
 function classIs($node, $className) {
@@ -1185,9 +1185,9 @@ function generateHomepage(  BlogInfo $blogInfo,
                     class="resting"
                     srcset="<?php 
     foreach ([500, 800, 1100, 1400, 1700, 2000] as $width) {
-        echo DECORATIONDIRPATH . "{$bannerFileStem}_{$width}w.{$restExt} {$width}w,\n";
+        echo DECORATIONDIR . "{$bannerFileStem}_{$width}w.{$restExt} {$width}w,\n";
     } ?>"
-                    src="<?= DECORATIONDIRPATH . $bannerFileStem ?>_800w.<?= $restExt ?>"
+                    src="<?= DECORATIONDIR . $bannerFileStem ?>_800w.<?= $restExt ?>"
                     sizes="(max-width: 800px) 100vw, 
                            (max-width: 1920px) 800px, 
                            (max-width: 3000px) 1400px, 
@@ -1199,9 +1199,9 @@ function generateHomepage(  BlogInfo $blogInfo,
                     class="interacting"
                     srcset="<?php 
     foreach ([500, 800, 1100, 1400, 1700, 2000] as $width) {
-        echo "\n" . DECORATIONDIRPATH . "{$interactBannerFileStem}_{$width}w.{$interactExt} {$width}w,";
+        echo "\n" . DECORATIONDIR . "{$interactBannerFileStem}_{$width}w.{$interactExt} {$width}w,";
     } ?>"
-                    src="<?= DECORATIONDIRPATH . $interactBannerFileStem ?>_800w.<?= $interactExt ?>"
+                    src="<?= DECORATIONDIR . $interactBannerFileStem ?>_800w.<?= $interactExt ?>"
                     sizes="(max-width: 800px) 90vw, 
                            (max-width: 1920px) 800px, 
                            (max-width: 3000px) 1400px, 
@@ -2007,13 +2007,13 @@ function generateArchivePage(   array $updateInfos,
         <header>
             <img 
                 class="left"
-                src="<?= DECORATIONDIRPATH ?>2026-09-04BigArchiveLeft_optimized.svg"
+                src="<?= DECORATIONDIR ?>2026-09-04BigArchiveLeft_optimized.svg"
                 height="100"
             >
             <h1>Archive</h1>
             <img 
                 class="right"
-                src="<?= DECORATIONDIRPATH ?>2026-09-04BigArchiveRight_optimized.svg"
+                src="<?= DECORATIONDIR ?>2026-09-04BigArchiveRight_optimized.svg"
                 height="100"
             >
         </header>
