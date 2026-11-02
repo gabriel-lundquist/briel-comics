@@ -1667,6 +1667,7 @@ function createTempSearchTables($joinTokens,
                                 $matchOp, 
                                 \PDO $pdoConn) {
     // useMasterDatabase($pdoConn);
+    // useMasterDatabase($pdoConn);
     $tagSearchDefinition = '';
     $cwSearchDefinition = '';
     $possibleTagMatches = null;
@@ -2048,6 +2049,7 @@ function searchComics(  string $searchStr,
                         bool $matchExactly = false, 
                         bool $searchImgDesc = false  ) {
     useMasterDatabase($pdoConn);
+    useMasterDatabase($pdoConn);
     [$getResults, $execList] = execSearchComicsStmt($searchStr, 
                                                     $pdoConn, 
                                                     $matchExactly, 
@@ -2064,6 +2066,7 @@ function allSearchComics(   string $searchStr,
                             \PDO $pdoConn, 
                             bool $matchExactly = false, 
                             bool $searchImgDesc = false  ) {
+    useMasterDatabase($pdoConn);
     useMasterDatabase($pdoConn);
     [$getResults, $execList] = execSearchComicsStmt($searchStr, 
                                                     $pdoConn, 
@@ -2146,6 +2149,23 @@ function recordUpdate(null|bool|\PDO $pdoConn = null) {
         $pdoConn->prepare("INSERT INTO blog(blogtext) VALUES (?);")
                 ->execute([$blogText]);
     }
+
+    // add post date to pages, update, and blog
+    if (promptInput("Would you like to post these pages now? (y/n) > ") == "y") {
+        $addDateToPage = $pdoConn->prepare("UPDATE page SET postdate = NOW() WHERE pageid = ?;");
+        foreach (array_column($pageRecords, 'pageid') as $pageID) {
+            $addDateToPage->execute([$pageID]);
+        }
+        $addDateToUpdate = $pdoConn->prepare(
+                "UPDATE comicupdate SET postdate = NOW() WHERE updateid = ?;");
+        $addDateToUpdate->execute([$updateRecord['updateid']]);
+        $pdoConn->exec(<<<STMT
+                UPDATE blog SET postdate = NOW() WHERE blogid = (
+                    SELECT MAX(blogid) FROM blog WHERE postdate IS NULL
+                );
+                STMT);
+    }
+
 
     // add post date to pages, update, and blog
     if (promptInput("Would you like to post these pages now? (y/n) > ") == "y") {
