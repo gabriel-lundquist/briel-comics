@@ -69,3 +69,6 @@ tempCodeRunnerFile.py
 
 # MySQL database
 binlog.*
+
+# PHP
+*.ini
