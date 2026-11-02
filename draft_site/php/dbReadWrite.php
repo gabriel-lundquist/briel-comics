@@ -557,7 +557,7 @@ function getPagePathInteractive() {
     }
 
     if (!file_exists($path)) file_put_contents($path, '');
-    return realpath($path);
+    return str_replace('\\', '/', ($path));
 }
 
 function getImgDescInteractive() {
@@ -1666,6 +1666,7 @@ function createTempSearchTables($joinTokens,
                                 $cwTokens, 
                                 $matchOp, 
                                 \PDO $pdoConn) {
+    // useMasterDatabase($pdoConn);
     $tagSearchDefinition = '';
     $cwSearchDefinition = '';
     $possibleTagMatches = null;
@@ -2046,6 +2047,7 @@ function searchComics(  string $searchStr,
                         \PDO $pdoConn, 
                         bool $matchExactly = false, 
                         bool $searchImgDesc = false  ) {
+    useMasterDatabase($pdoConn);
     [$getResults, $execList] = execSearchComicsStmt($searchStr, 
                                                     $pdoConn, 
                                                     $matchExactly, 
@@ -2062,6 +2064,7 @@ function allSearchComics(   string $searchStr,
                             \PDO $pdoConn, 
                             bool $matchExactly = false, 
                             bool $searchImgDesc = false  ) {
+    useMasterDatabase($pdoConn);
     [$getResults, $execList] = execSearchComicsStmt($searchStr, 
                                                     $pdoConn, 
                                                     $matchExactly, 
@@ -2143,7 +2146,23 @@ function recordUpdate(null|bool|\PDO $pdoConn = null) {
         $pdoConn->prepare("INSERT INTO blog(blogtext) VALUES (?);")
                 ->execute([$blogText]);
     }
-    
+
+    // add post date to pages, update, and blog
+    if (promptInput("Would you like to post these pages now? (y/n) > ") == "y") {
+        $addDateToPage = $pdoConn->prepare("UPDATE page SET postdate = NOW() WHERE pageid = ?;");
+        foreach (array_column($pageRecords, 'pageid') as $pageID) {
+            $addDateToPage->execute([$pageID]);
+        }
+        $addDateToUpdate = $pdoConn->prepare(
+                "UPDATE comicupdate SET postdate = NOW() WHERE updateid = ?;");
+        $addDateToUpdate->execute([$updateRecord['updateid']]);
+        $pdoConn->exec(<<<STMT
+                UPDATE blog SET postdate = NOW() WHERE blogid = (
+                    SELECT MAX(blogid) FROM blog WHERE postdate IS NULL
+                );
+                STMT);
+    }
+
     echo "Final check for commitment. ";
     return promptCommit($pdoConn);
 }
